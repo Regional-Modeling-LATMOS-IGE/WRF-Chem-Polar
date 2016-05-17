@@ -11,7 +11,8 @@
 ! Contact: J. Wong <johnwong@ucar.edu>
 !
 !**********************************************************************
-
+!
+!lm Louis Marelle 2016/5/17: Add lightning parameterization for KF-CuP cumuli
 
  MODULE module_ltng_iccg
  CONTAINS
@@ -248,6 +249,93 @@
  ENDDO jloop
 
  END SUBROUTINE iccg_pr93
+
+
+!lm Add a subroutine for iccg with KF-CuP cumuli
+ SUBROUTINE iccg_pr93_cup( &
+                            cldtop_adjustment, t_phy, z,         &
+                          ! Additional inputs from KF-CuP
+                            htop, &
+                            shall, &
+                          ! Order dependent args for domain, mem, and tile dims
+                            ids, ide, jds, jde, kds, kde,              &
+                            ims, ime, jms, jme, kms, kme,              &
+                            ips, ipe, jps, jpe, kps, kpe,              &
+                          ! Input
+                            total_flashrate,                           &
+                          ! Output
+                            ic_flashrate, cg_flashrate                 &
+                        )
+!-----------------------------------------------------------------
+ IMPLICIT NONE
+!-----------------------------------------------------------------
+! Inputs
+ REAL,                                            INTENT(IN   ) :: cldtop_adjustment
+ REAL,    DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(IN   ) :: t_phy, z
+! Additional inputs from KF-CuP
+ REAL, DIMENSION( ims:ime,          jms:jme ), INTENT(IN   ) :: htop ! cloud top level
+ REAL, DIMENSION( ims:ime,          jms:jme ), INTENT(IN   ) :: shall ! flag indicating convection status 
+                                                                      ! (shallow, deep, none)
+
+! Order dependent args for domain, mem, and tile dims
+ INTEGER, INTENT(IN   )    ::       ids,ide, jds,jde, kds,kde
+ INTEGER, INTENT(IN   )    ::       ims,ime, jms,jme, kms,kme
+ INTEGER, INTENT(IN   )    ::       ips,ipe, jps,jpe, kps,kpe
+
+! Primary inputs and outpus
+ REAL,    DIMENSION( ims:ime,          jms:jme ), INTENT(IN   ) :: total_flashrate   
+ REAL,    DIMENSION( ims:ime,          jms:jme ), INTENT(  OUT) :: ic_flashrate, cg_flashrate
+
+! Local variables
+ INTEGER :: kfreeze
+
+ INTEGER :: i,j,k
+ REAL    :: ratio, cgfrac, depth !cloud depth in km
+
+ REAL, PARAMETER :: dH_min = 5.5 !min cloud depth in km
+ REAL, PARAMETER :: dH_max = 14. !max cloud depth in km
+
+! Coefficients from Price and Rind 1993
+ REAL, PARAMETER :: coef_A = 0.021
+ REAL, PARAMETER :: coef_B = -0.648
+ REAL, PARAMETER :: coef_C = 7.493
+ REAL, PARAMETER :: coef_D = -36.54
+ REAL, PARAMETER :: coef_E = 63.09
+!-----------------------------------------------------------------
+
+ ic_flashrate(ips:ipe,jps:jpe) = 0.
+ cg_flashrate(ips:ipe,jps:jpe) = 0.
+
+ jloop: DO j=jps,jpe
+    iloop: DO i=ips,ipe
+      IF ( total_flashrate(i,j) .gt. 0.) THEN ! only do param if flashes occur
+        IF (shall(i,j) .gt. 0.5) then ! Only do param if deep convection occurs (should be redundant with the flashrate test)
+          depth = -1.
+        ELSE
+          ! Look for the freezing level in cloud
+           kfreeze = nint(htop(i,j))
+          DO WHILE ( t_phy(i,kfreeze,j) .le. 273.15 .and. kfreeze > 1) ! kfreeze can reach 0 if the ground is below freezing temp
+            kfreeze = kfreeze - 1
+          ENDDO
+          depth = ( z(i,nint(htop(i,j)),j) - z(i,kfreeze,j) ) * 1E-3 + cldtop_adjustment ! compute cloud depth (km)
+        ENDIF
+
+        IF (depth .gt. 0.) THEN
+          depth = max( dH_min, min( dH_max, depth )) ! keep cloud depth between these bounds
+
+          ! Price and Rind (1993) parameterization
+          ratio = (((coef_A*depth+coef_B )*depth+coef_C)*depth+coef_D)*depth+coef_E
+          cgfrac = 1./(ratio+1.)
+
+          cg_flashrate(i,j) = total_flashrate(i,j) * cgfrac
+          ic_flashrate(i,j) = total_flashrate(i,j) - cg_flashrate(i,j)
+        ENDIF ! shall(i,j) .gt. 0.5
+      ENDIF ! total_flashrate(i,j) .gt. 0.
+    ENDDO iloop
+ ENDDO jloop
+
+ END SUBROUTINE iccg_pr93_cup
+!lm
 
 
 !**********************************************************************

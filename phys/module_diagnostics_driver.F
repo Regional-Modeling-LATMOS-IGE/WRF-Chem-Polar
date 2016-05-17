@@ -6,7 +6,9 @@ CONTAINS
 END MODULE module_diagnostics_driver
 #else
 !WRF:MODEL_LAYER:PHYSICS
-
+!
+!lm Louis Marelle 2016/5/17: Add lightning parameterization for KF-CuP cumuli
+!
 MODULE module_diagnostics_driver
 
 CONTAINS
@@ -213,6 +215,10 @@ CONTAINS
           ! Scheme specific prognostics
             grid%ktop_deep, grid%refl_10cm,                    &
             domain_get_current_time( grid ),                   &
+!lm Additional inputs for lightning param with KF-CuP cumuli
+            config_flags%cu_physics,                           &
+            grid%msft, grid%cldfra_cup, grid%htop, grid%shall, &
+!lm
           ! Flashrate namelist inputs
             config_flags%lightning_option,                     &
             config_flags%lightning_dt,                         &

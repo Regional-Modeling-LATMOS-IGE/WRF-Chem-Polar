@@ -1,5 +1,7 @@
 !WRF:MODEL_LAYER:INITIALIZATION
 !
+!lm Louis Marelle 2016/5/17: Add lightning nox parameterization for KF-CuP cumuli
+!
    subroutine chem_init (id,chem,emis_ant,scalar,dt,bioemdt,photdt,chemdt,stepbioe, &
                stepphot,stepchem,stepfirepl,plumerisefire_frq,z_at_w,xlat,xlong,    &
                g,aerwrf,config_flags,grid,alt,t,p,CONVFAC,ttday,tcosz,julday,gmt,   &
@@ -386,6 +388,13 @@ call wrf_message("**************************************************************
       endif
    endif
 
+   !LMarelle - Only allow lightning nox options 0 (no lnox) or 1 (Ott lnox) with KF-CuP
+   ! cumuli. 
+   if ( config_flags%cu_physics == 10) then
+     if ( config_flags%lnox_opt /= 0 .and. config_flags%lnox_opt /= 1) then
+       call wrf_error_fatal("chemics_init: KF-CuP cumulus scheme only tested with lnox_opt = 0 or 1")
+     endif
+   endif
 
    if ( config_flags%cu_physics == 5 .OR. config_flags%cu_physics == 3) then
    if ( config_flags%cu_diag == 0) then

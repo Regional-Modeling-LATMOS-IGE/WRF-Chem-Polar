@@ -1,5 +1,7 @@
 !-------------------------------------------------------------------
-
+!
+!lm Louis Marelle 2016/5/17: Add lightning parameterization for KF-CuP cumuli
+!
    SUBROUTINE start_domain_em ( grid, allowed_to_read &
 ! Actual arguments generated from Registry
 # include "dummy_new_args.inc"
@@ -1328,6 +1330,9 @@ endif
                         ,ltngacttime=grid%ltngacttime                                             &
                         ,iccg_prescribed_num=config_flags%iccg_prescribed_num                     &
                         ,iccg_prescribed_den=config_flags%iccg_prescribed_den                     &
+!lm add this in order to prevent using lightning param with KFCUP cumuli if iccg_method=/=3
+                        ,iccg_method=config_flags%iccg_method                                     &
+!lm 
                         ,cellcount_method=config_flags%cellcount_method                           &
                     ! Order dependent args for domain, mem, and tile dims
                         ,ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde             &
