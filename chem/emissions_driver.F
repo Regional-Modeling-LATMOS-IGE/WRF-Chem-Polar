@@ -631,6 +631,7 @@ CONTAINS
       IF ( config_flags%biomass_burn_opt == BIOMASSB_MOZC .OR. &
            config_flags%biomass_burn_opt == BIOMASSB_T1_MOZCART  .OR. &
            config_flags%biomass_burn_opt == BIOMASSB_MOZ  .OR. &
+           config_flags%biomass_burn_opt == BIOMASSB_SAPRC .OR. &
            config_flags%biomass_burn_opt == BIOMASSB_GHG  .OR. &
            config_flags%biomass_burn_opt == BIOMASSB ) then
         IF ( ktau==1 ) then
@@ -784,7 +785,7 @@ CONTAINS
 !!! ***********   FIRE AND CHEM ****************************************
 !
     fire_select:  SELECT CASE(config_flags%biomass_burn_opt)
-     CASE (BIOMASSB,BIOMASSB_MOZC,BIOMASSB_MOZ,BIOMASSB_T1_MOZCART,BIOMASSB_GHG)
+     CASE (BIOMASSB,BIOMASSB_MOZC,BIOMASSB_MOZ,BIOMASSB_T1_MOZCART,BIOMASSB_GHG,BIOMASSB_SAPRC)
 !      if( do_plumerisefire )then
 !         CALL wrf_debug(15,'fire emissions: calling biomassb')
 !         write(0,*)ktau,stepfirepl
@@ -1340,31 +1341,69 @@ CONTAINS
                 chem(i,k,j,p_nh3)  = chem(i,k,j,p_nh3)                       &
                      +emis_ant(i,k,j,p_e_nh3)*conv
 
-!Use OM/OC of 1.25 for fossil and OM:OC of 1.57 for biomass
-! O:C=0.06,H:C=1.8, N:C=0.02 for fossil : OM/OC=(16*0.06+12+14*0.02+12)/12=1.25
-!O:C=0.3 H:C=1.8, N:C=0.02 for biomass, OM/OC=1.57 for biomass
+                ! If the SAPRC biomass burning package is not used, add BB
+                ! organic aerosol emissions as e.g. emis_ant(i,k,j,p_e_orgj_bb),
+                ! instead of as ebu array instead
+                if ( config_flags%biomass_burn_opt /= BIOMASSB_SAPRC ) then
+                  !Use OM/OC of 1.25 for fossil and OM:OC of 1.57 for biomass
+                  ! O:C=0.06,H:C=1.8, N:C=0.02 for fossil : OM/OC=(16*0.06+12+14*0.02+12)/12=1.25
+                  !O:C=0.3 H:C=1.8, N:C=0.02 for biomass, OM/OC=1.57 for biomass
+                   chem(i,k,j,p_pcg1_b_c)  =  chem(i,k,j,p_pcg1_b_c)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*1.17
+                  chem(i,k,j,p_pcg2_b_c)  =  chem(i,k,j,p_pcg2_b_c)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*7.605
+                  chem(i,k,j,p_pcg1_f_c)  =  chem(i,k,j,p_pcg1_f_c)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*1.17
+                  chem(i,k,j,p_pcg2_f_c)  =  chem(i,k,j,p_pcg2_f_c)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*7.605
+                  chem(i,k,j,p_pcg1_b_o)  =  chem(i,k,j,p_pcg1_b_o)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*0.40
+                  chem(i,k,j,p_pcg2_b_o)  =  chem(i,k,j,p_pcg2_b_o)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*2.60
+                  chem(i,k,j,p_pcg1_f_o)  =  chem(i,k,j,p_pcg1_f_o)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*0.08
+                  chem(i,k,j,p_pcg2_f_o)  =  chem(i,k,j,p_pcg2_f_o)                        &
+                  +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*0.52
 
-         chem(i,k,j,p_pcg1_b_c)  =  chem(i,k,j,p_pcg1_b_c)                        &
-        +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*1.17
-        chem(i,k,j,p_pcg2_b_c)  =  chem(i,k,j,p_pcg2_b_c)                        &
-        +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*7.605
-        chem(i,k,j,p_pcg1_f_c)  =  chem(i,k,j,p_pcg1_f_c)                        &
-        +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*1.17
-        chem(i,k,j,p_pcg2_f_c)  =  chem(i,k,j,p_pcg2_f_c)                        &
-        +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*7.605
-        chem(i,k,j,p_pcg1_b_o)  =  chem(i,k,j,p_pcg1_b_o)                        &
-        +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*0.40
-        chem(i,k,j,p_pcg2_b_o)  =  chem(i,k,j,p_pcg2_b_o)                        &
-        +(emis_ant(i,k,j,p_e_orgi_bb)/1.57+emis_ant(i,k,j,p_e_orgj_bb)/1.57)*conv3*2.60
-        chem(i,k,j,p_pcg1_f_o)  =  chem(i,k,j,p_pcg1_f_o)                        &
-        +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*0.08
-        chem(i,k,j,p_pcg2_f_o)  =  chem(i,k,j,p_pcg2_f_o)                        &
-        +(emis_ant(i,k,j,p_e_orgi_a)/1.25+emis_ant(i,k,j,p_e_orgj_a)/1.25)*conv3*0.52
-
+                end if ! if ( config_flags%biomass_burn_opt /= BIOMASSB_SAPRC )
 
              end do
           end do
        end do
+       ! If the SAPRC biomass burning package is used, add BB organic aerosol
+       ! emissions as ebu(i,k,j,p_ebu_oc) instead of e.g.
+       ! emis_ant(i,k,j,p_e_orgj_bb), and allow the use of e_orgj instead of
+       ! e_orgj_a for anthropogenic emissions
+       if ( config_flags%biomass_burn_opt == BIOMASSB_SAPRC ) then
+         do j=jts,jte
+           do i=its,ite
+             do k=kts,kte
+               ! Use OM/OC of 1.25 for fossil and OM:OC of 1.57 for biomass
+               ! O:C=0.06,H:C=1.8, N:C=0.02 for fossil : OM/OC=(16*0.06+12+14*0.02+12)/12=1.25
+               ! O:C=0.3 H:C=1.8, N:C=0.02 for biomass, OM/OC=1.57 for biomass
+               conv3 = (dtstep/dz8w(i,k,j))*alt(i,k,j)*28/250*1e-3! Molecular weight of C(15)H(27)N(0.3)O(4.5)
+
+               chem(i,k,j,p_pcg1_b_c)  =  chem(i,k,j,p_pcg1_b_c) + (ebu(i,k,j,p_ebu_oc) / 1.57) * conv3 * 1.17
+               chem(i,k,j,p_pcg2_b_c)  =  chem(i,k,j,p_pcg2_b_c) + (ebu(i,k,j,p_ebu_oc) / 1.57) * conv3 * 7.605
+               chem(i,k,j,p_pcg1_f_c)  =  chem(i,k,j,p_pcg1_f_c)  &
+                 + (emis_ant(i,k,j,p_e_orgi) / 1.25 + emis_ant(i,k,j,p_e_orgi_a) / 1.25 &
+                 + emis_ant(i,k,j,p_e_orgj) / 1.25 + emis_ant(i,k,j,p_e_orgj_a) / 1.25) * conv3 * 1.17
+               chem(i,k,j,p_pcg2_f_c)  =  chem(i,k,j,p_pcg2_f_c) &
+                 + (emis_ant(i,k,j,p_e_orgi) / 1.25 + emis_ant(i,k,j,p_e_orgi_a) / 1.25 &
+                 + emis_ant(i,k,j,p_e_orgj) / 1.25 + emis_ant(i,k,j,p_e_orgj_a) / 1.25) * conv3 * 7.605
+               chem(i,k,j,p_pcg1_b_o)  =  chem(i,k,j,p_pcg1_b_o) + (ebu(i,k,j,p_ebu_oc) / 1.57) * conv3 * 0.40
+               chem(i,k,j,p_pcg2_b_o)  =  chem(i,k,j,p_pcg2_b_o) + (ebu(i,k,j,p_ebu_oc) / 1.57) * conv3 * 2.60
+               chem(i,k,j,p_pcg1_f_o)  =  chem(i,k,j,p_pcg1_f_o) &
+                 + (emis_ant(i,k,j,p_e_orgi) / 1.25 + emis_ant(i,k,j,p_e_orgi_a) / 1.25 &
+                 + emis_ant(i,k,j,p_e_orgj) / 1.25 + emis_ant(i,k,j,p_e_orgj_a) / 1.25) * conv3 * 0.08
+               chem(i,k,j,p_pcg2_f_o)  =  chem(i,k,j,p_pcg2_f_o) &
+                 + (emis_ant(i,k,j,p_e_orgi) / 1.25 + emis_ant(i,k,j,p_e_orgi_a) / 1.25 &
+                 + emis_ant(i,k,j,p_e_orgj) / 1.25 + emis_ant(i,k,j,p_e_orgj_a) / 1.25) * conv3 * 0.52
+
+             end do ! do j=jts,jte
+           end do ! do i=its,ite
+         end do ! do k=kts,kte
+       end if ! if ( config_flags%biomass_burn_opt == BIOMASSB_SAPRC ) then
       else
        do j=jts,jte
           do i=its,ite

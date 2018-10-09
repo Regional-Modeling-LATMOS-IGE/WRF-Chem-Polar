@@ -294,8 +294,7 @@ CONTAINS
         enddo
         enddo
         enddo
-      CASE (RADM2,RACM_KPP,RACM_MIM_KPP,SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
-           SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(12/03/2013): Added SAPRC 8 bin and non-aq on (04/07/2014)
+      CASE (RADM2,RACM_KPP,RACM_MIM_KPP, SAPRC99_KPP)
           do j=jts,jte
           do i=its,ite
            do k=kts,kte
@@ -448,6 +447,53 @@ CONTAINS
           enddo
           enddo
         endif
+!++lm New biomass burning emission package for SAPRC VBS2 mechanisms
+        CASE (SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)
+        if( biomass_burn_opt == BIOMASSB_SAPRC ) then
+          call wrf_debug(15,'adding fire emissions for SAPRC')
+          do j=jts,jte
+            do k=kts,kte
+              do i=its,ite
+                conv_rho =(r_q*4.828e-4*dtstep)/(rho_phy(i,k,j)*60.*dz8w(i,k,j))
+                chem(i,k,j,p_co) = chem(i,k,j,p_co) + ebu(i,k,j,p_ebu_co)*conv_rho
+                chem(i,k,j,p_no) = chem(i,k,j,p_no) + ebu(i,k,j,p_ebu_no)*conv_rho
+                chem(i,k,j,p_no2) = chem(i,k,j,p_no2) + ebu(i,k,j,p_ebu_no2)*conv_rho
+                chem(i,k,j,p_so2) = chem(i,k,j,p_so2) + ebu(i,k,j,p_ebu_so2)*conv_rho
+                chem(i,k,j,p_nh3) = chem(i,k,j,p_nh3) + ebu(i,k,j,p_ebu_nh3)*conv_rho
+                chem(i,k,j,p_ch4) = chem(i,k,j,p_ch4) + ebu(i,k,j,p_ebu_ch4)*conv_rho
+                chem(i,k,j,p_acet) = chem(i,k,j,p_acet) + ebu(i,k,j,p_ebu_acet)*conv_rho
+                chem(i,k,j,p_c2h6) = chem(i,k,j,p_c2h6) + ebu(i,k,j,p_ebu_c2h6)*conv_rho
+                chem(i,k,j,p_c3h8) = chem(i,k,j,p_c3h8) + ebu(i,k,j,p_ebu_c3h8)*conv_rho
+                chem(i,k,j,p_alk3) = chem(i,k,j,p_alk3) + ebu(i,k,j,p_ebu_alk3)*conv_rho
+                chem(i,k,j,p_alk4) = chem(i,k,j,p_alk4) + ebu(i,k,j,p_ebu_alk4)*conv_rho
+                chem(i,k,j,p_alk5) = chem(i,k,j,p_alk5) + ebu(i,k,j,p_ebu_alk5)*conv_rho
+                chem(i,k,j,p_aro1) = chem(i,k,j,p_aro1) + ebu(i,k,j,p_ebu_aro1)*conv_rho
+                chem(i,k,j,p_aro2) = chem(i,k,j,p_aro2) + ebu(i,k,j,p_ebu_aro2)*conv_rho
+                chem(i,k,j,p_bald) = chem(i,k,j,p_bald) + ebu(i,k,j,p_ebu_bald)*conv_rho
+                chem(i,k,j,p_ccho) = chem(i,k,j,p_ccho) + ebu(i,k,j,p_ebu_ccho)*conv_rho
+                chem(i,k,j,p_cco_oh) = chem(i,k,j,p_cco_oh) + ebu(i,k,j,p_ebu_cco_oh)*conv_rho
+                chem(i,k,j,p_ethene) = chem(i,k,j,p_ethene) + ebu(i,k,j,p_ebu_ethene)*conv_rho
+                chem(i,k,j,p_hcho) = chem(i,k,j,p_hcho) + ebu(i,k,j,p_ebu_hcho)*conv_rho
+                chem(i,k,j,p_hcooh) = chem(i,k,j,p_hcooh) + ebu(i,k,j,p_ebu_hcooh)*conv_rho
+                chem(i,k,j,p_hono) = chem(i,k,j,p_hono) + ebu(i,k,j,p_ebu_hono)*conv_rho
+                chem(i,k,j,p_isoprene) = chem(i,k,j,p_isoprene) + ebu(i,k,j,p_ebu_isoprene)*conv_rho
+                chem(i,k,j,p_mek) = chem(i,k,j,p_mek) + ebu(i,k,j,p_ebu_mek)*conv_rho
+                chem(i,k,j,p_meoh) = chem(i,k,j,p_meoh) + ebu(i,k,j,p_ebu_meoh)*conv_rho
+                chem(i,k,j,p_methacro) = chem(i,k,j,p_methacro) + ebu(i,k,j,p_ebu_methacro)*conv_rho
+                chem(i,k,j,p_mgly) = chem(i,k,j,p_mgly) + ebu(i,k,j,p_ebu_mgly)*conv_rho
+                chem(i,k,j,p_mvk) = chem(i,k,j,p_mvk) + ebu(i,k,j,p_ebu_mvk)*conv_rho
+                chem(i,k,j,p_ole1) = chem(i,k,j,p_ole1) + ebu(i,k,j,p_ebu_ole1)*conv_rho
+                chem(i,k,j,p_ole2) = chem(i,k,j,p_ole2) + ebu(i,k,j,p_ebu_ole2)*conv_rho
+                chem(i,k,j,p_phen) = chem(i,k,j,p_phen) + ebu(i,k,j,p_ebu_phen)*conv_rho
+                chem(i,k,j,p_prod2) = chem(i,k,j,p_prod2) + ebu(i,k,j,p_ebu_prod2)*conv_rho
+                chem(i,k,j,p_rcho) = chem(i,k,j,p_rcho) + ebu(i,k,j,p_ebu_rcho)*conv_rho
+                chem(i,k,j,p_rno3) = chem(i,k,j,p_rno3) + ebu(i,k,j,p_ebu_rno3)*conv_rho
+                chem(i,k,j,p_terp) = chem(i,k,j,p_terp) + ebu(i,k,j,p_ebu_terp)*conv_rho
+              enddo
+            enddo
+          enddo
+        endif
+!--lm
     CASE DEFAULT
        call wrf_debug(15,'nothing done with burn emissions for chem array')
     END SELECT emiss_select
