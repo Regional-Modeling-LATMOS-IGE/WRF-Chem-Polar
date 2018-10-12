@@ -1345,7 +1345,12 @@ CONTAINS
                 ! If the SAPRC biomass burning package is not used, add BB
                 ! organic aerosol emissions as e.g. emis_ant(i,k,j,p_e_orgj_bb),
                 ! instead of as ebu array instead
-                if ( config_flags%biomass_burn_opt /= BIOMASSB_SAPRC ) then
+                ! For the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP mechanism,
+                ! there are no SOAs from S/I/VOC, only "standard" SOAs, and all
+                ! primary emissions are tranferred to OC directly in
+                ! module_mosaic_addemiss
+                if ( config_flags%biomass_burn_opt /= BIOMASSB_SAPRC .and. &
+                   config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
                   !Use OM/OC of 1.25 for fossil and OM:OC of 1.57 for biomass
                   ! O:C=0.06,H:C=1.8, N:C=0.02 for fossil : OM/OC=(16*0.06+12+14*0.02+12)/12=1.25
                   !O:C=0.3 H:C=1.8, N:C=0.02 for biomass, OM/OC=1.57 for biomass
@@ -1375,7 +1380,12 @@ CONTAINS
        ! emissions as ebu(i,k,j,p_ebu_oc) instead of e.g.
        ! emis_ant(i,k,j,p_e_orgj_bb), and allow the use of e_orgj instead of
        ! e_orgj_a for anthropogenic emissions
-       if ( config_flags%biomass_burn_opt == BIOMASSB_SAPRC ) then
+       ! For the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP mechanism, there are
+       ! no SOAs from S/I/VOC in the mechanism, only "standard" SOAs, and all
+       ! primary emissions are tranferred to OC directly in
+       ! module_mosaic_addemiss
+       if ( config_flags%biomass_burn_opt == BIOMASSB_SAPRC .and. &
+            config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
          do j=jts,jte
            do i=its,ite
              do k=kts,kte
