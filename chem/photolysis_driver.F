@@ -22,6 +22,7 @@
                nref0, nw0, tuv_jmax0,                                    &
                ph_radfld, ph_adjcoe, ph_prate,                           &
                wc, zref,                                                 &
+               snowh, snowc, xice,                                       &
                tauaer1,tauaer2,tauaer3,tauaer4,                          &
                gaer1,gaer2,gaer3,gaer4,                                  &
                waer1,waer2,waer3,waer4,                                  &
@@ -100,6 +101,9 @@
          OPTIONAL,                                                     &
          INTENT(INOUT ) ::                                             &
            gd_cloud,gd_cloud2
+   real, dimension( ims:ime , jms:jme ),                               &
+            intent(in   ) :: snowh, snowc, xice
+
 !
 ! arrays that hold the aerosol optical properties
 !
@@ -181,6 +185,7 @@
                ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,         &
                ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob,&
                ph_n2o5,                                                &
+               snowh, snowc, xice,                                     &
                tauaer1,tauaer2,tauaer3,tauaer4,                        &
                gaer1,gaer2,gaer3,gaer4,                                &
                waer1,waer2,waer3,waer4,                                &

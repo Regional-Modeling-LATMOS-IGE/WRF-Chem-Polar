@@ -983,6 +983,7 @@
               config_flags%track_tuv_num,                                             &
               grid%radfld,grid%adjcoe,grid%phrate,                                    &
               grid%track_wc,grid%track_zref,                                          &
+              grid%snowh, grid%snowc, grid%xice,                                      &
               grid%tauaer1,grid%tauaer2,grid%tauaer3,grid%tauaer4,                    &
               grid%gaer1,grid%gaer2,grid%gaer3,grid%gaer4,                            &
               grid%waer1,grid%waer2,grid%waer3,grid%waer4,                            &

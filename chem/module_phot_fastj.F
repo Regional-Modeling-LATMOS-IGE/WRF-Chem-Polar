@@ -76,6 +76,7 @@
                ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,         &
                ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob,&
                ph_n2o5,                                                &
+               snowh, snowc, xice,                                     &
                tauaer1,tauaer2,tauaer3,tauaer4,                        &
                gaer1,gaer2,gaer3,gaer4,                                &
                waer1,waer2,waer3,waer4,                                &
@@ -165,6 +166,8 @@
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, 1:4 ),               &
          INTENT(IN ) ::                                             &
            l2aer,l3aer,l4aer,l5aer,l6aer,l7aer                      
+   REAL, DIMENSION( ims:ime , jms:jme ),                            &
+         INTENT(IN   ) :: snowh, snowc, xice
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, num_chem ),         &
          INTENT(INOUT ) ::                                chem
@@ -207,6 +210,8 @@
       real, dimension(kts:kte+1) :: zatw
  	     
       real valuej(kte,nphoto_fastj)
+      real snow_height, snow_cover, ice_fraction
+      integer if_fractseaice !config flag for fractional_seaice
 
       logical processingAerosols
 
@@ -328,6 +333,12 @@
 ! set lat, long
 	  sla = xlat(iclm,jclm)
 	  slo = xlong(iclm,jclm)
+! snow height and cover, ice cover, to set the UV albedo in photolysis
+! calculations
+          snow_height = snowh(iclm, jclm)
+          snow_cover = snowc(iclm, jclm)
+          ice_fraction = xice(iclm, jclm)
+          if_fractseaice = config_flags%fractional_seaice
 ! set column pressures, temperature, and ozone
 	  psfc = p8w(iclm,1,jclm) * 10. ! convert pascals to dynes/cm2
 	  do k = kts, lpar
@@ -348,6 +359,8 @@
 	  call interface_fastj(tmidh,sla,slo,julday,           &
            pbnd, psfc, temp, ozone,                        &
            dz, cloudmr, airdensity, relhum, zatw,          &
+           snow_height, snow_cover, ice_fraction,          &
+           if_fractseaice,                                 &
            iclm, jclm, lpar, jpnl,                         &
            curr_secs, valuej, cos_sza, processingAerosols, &
            sizeaer,extaer,waer,gaer,tauaer,l2,l3,l4,l5,l6,l7)
@@ -508,6 +521,8 @@
         subroutine interface_fastj(tmidh,sla,slo,julian_day,   &
              pbnd, psfc, temp, ozone,                          &
              dz, cloudmr, airdensity, relhum, zatw,            &
+             snow_height, snow_cover, ice_fraction,            &
+             if_fractseaice,                                   &
              isvode, jsvode, lpar, jpnl,                       &
       	     curr_secs, valuej, cos_sza, processingAerosols,   &
              sizeaer,extaer,waer,gaer,tauaer,l2,l3,l4,l5,l6,l7)
@@ -606,6 +621,12 @@
    real, dimension (nspint, kmaxd+1) :: l2,l3,l4,l5,l6,l7
    data wavmid     &
        / 0.30e-4, 0.40e-4, 0.60e-4 ,0.999e-04 /
+! Broadband UV albedo for snow-covered surfaces and for bare ground (unitless 0-1)
+   real, parameter ::  snowice_uvalb = 0.836 ! From Tanskanen and Manninen, 2007.
+   real, parameter ::  ground_uvalb = 0.055 ! From the original implementation of this module
+! Snow height (m), snow cover (unitless 0-1), ice fraction (unitless 0-1)
+   real snow_height, snow_cover, ice_fraction !snow height in meters
+  integer if_fractseaice !config flag for fractional_seaice
 !jdf
 	real pbnd(0:lpar), psfc
 	real temp(lpar), ozone(lpar), surface_albedo
@@ -724,7 +745,18 @@
 	   col_ozone(k) = ozone(k)
 	end do
 
- 	surface_albedo=0.055
+! Use a different surface albedo over snow- and ice-covered surfaces
+        if (ice_fraction >= 0.15) then ! if ice > 15% threshold (NSIDC)
+          if(if_fractseaice == 1) then ! if fractional sea ice
+            surface_albedo = snowice_uvalb * ice_fraction + (1.0 - ice_fraction) * ground_uvalb
+          else
+            surface_albedo = snowice_uvalb
+          endif
+        elseif( snow_height >= 0.01) then ! 10 cm threshold for snow-covered land from MOZART
+          surface_albedo = snow_cover * snowice_uvalb + (1.0 - snow_cover) * ground_uvalb
+        else
+          surface_albedo = ground_uvalb
+        end if
 
 ! set aerosol parameters needed by Fast-J	                         	         	
         if (processingAerosols) then
