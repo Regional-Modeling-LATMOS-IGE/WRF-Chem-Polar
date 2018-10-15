@@ -175,16 +175,6 @@ SUBROUTINE wesely_driver( id, ktau, dtstep, config_flags, current_month,  &
 
       CALL wrf_debug(15,'in dry_dep_wesely')
 
-      if( .not. chm_is_moz ) then
-         if( julday < 90 .or. julday > 270 ) then
-            iseason = 2
-            CALL wrf_debug(15,'setting iseason to 2')
-         else
-            iseason = 1
-         endif
-      end if
-
-
 tile_lat_loop : &
       do j = jts,jte 
 tile_lon_loop : &
@@ -193,7 +183,32 @@ tile_lon_loop : &
 
             iland = luse2usgs( ivgtyp(i,j) )
 !--
+            ! For mechanisms other than MOZART, set iseason based on julian day
+            if( .not. chm_is_moz ) then
+               if(xlat(i, j) >= 0) then ! Northern Hemisphere case
+                 if( julday < 90 .or. julday > 270 ) then
+                    iseason = 2
+                    CALL wrf_debug(15,'setting iseason to 2')
+                 else
+                    iseason = 1
+                 endif
+               else ! Southern Hemisphere case
+                 if( julday > 270 .or. julday < 90 ) then
+                    iseason = 2
+                    CALL wrf_debug(15,'setting iseason to 2')
+                 else
+                    iseason = 1
+                 endif
+               end if !if xlat(i, j) >= 0
+            end if
 
+            ! If snow height >= 10 cm or if the land type is ice, force iseason = 4
+            ! ("winter, snow on ground and subfreezing" category)
+            if( snowh(i,j) >= .01 .or. iland == isice_temp) then
+               iseason = 4
+            end if
+
+            ! For MOZART mechanisms, set iseason based on the external dataset seasonal_wes
             if( chm_is_moz ) then
                if( snowh(i,j) < .01 ) then 
                   iseason = seasonal_pft(id)%seasonal_wes(i,j,iland,current_month)
@@ -201,6 +216,7 @@ tile_lon_loop : &
                   iseason = 4
                endif
             end if
+
             ta    = tsk(i,j)
             rad   = gsw(i,j)
             vegfrac = vegfra(i,j)
