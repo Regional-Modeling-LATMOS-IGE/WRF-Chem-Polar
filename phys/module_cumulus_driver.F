@@ -1600,6 +1600,9 @@ CONTAINS
              ,RQSCUTEN=rqscuten                                 &
              ,F_QV=f_qv,F_QC=f_qc,F_QR=f_qr                     &
              ,F_QI=f_qi,F_QS=f_qs                               &
+             ,CLDFRA_DP_KF=cldfra_dp                            & ! ckay for sub-grid cloud
+             ,CLDFRA_SH_KF=cldfra_sh                            &
+             ,QC_KF=QC_CU,QI_KF=QI_CU                           &
              )
         
         
