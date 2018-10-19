@@ -352,6 +352,29 @@ tile_lon_loop : &
             end do
          end do
       end if
+
+! For SAPRC99 mechanisms !LMarelle
+      if( config_flags%chem_opt == SAPRC99_KPP .or. &
+          config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP .or. &
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP .or. &
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP) then
+        do j=jts,jte
+          do i=its,ite
+            ! From MOZART mechanisms
+            ddvel(i,j,p_c2h6)    = 0.
+            ddvel(i,j,p_c3h6)    = 0.
+            ddvel(i,j,p_c3h8)    = 0.
+            ddvel(i,j,p_mek)     = 0.
+            ddvel(i,j,p_ch4)     = 0.
+            ddvel(i,j,p_co2)     = 0.
+            ! From CRIMECH and RADM2 mechanisms
+            ddvel(i,j,p_hcl)     = ddvel(i,j,p_hno3)
+            ! This one should also be set to 0 I think
+            ddvel(i,j,p_mvk)         = 0.
+          end do
+        end do
+      end if
+
 !!!!TUCCELLA
      if  (config_flags%chem_opt == RACM_SOA_VBS_KPP .OR.           &
           config_flags%chem_opt == RACM_SOA_VBS_HET_KPP .OR.           &
@@ -3142,6 +3165,33 @@ is_cbm4_kpp : &
           dvj(p_bzco_o2) = 1.000E-01
           dvj(p_ma_rco3) = 1.420E-01
           endif
+
+! Add constants missing for SAPRC99 mechanisms !LMarelle
+     if( config_flags%chem_opt == SAPRC99_KPP .or. &
+         config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP .or. &
+         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP .or. &
+         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP) then
+       ! acet, from MOZART
+       hstar(p_acet)  = 27.
+       dhr(p_acet)    = 5300.
+       f0(p_acet)     = small_value
+       dvj(p_acet)    = 0.1312
+       ! hcooh, from crimech
+       hstar(p_hcooh) = 311.
+       dhr(p_hcooh)   =  5241.
+       f0(p_hcooh)    = .1
+       dvj(p_hcooh)   = 0.098
+       ! meoh, from crimech & MOZART (ch3oh)
+       hstar(p_meoh)  = 220.
+       dhr(p_meoh)    = 4934.
+       f0(p_meoh)     = small_value
+       dvj(p_meoh)    = 0.1767
+       ! cres, from csl
+       hstar(p_cres)  = 4.00E+5
+       dhr(p_cres)    = 0.
+       f0(p_cres)     = 0.
+       dvj(p_cres)    = 0.096
+     end if
 
 !hstar for SOA species assumed 2700 following CMU approach
      if(p_pcg1_b_c.gt.1)  hstar(p_pcg1_b_c) =2.7E+3
