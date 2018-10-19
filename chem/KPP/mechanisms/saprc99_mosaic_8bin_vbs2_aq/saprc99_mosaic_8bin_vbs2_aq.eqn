@@ -370,23 +370,16 @@
  0.659MEK + 0.259PROD2 + 
  0.012METHACRO : 2.085D-11 ;
 {218} C2H2 + O3 = 0.5OH + 1.5HO2 + 
- 1.5CO + 0.5CO2 : 2.20D-10 ;
+ 1.5CO + 0.5CO2 : ARR(2.00D-14,4400.0_dp,0.0_dp,TEMP)  ;
 {219} C3H6 + OH = 0.984RO2_R + 0.016RO2_N +
- 0.984HCHO + 0.984CCHO + 0.048XC +psd1 : 2.20D-10 ;
+ 0.984HCHO + 0.984CCHO + 0.048XC +psd1 : ARR(4.85D-12,-504.0_dp,0.0_dp,TEMP) ;
 {220} C3H6 + O3 = 0.32OH + 0.06HO2 + 
  0.26C_O2 + 0.51CO + 0.135CO2 + 0.5HCHO +
- 0.5CCHO + 0.185HCOOH + 0.17CCO_OH + 0.07XC : 2.20D-10 ;
+ 0.5CCHO + 0.185HCOOH + 0.17CCO_OH + 0.07XC : ARR(5.51D-15,1878.0_dp,0.0_dp,TEMP) ;
 {221} C3H6 + NO3 = 0.949RO2_R + 0.051RO2_N + 
- 2.693XC + 1.0XN : 2.20D-10 ;
+ 2.693XC + 1.0XN :  ARR(4.59D-13,1156.0_dp,0.0_dp,TEMP)  ;
 {222} C3H6 + O3P = 0.45RCHO + 0.55MEK + 
- 0.55XC : 2.20D-10 ;
-{223} SO2 = H2SO4 : 2.20D-10 ;
-{224} HO2 = PROD : 7.0D-7 ;
-{225} SO2 = PROD : 2.20D-10 ;
-{226} H2SO4 = PROD : 2.20D-10 ;
-{227} HNO3 = PROD : 2.20D-10 ;
-{228} H2O2 = PROD : 2.20D-10 ;
-{229} CO2 = PROD : 7.0D-7 ;
+ 0.55XC : ARR(1.18D-11,324.0_dp,0.0_dp,TEMP) ; 
 {230} ALK4 + OH = ant1_c + ALK4 + OH                   : Keff(5.946D-12,91.0_dp,0.0_dp,TEMP,nume,den,0.011_dp,0.022_dp) ;
 {231} ALK5 + OH = ant1_c + ALK5 + OH                   : Keff(1.112D-11,52.0_dp,0.0_dp,TEMP,nume,den,0.064_dp,0.128_dp) ;
 {232} OLE1 + OH = ant1_c + OLE1 + OH                   : Keff(7.095D-12,-451.0_dp,0.0_dp,TEMP,nume,den,0.0002_dp,0.0012_dp) ;
