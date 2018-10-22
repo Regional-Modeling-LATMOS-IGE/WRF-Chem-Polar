@@ -24,6 +24,23 @@
        +y2*(1-X1/(X1 + X2 + 1.0e-35 )))
     END FUNCTION Keff2
 !__________________________________________________
+
+
+!LMarelle: from MOZART, for DMS
+REAL(KIND=dp) FUNCTION usr24( temp, c_m )
+
+    REAL(KIND=dp), INTENT(IN) :: temp
+    REAL(KIND=dp), INTENT(IN) :: c_m
+
+    REAL(KIND=dp) :: ko, wrk
+
+    wrk   = .21_dp*c_m
+    ko    = 1._dp + 5.5e-31_dp*exp( 7460._dp/temp )*wrk
+    usr24 = 1.7e-42_dp*exp( 7810._dp/temp )*wrk/ko
+
+END FUNCTION usr24
+
+
 #ENDINLINE
 
 

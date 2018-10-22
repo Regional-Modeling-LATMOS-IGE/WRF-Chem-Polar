@@ -396,6 +396,9 @@
 {243} SESQ + O3 = biog1_c + SESQ + O3                  : Keff2(6.21D-17,nume,den,0.0163_dp,0.0816_dp) ;
 {244} SESQ + NO3 = 0.0816biog1_c + SESQ + NO3          : 8.29D-12 ;
 
+{245} DMS+OH=SO2                     : ARR2(9.6e-12_dp, 234._dp, TEMP) ;
+{246} DMS+OH=.5 SO2+.5 HO2           : usr24( temp, c_m ) ;
+{247} DMS+NO3=SO2+HNO3               : ARR2(1.9e-13_dp, -520._dp, TEMP) ;
 
 
 
