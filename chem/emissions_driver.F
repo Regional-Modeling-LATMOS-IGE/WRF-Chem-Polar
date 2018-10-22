@@ -93,6 +93,7 @@ CONTAINS
   USE gocart_dust
   USE gocart_dust_afwa
   USE gocart_seasalt
+  USE module_nightingale_dmsemis, only: nightingale_dmsemis
   USE uoc_dust  
   USE module_dms_emis
   USE module_mosaic_addemiss
@@ -777,6 +778,14 @@ CONTAINS
          ids,ide, jds,jde, kds,kde,                                        &
          ims,ime, jms,jme, kms,kme,                                        &
          its,ite, jts,jte, kts,kte                                         )
+      CASE (DMS_NIGHTINGALE)
+        CALL wrf_debug(15,'Nightingale dms emissions')
+        call nightingale_dmsemis( id, dtstep, dz8w, config_flags,   &
+         u_phy, v_phy, rho_phy, chem,emis_ant,alt,                  &
+         u10, v10, xland, tsk,                                      &
+         ids,ide, jds,jde, kds,kde,                                 &
+         ims,ime, jms,jme, kms,kme,                                 &
+         its,ite, jts,jte, kts,kte                                  )
       CASE DEFAULT 
         CALL wrf_debug(15,'no dms emissions')
       END SELECT dms_select
