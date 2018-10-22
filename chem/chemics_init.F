@@ -435,6 +435,13 @@ call wrf_message("**************************************************************
       call wrf_error_fatal( trim(message_txt) )
    endif
 
+   !LMarelle: Add a condition on emiss_opt for Nightingale DMS emissions
+   if ( config_flags%dmsemis_opt == 2 .and. (config_flags%emiss_opt /= 13 &
+        .and. config_flags%emiss_opt /= 10) ) then
+      call wrf_error_fatal ('chemics_init: error, nightingale_dmsemis (dmsemis_opt = 2) &
+                            requires e_dms_oc to be defined in emis_ant (emiss_opt = 13 or 10)')
+   endif
+
     IF ( config_flags%chem_opt == 0 .AND. config_flags%aer_ra_feedback .NE. 0 ) THEN
 !       config_flags%aer_ra_feedback = 0
         call wrf_error_fatal(" ERROR: CHEM_INIT: FOR CHEM_OPT = 0, AER_RA_FEEDBACK MUST = 0 ")
