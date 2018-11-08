@@ -39,7 +39,65 @@ REAL(KIND=dp) FUNCTION usr24( temp, c_m )
     usr24 = 1.7e-42_dp*exp( 7810._dp/temp )*wrk/ko
 
 END FUNCTION usr24
+!__________________________________________________
 
+REAL(KIND=dp) FUNCTION  RACM_THERMAL(temp, A0, B0)
+!LMarelle: from PACT-1d
+!////   RACM2 reaction rates have the form K = A * exp(-B / T)
+!// for example - for the reaction: HO+O3 -> O2 + O2 
+!// rate_constant = 1.70 x 10-12 exp(-940/T)
+!// A0 = 1.70 x 10-12
+!// B0 = 940
+  REAL(KIND=dp), INTENT(IN) :: temp
+  REAL(KIND=dp), INTENT(IN) :: A0
+  REAL(KIND=dp), INTENT(IN) :: B0
+
+  RACM_THERMAL = (A0) * exp(-(B0)/temp)
+
+END FUNCTION RACM_THERMAL
+!__________________________________________________
+
+REAL(KIND=dp) FUNCTION RACM_TROE(temp,c_m,K0,N,KINF,M)
+!LMarelle: from PACT-1d
+!//Following the definition in the NASA JPL data eval 2011, section 2.1
+!//The rate constant is given by  k_f([M],T)
+!//k_0_T = K0 * (T/300.)**(-N)
+!//k_inf_T = KINF * (T/300.)**(-M)
+!//FACTOR = [1+(log10(k_0_T AIR_CONC/k_inf_T))**2]**(-1)
+!//rate_constant = (k_0_T AIR_CONC )/ (1 + (k_0_T AIR_CONC/k_inf_T) ) * 0.6**(FACTOR)
+  REAL(KIND=dp), INTENT(IN) :: temp
+  REAL(KIND=dp), INTENT(IN) :: c_m
+  REAL(KIND=dp), INTENT(IN) :: K0
+  REAL(KIND=dp), INTENT(IN) :: N
+  REAL(KIND=dp), INTENT(IN) :: KINF
+  REAL(KIND=dp), INTENT(IN) :: M
+  REAL(KIND=dp)             :: k_0_T, k_inf_T, FACTOR
+
+  INTRINSIC LOG10
+
+  k_0_T   = K0 * (temp/300._dp)**(-N)
+  k_inf_T = KINF * (temp/300._dp)**(-M)
+  FACTOR = ( 1._dp + ( log10( k_0_T*c_m/k_inf_T ) )**2._dp )**(-1._dp)
+  RACM_TROE = (k_0_T*c_m)/(1._dp+(k_0_T*c_m/k_inf_T)) * 0.6_dp**(FACTOR) 
+
+END FUNCTION RACM_TROE
+!__________________________________________________
+
+!LMarelle: add these surface reaction rates as placeholders, in the end they
+! should be passed from WRF-Chem to KPP
+REAL(KIND=dp) FUNCTION surface_reaction_rates(ii)
+  INTEGER, INTENT(IN) :: ii
+  surface_reaction_rates = 0._dp
+
+END FUNCTION surface_reaction_rates
+
+!LMarelle: add these photolysis rates as placeholders, in the end they
+! should be passed from WRF-Chem to KPP
+REAL(KIND=dp) FUNCTION jrates(p_specname)
+  character(len = *), INTENT(IN) :: p_specname
+  jrates = 0._dp
+
+END FUNCTION jrates
 
 #ENDINLINE
 

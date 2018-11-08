@@ -375,6 +375,84 @@ tile_lon_loop : &
           end do
         end do
       end if
+! For SAPRC99 mechanisms with halogens, set deposition to 0 for all new species
+      if( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) then
+        do j=jts,jte
+          do i=its,ite
+            ddvel(i,j,p_c2h6)    = 0.
+            ddvel(i, j, p_oclo) = 0.0
+            ddvel(i, j, p_cl) = 0.0
+            ddvel(i, j, p_clo) = 0.0
+            ddvel(i, j, p_cl2) = 0.0
+            ddvel(i, j, p_hocl) = 0.0
+            ddvel(i, j, p_clno2) = 0.0
+            ddvel(i, j, p_clono2) = 0.0
+            ddvel(i, j, p_bro) = 0.0
+            ddvel(i, j, p_br) = 0.0
+            ddvel(i, j, p_br2) = 0.0
+            ddvel(i, j, p_hobr) = 0.0
+            ddvel(i, j, p_brno2) = 0.0
+            ddvel(i, j, p_brono2) = 0.0
+            ddvel(i, j, p_io) = 0.0
+            ddvel(i, j, p_i) = 0.0
+            ddvel(i, j, p_hoi) = 0.0
+            ddvel(i, j, p_ino2) = 0.0
+            ddvel(i, j, p_i2) = 0.0
+            ddvel(i, j, p_brcl) = 0.0
+            ddvel(i, j, p_icl) = 0.0
+            ddvel(i, j, p_ibr) = 0.0
+            ddvel(i, j, p_hcl) = 0.0
+            ddvel(i, j, p_clono) = 0.0
+            ddvel(i, j, p_ch3) = 0.0
+            ddvel(i, j, p_hco) = 0.0
+            ddvel(i, j, p_cloo) = 0.0
+            ddvel(i, j, p_chcl3) = 0.0
+            ddvel(i, j, p_ccl3) = 0.0
+            ddvel(i, j, p_c2h5o2) = 0.0
+            ddvel(i, j, p_c2h5o) = 0.0
+            ddvel(i, j, p_c2h4o2) = 0.0
+            ddvel(i, j, p_ccl4) = 0.0
+            ddvel(i, j, p_ch3ccl3) = 0.0
+            ddvel(i, j, p_ch2ccl3) = 0.0
+            ddvel(i, j, p_ch3sch3) = 0.0
+            ddvel(i, j, p_ch3sch2) = 0.0
+            ddvel(i, j, p_ch3br) = 0.0
+            ddvel(i, j, p_ch2br) = 0.0
+            ddvel(i, j, p_broo) = 0.0
+            ddvel(i, j, p_ch32sbr) = 0.0
+            ddvel(i, j, p_ch3soch3) = 0.0
+            ddvel(i, j, p_hi) = 0.0
+            ddvel(i, j, p_iono2) = 0.0
+            ddvel(i, j, p_oio) = 0.0
+            ddvel(i, j, p_ino) = 0.0
+            ddvel(i, j, p_ch2br2) = 0.0
+            ddvel(i, j, p_chbr2) = 0.0
+            ddvel(i, j, p_chbr3) = 0.0
+            ddvel(i, j, p_ch2brcl) = 0.0
+            ddvel(i, j, p_chbrcl) = 0.0
+            ddvel(i, j, p_h) = 0.0
+            ddvel(i, j, p_hbr) = 0.0
+            ddvel(i, j, p_cbr3) = 0.0
+            ddvel(i, j, p_iaer) = 0.0
+            ddvel(i, j, p_braer) = 0.0
+            ddvel(i, j, p_claer) = 0.0
+            ddvel(i, j, p_nocl) = 0.0
+            ddvel(i, j, p_brno) = 0.0
+            ddvel(i, j, p_obro) = 0.0
+            ddvel(i, j, p_ch3cl) = 0.0
+            ddvel(i, j, p_ch3ccl2) = 0.0
+            ddvel(i, j, p_ch2cl) = 0.0
+            ddvel(i, j, p_ch2i2) = 0.0
+            ddvel(i, j, p_ch2i) = 0.0
+            ddvel(i, j, p_ch3i) = 0.0
+            ddvel(i, j, p_ch2icl) = 0.0
+            ddvel(i, j, p_i2o2) = 0.0
+            ddvel(i, j, p_ixoy) = 0.0
+            ddvel(i, j, p_hio3) = 0.0
+          end do
+        end do
+      end if
+
 
 !!!!TUCCELLA
      if  (config_flags%chem_opt == RACM_SOA_VBS_KPP .OR.           &
