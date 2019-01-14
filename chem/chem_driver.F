@@ -876,6 +876,9 @@
               current_month,                                                               &
          ! stuff for LNOx emissions
              grid%ht, grid%refl_10cm, grid%ic_flashrate, grid%cg_flashrate,                 &
+         ! stuff for Br2 emissions from snow
+              grid%snowc, grid%xice, grid%coszen, grid%drydepflx_o3, grid%drydepflx_hobr,  &
+              grid%drydepflx_brno3, grid%drydepflx_hbr, grid%drydepflx_br2,                &
          ! stuff for aircraft emissions
               emis_aircraft,                                                               &
          ! stuff for the GHG fluxes
@@ -1059,6 +1062,9 @@
                  grid%ahno3,grid%anh3,grid%cvaro1,grid%cvaro2,grid%cvalk1,grid%cvole1,&
                  grid%cvapi1,grid%cvapi2,grid%cvlim1,grid%cvlim2,grid%dep_vel_o3,     &
                  grid%ddlen,grid%ddflx, &
+               ! Dry deposition fluxes needed for Br2 emissions from snow
+                 grid%drydepflx_o3, grid%drydepflx_hobr, grid%drydepflx_brno3,        &
+                 grid%drydepflx_hbr, grid%drydepflx_br2, grid%dvel_o3,                &
                  emis_ant,ebu_in,                                                     &
                  config_flags%sf_urban_physics,numgas,current_month,dvel,grid%snowh,  &
                  grid%dustdrydep_1,grid%dustdrydep_2,grid%dustdrydep_3,               &

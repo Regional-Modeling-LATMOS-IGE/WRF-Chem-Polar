@@ -601,6 +601,15 @@ state    real  ddlen          ijo     misc        1         Z      r       "DRY_
 state    real  ddflx          ijo     misc        1         Z      r       "DRY_DEP_FLUX"      "dry deposition flux"             "mol or ug m^-2"
 state    real  wdflx          ijo     misc        1         Z      r       "WET_DEP_FLUX"      "column wet scavening flux"       "mmol or ug m^-2"
 
+# Deposition fluxes used to diagnose halogen emissions from snow
+state    real  drydepflx_o3    ij     misc        1         Z      rh      "DRYDEPFLX_O3"      "O3 dry deposition flux"          "mol m^-2 s^-1"
+state    real  drydepflx_hobr  ij     misc        1         Z      rh      "DRYDEPFLX_HOBR"    "HOBr dry deposition flux"        "mol m^-2 s^-1"
+state    real  drydepflx_brno3 ij     misc        1         Z      rh      "DRYDEPFLX_BRNO3"   "BrNO3 dry deposition flux"       "mol m^-2 s^-1"
+state    real  drydepflx_hbr   ij     misc        1         Z      rh      "DRYDEPFLX_HBR"     "HBr dry deposition flux"         "mol m^-2 s^-1"
+state    real  drydepflx_br2   ij     misc        1         Z      rh      "DRYDEPFLX_BR2"     "Br2 dry deposition flux"         "mol m^-2 s^-1"
+# Deposition velocity of O3
+state    real  dvel_o3         ij     misc        1         Z      rh      "DVEL_O3"           "O3 deposition velocity"          "cm s^-1"
+
 #
 state    real  e_bio          ijo     misc        1         Z      r        "E_BIO"             "EMISSIONS"             "ppm m/min"
 state    real  sebio_iso      ij      misc        1         -      i06r     "sebio_iso"         "Reference biog emiss"  "mol km^-2 hr^-1"

@@ -21,6 +21,9 @@ CONTAINS
                anh3,cvaro1,cvaro2,                                        &
                cvalk1,cvole1,cvapi1,cvapi2,cvlim1,cvlim2,dep_vel_o3,      &
                ddlen,ddflx,                                               &
+               ! Dry deposition fluxes needed for Br2 emissions from snow
+               drydepflx_o3, drydepflx_hobr, drydepflx_brno3,             &
+               drydepflx_hbr, drydepflx_br2, dvel_o3,                     &
                emis_ant,ebu_in,                                           &
                sf_urban_physics,numgas,current_month,dvel,snowh,          & 
                dustdrydep_1,dustdrydep_2,dustdrydep_3,                    &
@@ -138,6 +141,14 @@ CONTAINS
    REAL,  DIMENSION( ims:ime , jms:jme )                   ,    &
           INTENT(OUT) ::                                      &
                                                      dep_vel_o3
+   ! Dry deposition fluxes of O3, HOBr, BrNO3, and HBr (mol/m2/s)
+   REAL,  DIMENSION(ims:ime, jms:jme),                          &
+          INTENT(INOUT) :: drydepflx_o3, drydepflx_hobr,        &
+          drydepflx_brno3, drydepflx_hbr, drydepflx_br2
+   ! O3 deposition velocity (cm/s)
+   REAL,  DIMENSION(ims:ime, jms:jme),                          &
+          INTENT(INOUT) :: dvel_o3
+
    REAL,  DIMENSION( ims:ime , jms:jme , num_chem )                   ,    &
           INTENT(INOUT) ::                                      &
                     ddlen, & !dry deposition length
@@ -454,6 +465,32 @@ CONTAINS
        enddo
        enddo
        end if
+
+! Calculate deposition fluxes for bromine species and O3, and the deposition
+! velocity of O3
+       IF (config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) THEN
+         DO i = its, ite
+           DO j = jts, jte
+             drydepflx_o3(i, j) = chem(i, kts, j, p_o3) * p_phy(i, kts, j)          &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_o3) * 1.E-6
+
+             drydepflx_hobr(i, j) = chem(i, kts, j, p_hobr) * p_phy(i, kts, j)      &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hobr) * 1.E-6
+
+             drydepflx_brno3(i, j) = chem(i, kts, j, p_brono2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_brono2) *  1.E-6
+
+             drydepflx_hbr(i, j) = chem(i, kts, j, p_hbr) * p_phy(i, kts, j)        &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hbr) * 1.E-6
+
+             drydepflx_br2(i, j) = chem(i, kts, j, p_br2) * p_phy(i, kts, j)        &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_br2) * 1.E-6
+
+             dvel_o3(i,j) = m2cm*ddvel(i,j,p_o3)
+
+           ENDDO
+         ENDDO
+       ENDIF
 
        if (config_flags%aer_aerodynres_opt == 2) then
           ! use aerodynamic resistance from center of layer kts to surface

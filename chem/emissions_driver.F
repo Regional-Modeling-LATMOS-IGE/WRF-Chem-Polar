@@ -67,6 +67,9 @@ CONTAINS
          ht, refl_10cm,                                                    &
          ic_flashrate, cg_flashrate,                                       &
          ! end stuff for LNOx emissions
+         ! stuff for Br2 emissions from snow
+         snowc, xice, coszen, drydepflx_o3, drydepflx_hobr,                &
+         drydepflx_brno3, drydepflx_hbr, drydepflx_br2,                    &
          ! stuff for aircraft emissions
          emis_aircraft,                                                    &
          ! stuff for GHG fluxes
@@ -94,6 +97,7 @@ CONTAINS
   USE gocart_dust_afwa
   USE gocart_seasalt
   USE module_nightingale_dmsemis, only: nightingale_dmsemis
+  USE module_airsnow_emissions, only: airsnow_emissions
   USE uoc_dust  
   USE module_dms_emis
   USE module_mosaic_addemiss
@@ -337,6 +341,10 @@ CONTAINS
      REAL, DIMENSION( ims:ime,          jms:jme ),           INTENT(IN   ) :: ht, ic_flashrate, cg_flashrate
      REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),           INTENT(IN   ) :: refl_10cm
 ! end stuff for lightning NOx
+! stuff for Br2 emissions from snow
+      REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: snowc, xice, coszen, drydepflx_o3, &
+                            drydepflx_hobr, drydepflx_brno3, drydepflx_hbr, drydepflx_br2
+
 !
 ! Local variables...
 !
@@ -789,6 +797,21 @@ CONTAINS
       CASE DEFAULT 
         CALL wrf_debug(15,'no dms emissions')
       END SELECT dms_select
+
+      !LMarelle For the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP mechanism, add
+      ! Br2 emissions from sow
+      IF ( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+        CALL wrf_debug(15, 'Br2 emissions from snow')
+        CALL airsnow_emissions( id, dtstep, dz8w,  rho_phy,         &
+         chem, snowh, snowc, tsk, xice, coszen, drydepflx_o3,       &
+         drydepflx_hobr, drydepflx_brno3, drydepflx_hbr,            &
+         drydepflx_br2,                                             &
+         ids,ide, jds,jde, kds,kde,                                 &
+         ims,ime, jms,jme, kms,kme,                                 &
+         its,ite, jts,jte, kts,kte                                  )
+      ENDIF
+
+
 
     ksub=0
 !!! ***********   FIRE AND CHEM ****************************************

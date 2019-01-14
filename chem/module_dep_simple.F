@@ -389,10 +389,10 @@ tile_lon_loop : &
             ddvel(i, j, p_clono2) = 0.0
             ddvel(i, j, p_bro) = 0.0
             ddvel(i, j, p_br) = 0.0
-            ddvel(i, j, p_br2) = 0.0
-            ddvel(i, j, p_hobr) = 0.0
+!            ddvel(i, j, p_br2) = 0.0
+!            ddvel(i, j, p_hobr) = 0.0
             ddvel(i, j, p_brno2) = 0.0
-            ddvel(i, j, p_brono2) = 0.0
+!            ddvel(i, j, p_brono2) = 0.0
             ddvel(i, j, p_io) = 0.0
             ddvel(i, j, p_i) = 0.0
             ddvel(i, j, p_hoi) = 0.0
@@ -431,7 +431,7 @@ tile_lon_loop : &
             ddvel(i, j, p_ch2brcl) = 0.0
             ddvel(i, j, p_chbrcl) = 0.0
             ddvel(i, j, p_h) = 0.0
-            ddvel(i, j, p_hbr) = 0.0
+ !           ddvel(i, j, p_hbr) = 0.0
             ddvel(i, j, p_cbr3) = 0.0
             ddvel(i, j, p_iaer) = 0.0
             ddvel(i, j, p_braer) = 0.0
@@ -3271,6 +3271,33 @@ is_cbm4_kpp : &
        dhr(p_cres)    = 0.
        f0(p_cres)     = 0.
        dvj(p_cres)    = 0.096
+       ! Additional constants for SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP only
+       IF( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) THEN
+         ! hstar and dhr from Sander (2015, doi:10.5194/acp-15-4399-2015)
+         ! f0 from Toyota et al. (2011, doi:10.5194/acp-11-3949-2011)
+         ! dvj is 1/sqrt(molar_weight) with the molar weight in g/mol
+         ! Br2, Sander 2011 value
+         hstar(p_br2) = 7.3E+4
+         dhr(p_br2) = 4400.
+         f0(p_br2) = 1.
+         dvj(p_br2) = 0.079
+         ! HOBr,  Mozurkewich 1995 value
+         hstar(p_hobr) = 1.82E+5
+         dhr(p_hobr) = 4000.
+         f0(p_hobr) = 1.
+         dvj(p_hobr) = 0.102
+         ! HBr, Dean 1992 value
+         hstar(p_hbr) = 2.43E+6
+         dhr(p_hbr) = 370.
+         f0(p_hbr) = 0.
+         dvj(p_hbr) = 0.111
+         ! BrONO2, assuming same Henry's law constants as HBr, following Toyota
+         ! et al.  (2011, doi:10.5194/acp-11-3949-2011)
+         hstar(p_brono2) = 2.43E+6
+         dhr(p_brono2) = 370.
+         f0(p_brono2) = 1.
+         dvj(p_brono2) = 0.084
+       END IF
      end if
 
 !hstar for SOA species assumed 2700 following CMU approach
