@@ -1431,6 +1431,13 @@ state    real  ph_hobr         ikj     misc        1         -      rh      "PHO
 state    real  ph_brno2        ikj     misc        1         -      rh      "PHOTR254"              "brno2 photolysis rate"      "min{-1}"
 state    real  ph_brono2_br    ikj     misc        1         -      rh      "PHOTR255"              "brono2_br photolysis rate"  "min{-1}"
 state    real  ph_brono2_bro   ikj     misc        1         -      rh      "PHOTR256"              "brono2_bro photolysis rate" "min{-1}"
+# SAPRC99 with halogens, heterogeneous reaction rates, highjacking the photolysis coupling with KPP
+state    real  ph_het_hobr     ikj     misc        1         -      rh      "PHOTR257"              "HOBr het reaction rate"   "s-1"
+state    real  ph_het_brono2   ikj     misc        1         -      rh      "PHOTR258"              "BrONO2 het reaction rate" "s-1"
+state    real  ph_het_hcl      ikj     misc        1         -      rh      "PHOTR259"              "HCl het reaction rate"    "s-1"
+state    real  ph_het_hbr      ikj     misc        1         -      rh      "PHOTR260"              "HBr het reaction rate"    "s-1"
+state    real  ph_het_n2o5     ikj     misc        1         -      rh      "PHOTR261"              "N2O5 het reaction rate"   "s-1"
+
 # photolysis rad field diagnostic variables
 state    real  ph_par          ikj     misc        1         -      -        "ph_par"                "Photosynthetic Active Radiation"  "W m-2"
 state    real  ph_erythema     ikj     misc        1         -      -        "ph_erythema"           "Erythema Action Spectrum"         "W m-2"

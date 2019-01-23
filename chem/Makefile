@@ -88,6 +88,7 @@ MODULES =                                 \
         module_data_uoc_wd.o              \
 	module_nightingale_dmsemis.o      \
 	module_airsnow_emissions.o        \
+	module_mosaic_set_heterogeneous.o \
         module_mosaic_addemiss.o          \
         module_mosaic_initmixrats.o       \
         module_mosaic_support.o           \

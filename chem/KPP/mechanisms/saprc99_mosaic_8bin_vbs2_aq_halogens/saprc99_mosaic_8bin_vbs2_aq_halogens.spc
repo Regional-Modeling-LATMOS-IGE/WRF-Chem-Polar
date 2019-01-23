@@ -138,7 +138,6 @@
  H = IGNORE;         
  HBr = IGNORE;       
  CBr3 = IGNORE;      
- IAer  = IGNORE;     
  BrAer = IGNORE;     
  ClAer = IGNORE;     
  NOCl = IGNORE;      

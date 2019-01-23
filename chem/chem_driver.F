@@ -57,6 +57,7 @@
   USE module_cu_camzm_driver, only: zm_conv_tend_2
   USE module_cam_mam_gas_wetdep_driver, only: cam_mam_gas_wetdep_driver
   USE module_trajectory, only: trajectory_dchm_tstep_init, trajectory_dchm_tstep_set
+  USE module_mosaic_set_heterogeneous, only: mosaic_set_heterogeneous
 
   IMPLICIT NONE
 
@@ -1214,6 +1215,19 @@
      n2o5_het(its:ite,kts:kte,jts:jte)=0.
 ! Calculate rate of n2o5 hydrolysis 
      call wrf_debug(15,'calling calc_het_n2o5')
+
+!LMarelle - Calculate heterogeneous reaction rates for the MOSAIC halogen
+!mechanism
+     if(config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+       call wrf_debug(15,'calling mosaic_set_heterogeneous')
+       call mosaic_set_heterogeneous(                                  &
+        chem, t_phy, p_phy, grid%alt,                                  &
+        grid%ph_het_hobr, grid%ph_het_brono2, grid%ph_het_hcl,         &
+        grid%ph_het_hbr, grid%ph_het_n2o5,                             &
+        ids,ide, jds,jde, kds,kde,                                     &
+        ims,ime, jms,jme, kms,kme,                                     &
+        its,ite, jts,jte, kts,kte                                      )
+     endif
 
      write(msg,'(''chem_driver('',i2.2,''): Calling dchm_tstep_init'')') grid%id
      call wrf_debug( 200,trim(msg) )
