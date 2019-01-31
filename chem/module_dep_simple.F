@@ -3277,23 +3277,23 @@ is_cbm4_kpp : &
          ! f0 from Toyota et al. (2011, doi:10.5194/acp-11-3949-2011)
          ! dvj is 1/sqrt(molar_weight) with the molar weight in g/mol
          ! Br2, Sander 2011 value
-         hstar(p_br2) = 7.3E+4
+         hstar(p_br2) = 0.730
          dhr(p_br2) = 4400.
          f0(p_br2) = 1.
          dvj(p_br2) = 0.079
-         ! HOBr,  Mozurkewich 1995 value
-         hstar(p_hobr) = 1.82E+5
-         dhr(p_hobr) = 4000.
+         ! HOBr,  Toyota et al., 2011
+         hstar(p_hobr) = 6.0E+3
+         dhr(p_hobr) = 0.
          f0(p_hobr) = 1.
          dvj(p_hobr) = 0.102
          ! HBr, Dean 1992 value
-         hstar(p_hbr) = 2.43E+6
+         hstar(p_hbr) = 24.3
          dhr(p_hbr) = 370.
          f0(p_hbr) = 0.
          dvj(p_hbr) = 0.111
          ! BrONO2, assuming same Henry's law constants as HBr, following Toyota
          ! et al.  (2011, doi:10.5194/acp-11-3949-2011)
-         hstar(p_brono2) = 2.43E+6
+         hstar(p_brono2) = 24.3
          dhr(p_brono2) = 370.
          f0(p_brono2) = 1.
          dvj(p_brono2) = 0.084

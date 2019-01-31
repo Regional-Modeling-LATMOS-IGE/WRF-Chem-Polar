@@ -405,7 +405,7 @@
 {368} ClONO2 + hv = Cl + NO3 : j(Pj_ClONO2_NO3);
 {369} ClONO2 + hv = ClO + NO2 : j(Pj_ClONO2_NO2);
 {370} ClO + hv = Cl + O3P : j(Pj_ClO_O3P);
-{371} BrO = Br + O3 : j(Pj_BrO);
+{371} BrO = Br + O3P : j(Pj_BrO);
 {372} Br2 = 2.00*Br : j(Pj_Br2);
 {373} HOBr = Br + OH : j(Pj_HOBr);
 {374} BrNO2 = Br + NO2 : j(Pj_BrNO2);
@@ -468,7 +468,7 @@
 {431} BrO + BrO = Br2 + M {O2} : RACM_THERMAL(TEMP,2.8D-14, -860.0_dp);
 {432} HBr + OH = Br + H2O : RACM_THERMAL(TEMP,5.5D-12, -200.0_dp);
 {433} Br2 + OH = HOBr + Br : RACM_THERMAL(TEMP,2.1D-11, -240.0_dp);
-{434} OH + CH3Br = CH2Br + H2O : RACM_THERMAL(TEMP,2.1D-11, -240.0_dp);
+{434} OH + CH3Br = CH2Br + H2O : RACM_THERMAL(TEMP,1.42D-12, 1150.0_dp);
 {435} Br + NO3 = BrO + NO2 : RACM_THERMAL(TEMP,1.6D-11, 0.0_dp);
 {436} BrO + NO3 = BrOO + NO2 : RACM_THERMAL(TEMP,1.0D-12, 0.0_dp);
 {437} HBr + O3P = Br + OH : RACM_THERMAL(TEMP,5.8D-12, 1500.0_dp);
@@ -535,6 +535,7 @@
 {498} IO + ClO = I + OClO : RACM_THERMAL(TEMP,5.1D-12, -280.0_dp);
 {499} I2O2 + O3 = IxOy : RACM_THERMAL(TEMP,1.0D-12, 9770.0_dp);
 {500} OIO + OH = HIO3 : RACM_THERMAL(TEMP,4.72D-10, 0.0_dp); 
+{501} Br + CCHO = HBr + CCO_O2 : RACM_THERMAL(TEMP,1.8D-11, 460.0_dp);
 {s9}  HOCl = Cl2:  0.5*j(Pj_het_hocl);
 {s10} ClONO2 = Cl2 + HNO3:  0.27*j(Pj_het_clono2);
 {s11}  HOBr = Br2:  0.5*j(Pj_het_hobr);
