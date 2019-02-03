@@ -481,7 +481,8 @@ call wrf_message("**************************************************************
             call wrf_error_fatal("ERROR: N2O5 heterogenous chemistry (without Cl- pathway) must be run with MOSAIC aerosol")
         endif
     elseif ( config_flags%n2o5_hetchem == 2 ) then
-        if( config_flags%chem_opt == 601 .OR. config_flags%chem_opt == 611 ) then
+        if( config_flags%chem_opt == 601 .OR. config_flags%chem_opt == 611 .OR. &
+            config_flags%chem_opt == 205) then
             call wrf_debug( 15, 'using full N2O5 heterogeneous chemistry')
         else
             call wrf_error_fatal("ERROR: full N2O5 heterogenous chemistry must be run with MOSAIC aerosol coupled with gas-phase scheme which deals with ClNO2")
