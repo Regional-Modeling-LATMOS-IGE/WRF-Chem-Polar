@@ -91,6 +91,37 @@ REAL(KIND=dp) FUNCTION surface_reaction_rates(ii)
 
 END FUNCTION surface_reaction_rates
 
+!----------------
+!LMarelle Reaction rate for the "uptaken gaseous species + halogen in aerosol"
+! heterogeneous reaction, e.g. N2O5 + Br_aer = BrNO2 + HNO3
+! The uptake of the gas (e.g. N2O5) on the aerosol containing halogens (e.g.
+! Br_aer) needs to consume Br_aer, but the reaction rate should not depend on 
+! the concentration of Br_aer. We achieve this by writing the reaction as 
+! N2O5 + HBr = BrNO2 + HNO3 (Using HBr as a proxy for Br_aer) and dividing
+! the reaction rate by [HBr]
+REAL(KIND=dp) FUNCTION khet_halogens_aer(k_uptake_gas, C_halogen_aer, & 
+                                         C_uptake_gas)
+  REAL(KIND=dp),INTENT(IN) :: k_uptake_gas, C_halogen_aer, C_uptake_gas
+  ! - k_uptake_gas, uptake rate of species "uptake_gas" on aerosols, 
+  !   from WRF-Chem (KPP units)
+  ! - C_halogen_aer, air concentration of aerosol-borne halogen (e.g. 
+  !   Br_aer) (KPP units)
+  ! - C_uptake_gas, air concentration of uptaken gas (e.g. N2O5) (KPP units)
+  ! - This routine returns the reaction rate khet_halogens_aer (KPP units)
+  !   for the reaction uptake_gas + halogen_aer, independent on the 
+  ! concentration of halogen_aer.
+
+  ! If the concentrations are too low, just return a rate of 0.0 
+  khet_halogens_aer = 0._dp
+  ! In the other case, normalize the rate by the C_halogen_aer
+  ! concentration
+  IF (min(C_halogen_aer, C_uptake_gas) .GT. 1._dp) THEN
+    khet_halogens_aer = k_uptake_gas / C_halogen_aer
+  END IF
+
+END FUNCTION khet_halogens_aer
+
+!----------------
 !LMarelle: add these photolysis rates as placeholders, in the end they
 ! should be passed from WRF-Chem to KPP
 REAL(KIND=dp) FUNCTION jrates(p_specname)
