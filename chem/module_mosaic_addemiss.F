@@ -769,7 +769,7 @@ size_loop: &
 !
 
    USE module_configure, only:  grid_config_rec_type
-   USE module_state_description, only:  num_chem, param_first_scalar
+   USE module_state_description, only:  num_chem, param_first_scalar, P_br2
    USE module_data_mosaic_asect
 
    IMPLICIT NONE
@@ -809,6 +809,14 @@ size_loop: &
 
 	real :: ssemfact_numb( maxd_asize, maxd_atype )
 	real :: ssemfact_mass( maxd_asize, maxd_atype )
+
+        !++LMarelle
+        real fact_ppm_br2
+        ! Br2/NaCl mass ratio in kg/kg, from doi:10.1029/2008GL034536, also
+        ! assuming an emission efficiency of 0.5. Additional 0.5 factor for Br ->
+        ! Br2 conversion, to conserve Br.
+        real, save :: br2_nacl_massratio = 0.00233  * 0.5 * 0.5
+        !--LMarelle
 
 
 	! Factors for Fuentes et al (ACP, 2011, doi:10.5194/acp-11-2585-2011) 
@@ -901,6 +909,12 @@ size_loop: &
 		factaa = (dtstep/dz8w(i,k,j))*alt(i,k,j)
 	
 		factbb = factaa * dumspd10
+                !++LMarelle
+                ! Factor for ug/m2/s to ppmv(Br2) conversion. factaa converts to
+                ! ug/kg, and 28.97 / 159.81 is the ratio of molar weights for
+                ! ug/kg to ppmv conversion
+                fact_ppm_br2 = factaa * 28.97 / 159.81
+                !--LMarelle
 	
 		if(seasalt_emiss_active == 1)then
 		
@@ -926,6 +940,15 @@ size_loop: &
 					l = numptr_aer(n,itype,iphase)
 					if (l >= p1st) chem(i,k,j,l) = chem(i,k,j,l) +   &
 										factbb * ssemfact_numb(n,itype)
+
+                                        !++LMarelle - also apply br2 emissions only if br2 exists.
+                                        if (P_br2 >= p1st) then
+                                          chem(i,k,j,P_br2) = chem(i,k,j,P_br2) +   &
+                                                  ssemfact_mass(n,itype) * br2_nacl_massratio * fact_ppm_br2
+
+                                        end if
+                                        !--LMarelle
+                                       
 		
 				end if
 				
