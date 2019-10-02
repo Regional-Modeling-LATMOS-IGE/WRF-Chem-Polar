@@ -20,6 +20,13 @@
 ! For now, this is only coupled to the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP
 ! gas-phase/aerosol mechanism 
 !
+!TODO change the critical temperature to OK but include a memory to this,
+!everytime the temperature rises above 0K or if liquid rain falls bromine
+!emissions and recycling are turned off, until new snow falls again and
+!temperatures are below 0K.
+!TODO 
+! - If someone tries to use this option with another mechanism include a call
+! to WRF_FATAL in chemics_init.F.
 ! TODO This is hardcoded to USGS for now read in IVGTYP and MMINLU, abort if
 ! MMINLU is not USGS. Also, determine if land type is sea ice by reading xice .gt. 0
 ! and ivgtyp .eq. isice, determine if land snow by xice .eq. 0 and ivgtyp .ne.
@@ -34,7 +41,7 @@ CONTAINS
   SUBROUTINE  airsnow_emissions( id, dtstep, dz8w, rho_phy,         &
          chem, snowh, snowc, tsk, xice, coszen, drydepflx_o3,       &
          drydepflx_hobr, drydepflx_brno3, drydepflx_hbr,            &
-         drydepflx_br2,                                             &
+         drydepflx_br2, emiss_br2,                                  &
          ids,ide, jds,jde, kds,kde,                                 &
          ims,ime, jms,jme, kms,kme,                                 &
          its,ite, jts,jte, kts,kte                                  )
@@ -69,6 +76,10 @@ CONTAINS
         INTENT(IN) :: drydepflx_o3, drydepflx_hobr,               &
         drydepflx_brno3, drydepflx_hbr, drydepflx_br2
 
+  ! Accumulated br2 emission flux (mol/m2)
+  REAL, DIMENSION(ims:ime, jms:jme)               ,               &
+        INTENT(INOUT) :: emiss_br2
+
   ! Trace species mixing ratios (gases in ppm, aerosols in microg/m3)
   REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem),           &
         INTENT(INOUT) :: chem
@@ -76,9 +87,9 @@ CONTAINS
   ! Local variables
   ! Loop indices i j k, ice landuse category
   INTEGER :: i, j, k, isice_temp = 24
-  ! Br2 emissions (moles/km2/s), Conversion factor from emissions to ppm,
+  ! Br2 emissions (moles/m2/s), Conversion factor from emissions to ppm,
   ! critical temperature for Br2 emissions & recycling (K)
-  REAL :: br2_emi = 0.0, conv, tskcrit = 258.15
+  REAL :: br2_emi = 0.0, conv, tskcrit = 273.15
 
 
 !-------- Add emissions --------
@@ -95,7 +106,9 @@ CONTAINS
       ! used in the whole routine also needs to be consistent with the one used
       ! to set ice-covered conditions in dry deposition (that is, the threshold
       ! used to set ivgtyp = is_ice)
-      IF (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. 0.5) THEN
+      ! xice(i, j) .GT. 0.9 to avoid cases with high deposition because of
+      ! fractional sea ice
+      IF (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. 0.9) THEN
         br2_emi = 0.0
 
         ! Br2 emissions occur only when the surface temperature is below Tcrit (-15°?). 
@@ -111,21 +124,18 @@ CONTAINS
           ! O3 deposition over first-year sea ice is converted to Br2 with a
           ! molar yield of 0.075 for SZA <= 85°
           !TODO add ice age, for now assume that all ice is first year ice
-          IF (coszen(i,j) .GE. 0.087 .AND. xice(i,j) .GE. 0.5 ) THEN
-            br2_emi = br2_emi + drydepflx_o3(i,j) * 0.075;
-          ELSEIF (coszen(i,j) .LT. 0.087 .AND. xice(i,j) .GE. 0.5 ) THEN
-            br2_emi = br2_emi + drydepflx_o3(i,j) * 0.001;
+          !TODO tuned up the factors by x10
+          IF (coszen(i,j) .GE. 0.087 .AND. xice(i,j) .GT. 0.9) THEN
+            br2_emi = br2_emi + drydepflx_o3(i,j) * 0.075 * 10
+          ELSEIF (coszen(i,j) .LT. 0.087 .AND. xice(i,j) .GT. 0.9 ) THEN
+            br2_emi = br2_emi + drydepflx_o3(i,j) * 0.001 * 0.01 * 10
           END IF ! coszen >= 0.087 <=> SZA <= 85°, and over ice
-          !TODO O3 deposition is approx. 0.007 cm s-1 over snow/ice in basic
-          !WRF-Chem, but Toyota et al. (2011) tuned it to approx. 0.01. To
-          !reproduce their results it is thus probably better to adjust the
-          !0.075 factor from Toyota et al. to 0.1
 
           !---- Br2 "recycling" release
 
           ! Over FY ice, HOBr and BrONO2 deposition gets converted to Br2
           !TODO add ice age, for now assume that all ice is first year ice
-          IF (xice(i,j) .GE. 0.5) THEN
+          IF (xice(i,j) .GT. 0.9) THEN
             br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j))
           END IF
 
@@ -138,11 +148,11 @@ CONTAINS
 
           ! Over continental snow, the smaller of both fluxes gets converted to
           ! Br2
-          !TODO make sure that this is not ocean/seaice. Technically, xice < 0.5
+          !TODO make sure that this is not ocean/seaice. Technically, xice < 0.9
           !should be enough to make sure that it is not a sea ice cell, and
           !there is no snow height over the open ocean, but it would be safer to
           !also use xland
-          IF (xice(i,j) .LT. 0.5 .AND. snowh(i, j) .GT. 0.01) THEN
+          IF (xice(i,j) .LE. 0.9 .AND. snowh(i, j) .GT. 0.01) THEN
             IF ((drydepflx_hobr(i,j) + drydepflx_brno3(i,j)) .LE. drydepflx_hbr(i,j)) THEN
               br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j))
             ELSE
@@ -158,8 +168,11 @@ CONTAINS
           ! to the surface trace gas concentrations)
           chem(i, kts, j, p_br2) = chem(i, kts, j, p_br2) + br2_emi * conv
 
+          ! Output diagnosis, accumulated br2 emissions in mol/m2
+          emiss_br2(i, j) = emiss_br2(i, j) + br2_emi * dtstep
+
         END IF ! tsk <= tskcrit
-      END IF ! (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. 0.5), snow or sea ice cell
+      END IF ! (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. 0.9), snow or sea ice cell
 
     END DO ! i loop
   END DO ! j loop

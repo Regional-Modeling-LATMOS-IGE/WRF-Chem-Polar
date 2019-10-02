@@ -5,13 +5,8 @@
 ! Calculates heterogeneous reaction rates for the halogen mechanism coupled with
 ! MOSAIC
 !
-!TODO check the resulting rates
 !TODO include a control on Cl- content and on pH: species should react only on
 !  acidic aerosols containing some Cl-
-!TODO change the critical temperature to OK but include a memory to this,
-!everytime the temperature rises above 0K or if liquid rain falls bromine
-!emissions and recycling are turned off, until new snow falls again and
-!temperatures are below 0K.
 
     CONTAINS
 
@@ -232,7 +227,6 @@
   
       ! Calculate the Fuchs and Sutugin (1971) expression from Table 11.1 
       ! Seinfeld and Pandis, 1998 
-      !TODO define everything
       DO ispecies = 1,nspecies
 
         molar_weight = molar_weights(ispecies)

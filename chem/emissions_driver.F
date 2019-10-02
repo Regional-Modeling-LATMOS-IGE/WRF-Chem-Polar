@@ -69,7 +69,7 @@ CONTAINS
          ! end stuff for LNOx emissions
          ! stuff for Br2 emissions from snow
          snowc, xice, coszen, drydepflx_o3, drydepflx_hobr,                &
-         drydepflx_brno3, drydepflx_hbr, drydepflx_br2,                    &
+         drydepflx_brno3, drydepflx_hbr, drydepflx_br2, emiss_br2,         &
          ! stuff for aircraft emissions
          emis_aircraft,                                                    &
          ! stuff for GHG fluxes
@@ -344,6 +344,8 @@ CONTAINS
 ! stuff for Br2 emissions from snow
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: snowc, xice, coszen, drydepflx_o3, &
                             drydepflx_hobr, drydepflx_brno3, drydepflx_hbr, drydepflx_br2
+  REAL, DIMENSION(ims:ime, jms:jme)               ,               &
+        INTENT(INOUT) :: emiss_br2
 
 !
 ! Local variables...
@@ -805,7 +807,7 @@ CONTAINS
         CALL airsnow_emissions( id, dtstep, dz8w,  rho_phy,         &
          chem, snowh, snowc, tsk, xice, coszen, drydepflx_o3,       &
          drydepflx_hobr, drydepflx_brno3, drydepflx_hbr,            &
-         drydepflx_br2,                                             &
+         drydepflx_br2, emiss_br2,                                  &
          ids,ide, jds,jde, kds,kde,                                 &
          ims,ime, jms,jme, kms,kme,                                 &
          its,ite, jts,jte, kts,kte                                  )
