@@ -98,14 +98,7 @@
  HOBr = IGNORE;      
  BrNO2 = IGNORE;     
  BrONO2 = IGNORE;    
- IO = IGNORE;        
- I = IGNORE;         
- HOI = IGNORE;       
- INO2 = IGNORE;      
- I2 = IGNORE;        
  BrCl = IGNORE;      
- ICl = IGNORE;       
- IBr = IGNORE;       
  HCl = IGNORE;       
  ClONO = IGNORE;     
  CH3 = IGNORE;       
@@ -126,10 +119,6 @@
  BrOO = IGNORE;      
  CH32SBr = IGNORE;   
  CH3SOCH3 = IGNORE;  
- HI = IGNORE;        
- IONO2 = IGNORE;     
- OIO = IGNORE;       
- INO = IGNORE;       
  CH2Br2 = IGNORE;    
  CHBr2 = IGNORE;     
  CHBr3 = IGNORE;     
@@ -138,21 +127,12 @@
  H = IGNORE;         
  HBr = IGNORE;       
  CBr3 = IGNORE;      
- BrAer = IGNORE;     
- ClAer = IGNORE;     
  NOCl = IGNORE;      
  BrNO = IGNORE;      
  OBrO = IGNORE;      
  CH3Cl = IGNORE;     
  CH3CCl2 = IGNORE;   
  CH2Cl = IGNORE;     
- CH2I2 = IGNORE;     
- CH2I = IGNORE;      
- CH3I = IGNORE;      
- CH2ICl = IGNORE;    
- I2O2 = IGNORE;      
- IxOy = IGNORE;      
- HIO3 = IGNORE;      
 #DEFFIX
  H2O = 2H + O;
  M = IGNORE;
