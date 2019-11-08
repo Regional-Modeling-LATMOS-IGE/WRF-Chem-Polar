@@ -25,7 +25,7 @@ CONTAINS
                drydepflx_o3, drydepflx_hobr, drydepflx_brno3,             &
                drydepflx_hbr, drydepflx_br2, dvel_o3,                     &
                emis_ant,ebu_in,                                           &
-               sf_urban_physics,numgas,current_month,dvel,snowh,          & 
+               sf_urban_physics,numgas,current_month,dvel,snowh,xice,     & 
                dustdrydep_1,dustdrydep_2,dustdrydep_3,                    &
                dustdrydep_4,dustdrydep_5,                                 &
                depvelocity,                                               &               
@@ -131,6 +131,7 @@ CONTAINS
                                                      xlat,      &
                                                      xlong,     &
                                                      snowh,     &
+                                                     xice,      &
                                           xland,znt,raincv,ash_fall
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
           INTENT(INOUT ) ::                                     &
@@ -285,7 +286,7 @@ CONTAINS
                gmt,julday,t_phy,moist,p8w,t8w,raincv,                     &
                p_phy,chem,rho_phy,dz8w,ddvel,aer_res_def,aer_res_zcen,    &
                ivgtyp,tsk,gsw,vegfra,pbl,rmol,ust,znt,xlat,xlong,z,z_at_w,&
-               snowh,numgas,                                              &
+               snowh,xice,numgas,                                         &
                ids,ide, jds,jde, kds,kde,                                 &
                ims,ime, jms,jme, kms,kme,                                 &
                its,ite, jts,jte, kts,kte                                  )
@@ -391,7 +392,7 @@ CONTAINS
                gmt,julday,t_phy,moist,p8w,t8w,raincv,                     &
                p_phy,chem,rho_phy,dz8w,ddvel,aer_res_def,aer_res_zcen,    & 
                ivgtyp,tsk,gsw,vegfra,pbl,rmol,ust,znt,xlat,xlong,z,z_at_w,&
-               snowh, numgas,                                             &
+               snowh, xice, numgas,                                       &
                ids,ide, jds,jde, kds,kde,                                 &
                ims,ime, jms,jme, kms,kme,                                 &
                its,ite, jts,jte, kts,kte                                  )
@@ -435,7 +436,7 @@ CONTAINS
                gmt,julday,t_phy,moist,p8w,t8w,raincv,                     &
                p_phy,chem,rho_phy,dz8w,ddvel,aer_res_def,aer_res_zcen,    &
                ivgtyp,tsk,gsw,vegfra,pbl,rmol,ust,znt,xlat,xlong,z,z_at_w,&
-               snowh, numgas,                                             &
+               snowh, xice, numgas,                                       &
                ids,ide, jds,jde, kds,kde,                                 &
                ims,ime, jms,jme, kms,kme,                                 &
                its,ite, jts,jte, kts,kte                                  )

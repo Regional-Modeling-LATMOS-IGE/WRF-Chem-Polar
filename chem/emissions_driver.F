@@ -68,7 +68,8 @@ CONTAINS
          ic_flashrate, cg_flashrate,                                       &
          ! end stuff for LNOx emissions
          ! stuff for Br2 emissions from snow
-         snowc, xice, coszen, drydepflx_o3, drydepflx_hobr,                &
+         snowc, xice, meltedsnow, coszen,                                  &
+         drydepflx_o3, drydepflx_hobr,                                     &
          drydepflx_brno3, drydepflx_hbr, drydepflx_br2, emiss_br2,         &
          ! stuff for aircraft emissions
          emis_aircraft,                                                    &
@@ -345,7 +346,7 @@ CONTAINS
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: snowc, xice, coszen, drydepflx_o3, &
                             drydepflx_hobr, drydepflx_brno3, drydepflx_hbr, drydepflx_br2
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
-        INTENT(INOUT) :: emiss_br2
+        INTENT(INOUT) :: emiss_br2, meltedsnow
 
 !
 ! Local variables...
@@ -805,8 +806,9 @@ CONTAINS
       IF ( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
         CALL wrf_debug(15, 'Br2 emissions from snow')
         CALL airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
-         v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,   &
-         xice, coszen, drydepflx_o3, drydepflx_hobr, drydepflx_brno3,  &
+         v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
+         xice, meltedsnow, coszen,                                     &
+         drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &

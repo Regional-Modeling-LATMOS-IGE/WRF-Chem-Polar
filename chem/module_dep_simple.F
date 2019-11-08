@@ -73,7 +73,7 @@ SUBROUTINE wesely_driver( id, ktau, dtstep, config_flags, current_month,  &
                           p_phy, chem, rho_phy, dz8w, ddvel, aer_res_def, &
                           aer_res_zcen, ivgtyp, tsk, gsw, vegfra, pbl,    &
                           rmol, ust, znt, xlat, xlong,                    &
-                          z, z_at_w, snowh, numgas,                       &
+                          z, z_at_w, snowh, xice, numgas,            &
                           ids,ide, jds,jde, kds,kde,                      &
                           ims,ime, jms,jme, kms,kme,                      &
                           its,ite, jts,jte, kts,kte                       )
@@ -138,6 +138,7 @@ SUBROUTINE wesely_driver( id, ktau, dtstep, config_flags, current_month,  &
    REAL, intent(inout) ::                            aer_res_def(its:ite,jts:jte)
    REAL, intent(inout) ::                            aer_res_zcen(its:ite,jts:jte)
    REAL,  optional, INTENT(IN)  ::                   snowh(ims:ime,jms:jme)
+   REAL,  DIMENSION( ims:ime , jms:jme ), INTENT(IN )      :: xice
    TYPE(grid_config_rec_type),  INTENT(IN) ::        config_flags
 
 !--------------------------------------------------
