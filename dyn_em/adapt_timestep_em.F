@@ -47,6 +47,11 @@ RECURSIVE SUBROUTINE adapt_timestep(grid, config_flags)
   TYPE(WRFU_TimeInterval)                    :: last_dtInterval
   REAL                                       :: real_time
   REAL                                       :: max_vert_cfl, max_horiz_cfl
+  ! LMarelle
+  LOGICAL                                    :: stepping_to_hist
+  LOGICAL                                    :: step_to_rad_time
+  INTEGER                                    :: radt_sec, rad_time
+  REAL                                       :: time_to_rad
 
   !
   ! If use_last2 is true, this routine will use the time step
@@ -317,7 +322,6 @@ RECURSIVE SUBROUTINE adapt_timestep(grid, config_flags)
   !   avoid having a very short time step.  Very short time steps can cause model
   !   instability.
   !
-
   if ((grid%step_to_output_time) .and. (.not. stepping_to_bc) .and. &
        (.not. grid%nested)) then
 
@@ -336,6 +340,7 @@ RECURSIVE SUBROUTINE adapt_timestep(grid, config_flags)
         dtInterval = tmpTimeInterval / 2
         use_last2 = .TRUE.
         grid%stepping_to_time = .TRUE.
+        stepping_to_hist = .true.
 
      elseif (tmpTimeInterval .LE. dtInterval) then
         !
@@ -355,8 +360,55 @@ RECURSIVE SUBROUTINE adapt_timestep(grid, config_flags)
 
         use_last2 = .TRUE.
         grid%stepping_to_time = .TRUE.
+        stepping_to_hist = .true.
+       !LMarelle++
+     else
+       stepping_to_hist = .false.
+       !LMarelle--
      endif
   endif
+
+  !LMarelle: it is also necessary to step to the radiation time step (the
+  ! radiation routines seem to assume that they are called every radt exactly)
+  !LMarelle++
+  step_to_rad_time = .true. ! Make this a namelist option?
+  if ((step_to_rad_time) .and. (.not. stepping_to_bc) .and. &
+     (.not. stepping_to_hist) .and. (grid%radt .gt. 0.) .and. &
+     (.not. grid%nested)) then
+
+     radt_sec = grid%radt*60
+
+     time_to_rad = radt_sec - &
+          mod( curr_secs, REAL(radt_sec) )
+     num = INT(time_to_rad * precision + 0.5)
+     den = precision
+     call WRFU_TimeIntervalSet(tmpTimeInterval, Sn=num, Sd=den)
+
+     if ( ( tmpTimeInterval .LT. dtInterval * 2 ) .and. &
+          ( tmpTimeInterval .GT. dtInterval ) ) then
+        dtInterval = tmpTimeInterval / 2
+        use_last2 = .TRUE.
+        grid%stepping_to_time = .TRUE.
+
+     elseif (tmpTimeInterval .LE. dtInterval) then
+        !
+        ! We will do some tricks here to assure that we fall exactly on a
+        !   radiation time.  Without the tricks, round-off error causes problems!
+        !
+        ! Calculate radiation time.  We round to nearest radiation time to assure
+        !    we don't have any rounding error.
+        !
+        rad_time = NINT ( (curr_secs + time_to_rad) /  &
+             (radt_sec) ) * (radt_sec)
+        CALL WRFU_TimeIntervalSet(tmpTimeInterval, S=rad_time)
+        dtInterval = tmpTimeInterval - &
+             (domain_get_current_time(grid) - domain_get_sim_start_time(grid))
+
+        use_last2 = .TRUE.
+        grid%stepping_to_time = .TRUE.
+     endif
+  endif
+  !LMarelle--
 
   !
   ! Now, set adapt_step_using_child only if we are not stepping to an
