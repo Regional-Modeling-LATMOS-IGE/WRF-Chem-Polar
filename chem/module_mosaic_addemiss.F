@@ -826,7 +826,7 @@ size_loop: &
         !++LMarelle
         real fact_ppm_br2, xocean
         ! Br2/NaCl mass ratio in kg/kg, from doi:10.1029/2008GL034536, also
-        ! assuming an emission efficiency of 0.5. Additional 0.5 factor for Br ->
+        ! assuming a depletion factor of 0.5. Additional 0.5 factor for Br ->
         ! Br2 conversion, to conserve Br.
         real, save :: br2_nacl_massratio = 0.00233  * 0.5 * 0.5
         !--LMarelle

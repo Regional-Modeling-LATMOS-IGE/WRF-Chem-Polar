@@ -6,10 +6,10 @@
 !
 ! References:
 ! - Louis Marelle, Jennie L. Thomas, Shaddy Ahmed, Katie Tuite, Jochen Stutz,
-! Aurélien Dommergue, William R. Simpson, Markus M.  Frey. Implementation and
-! impacts of surface and blowing snow sources of Arctic bromine activation
-! within WRF-Chem 4.1.1. Submitted to the Journal of Advances in Modeling Earth
-! Systems, 2020
+! Aurélien Dommergue, William R. Simpson, Markus M.  Frey, Foteini Baladima.
+! Implementation and impacts of surface and blowing snow sources of Arctic
+! bromine activation within WRF-Chem 4.1.1. Submitted to the Journal of Advances
+! in Modeling Earth Systems, 2021
 ! - Toyota, K., McConnell, J. C., Lupu, A., Neary, L., McLinden, C. A., Richter,
 ! A., Kwok, R., Semeniuk, K., Kaminski, J. W., Gong, S.-L., Jarosz, J.,
 ! Chipperfield, M. P., and Sioris, C. E.: Analysis of reactive bromine
@@ -39,15 +39,9 @@
 ! - In order to use a new snow salinity for blowing snow, the size distribution
 ! of the emitted seasalt, mosaic_massfrac_nacl, also has to change consistently
 !
-!TODO define parameters as FORTRAN parameters, and separate them from other data
-! declaration
 !TODO add a check for lake ice
 !TODO Ideally, blowing snow should be in a separate module
-!TODO The blowing snow code can be updated with latest developments, from
-! https://doi.org/10.5194/acp-19-8407-2019, 2019. 
-!
-!TODO
-! - If someone tries to use this option with another mechanism include a call
+!TODO If someone tries to use this option with another mechanism, include a call
 ! to WRF_FATAL in chemics_init.F.
 
 MODULE module_airsnow_emissions
@@ -75,24 +69,22 @@ CONTAINS
 
   IMPLICIT NONE
 
+
+  !-------- Subroutine arguments  --------
   INTEGER, INTENT(IN) :: id,                                      &
                          ids,ide, jds,jde, kds,kde,               &
                          ims,ime, jms,jme, kms,kme,               &
                          its,ite, jts,jte, kts,kte
-
   ! Dynamical time step (s)
   REAL, INTENT(IN) :: dtstep
-
   ! Vertical layer thickness (m), air temperature (K), air pressure (Pa),
   ! x-direction windspeed (m/s), y-direction windspeed (m/s), air density
   ! (km/m3)
   REAL, DIMENSION(ims:ime, kms:kme, jms:jme),                     &
         INTENT(IN) :: dz8w, t_phy, p_phy, u_phy, v_phy, rho_phy
-
   ! Moist scalars, used to obtain qv, the water vapor mixing ratio (kg/kg)
   REAL, DIMENSION( ims:ime, kms:kme, jms:jme, num_moist ),        &
         INTENT(IN ) :: moist
-
   ! 10m-x-direction-windspeed (m/s), 10m-y-direction-windspeed (m/s), friction
   ! velocity (m/s), 2m-temperature (K), Snow height (m), skin temperature (K),
   ! ice fraction (0-1), cosine of solar zenith angle (dimensionless)
@@ -101,33 +93,66 @@ CONTAINS
   ! Past snow melt flag (dimensionless flag)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: meltedsnow
-
   ! Dry deposition fluxes of O3, HOBr, BrNO3, and HBr (mole/m2/s), calculated in
   ! dry_dep_driver
   REAL,  DIMENSION(ims:ime, jms:jme),                             &
         INTENT(IN) :: drydepflx_o3, drydepflx_hobr,               &
         drydepflx_brno3, drydepflx_hbr, drydepflx_br2
-
   ! Accumulated br2 emission flux diagnosis (mole/m2)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: emiss_br2
-
   ! Trace species mixing ratios (gases in ppm, aerosols in microg/kg)
   REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem),           &
         INTENT(INOUT) :: chem
 
+
+  !-------- Parameters --------
+  ! Temperature threshold for Br2 emissions & recycling (K), sea ice cover
+  ! threshold for surface snow and blowing snow emissions (area fraction)
+  REAL, PARAMETER :: tskcrit = 273.15, seaice_crit = 0.75
+
+  !---- Parameters for the blowing snow model
+  INTEGER, PARAMETER :: naersizes = 8
+  ! Br/NaCl mass ratio in sea salt (kg/kg, Yang et al., 2008)
+  REAL, PARAMETER :: br_nacl_massratio = 0.00233
+  ! Average Antarctic snow salinity (psu)
+  ! The size distribution of the emitted seasalt, mosaic_massfrac_nacl, also
+  ! depends on snow_salinity. Do not update one without updating the other.
+  ! ! Massom et al. (2001), Antarctic upper bound
+  ! REAL :: snow_salinity = 8.5
+  ! Huang and Jaeglé, 2017, Arctic
+  REAL, PARAMETER :: snow_salinity = 0.1
+  ! Conversion factor (from kg/m2/day to kg/m2/s)
+  REAL, PARAMETER :: kconv_day_s = 1.1574E-5
+  ! Snow age (hours), Huang and Jaeglé (2017)
+  REAL, PARAMETER :: snow_age = 72
+  ! Reference 10m-wind speed (m/s)
+  REAL, PARAMETER :: w10_0 = 6.975
+  ! Parameters for qsnow_subl_prime parameterization, from Dery and Yau (2001)
+  REAL, PARAMETER :: a0 = 3.78407E-1, a1 = -8.64089E-2, a2 = -1.60570E-2, &
+          a3 = 7.25516E-4, a4 = -1.25650E-1, a5 = 2.48430E-2, &
+          a6 = -9.56871E-4, a7 = 1.24600E-2, a8 = 1.56862E-3, &
+          a9 = -2.93002E-4
+  ! Conversion factor for the ksi parameter (unitless)
+  REAL, PARAMETER :: convert_ksi = -1.0E12
+  ! Density of ice (kg/m3) and sea salt (kg/m3)
+  REAL, PARAMETER :: rho_ice = 914.0, rho_nacl = 2160.
+  ! Molar weight of bromine (g/mole)
+  REAL, PARAMETER :: mw_br = 79.904
+
+
   !-------- Local variables --------
   CHARACTER (LEN=1000) :: msg
-  ! Loop indices i j k, ice landuse category
-  INTEGER :: i, j, k, isice_temp = 24
-  ! Br2 and BrCl emissions (mole/m2/s), Conversion factor from emissions to ppm,
-  ! Conversion factor from emissions to µg/kg, temperature threshold for Br2
-  ! emissions & recycling (K), sea ice cover threshold for surface snow and
-  ! blowing snow emissions (area fraction)
-  REAL :: br2_emi = 0.0, brcl_emi = 0.0, conv, conv2, tskcrit = 273.15, seaice_crit = 0.75
+  ! Loop indices i j k
+  INTEGER :: i, j, k
+  ! Conversion factor from emissions to ppm, conversion factor from emissions to µg/kg
+  REAL :: conv, conv2
+  ! Switches for enabling surface snow or blowing snow emissions
+  LOGICAL :: do_snow_emissions, do_blowing_snow
+  ! Br2 and BrCl emissions (mole/m2/s)
+  REAL :: br2_emi = 0.0, brcl_emi = 0.0
 
   !---- Local variables for the blowing snow model
-  INTEGER, PARAMETER :: naersizes = 8
   ! Br emissions (kg/m2/s), NaCl emissions (kg/m2/s), Snow sublimation flux (kg/m2/s), Normalized
   ! column-integrated snow sublimation flux (kg/m2/day), Snow mixing ratio in
   ! saltation layer (kg/kg), Snow mixing ratio at reference wind speed (kg/kg)
@@ -148,32 +173,8 @@ CONTAINS
   ! MOSAIC aerosol type, size, phase indexes, and "pointers" to number, Na and
   ! Cl in chem
   INTEGER :: itype, isize, iphase, l_num, l_na, l_cl
-  ! Br/NaCl mass ratio in sea salt (kg/kg, Yang et al., 2008)
-  REAL :: br_nacl_massratio = 0.00233
-  ! Average Antarctic snow salinity (psu)
-  ! The size distribution of the emitted seasalt, mosaic_massfrac_nacl, also
-  ! depends on snow_salinity. Do not update one without updating the other.
-  ! ! Massom et al. (2001), Antarctic upper bound
-  ! REAL :: snow_salinity = 8.5
-  ! Huang and Jaegle, 2017, Arctic
-  REAL :: snow_salinity = 0.1
-  ! Conversion factor (from kg/m2/day to kg/m2/s)
-  REAL :: kconv_day_s = 1.1574E-5
-  ! Adjustment factor for the emission flux (unitless), snow age (hours)
-  REAL ::  a_prime, snow_age = 3 * 24
-  ! Reference 10m-wind speed (m/s)
-  REAL :: w10_0 = 6.975
-  ! Parameters for qsnow_subl_prime parameterization, from Dery and Yau (2001)
-  REAL :: a0 = 3.78407E-1, a1 = -8.64089E-2, a2 = -1.60570E-2, &
-          a3 = 7.25516E-4, a4 = -1.25650E-1, a5 = 2.48430E-2, &
-          a6 = -9.56871E-4, a7 = 1.24600E-2, a8 = 1.56862E-3, &
-          a9 = -2.93002E-4
-  ! Conversion factor for the ksi parameter (unitless)
-  REAL :: convert_ksi = -1.0E12
-  ! Density of ice (kg/m3) and sea salt (kg/m3)
-  REAL :: rho_ice = 914.0, rho_nacl = 2160.
-  ! Molar weight of bromine (g/mole)
-  REAL :: mw_br = 79.904
+  ! Adjustment factor for the emission flux (unitless)
+  REAL ::  a_prime
   ! Mass proportion of total NaCl emissions going into each MOSAIC size bin,
   ! calculated offline from the size+salinity integral in Yang et al.
   ! (2008), eq. 8 TODO include a check on naersizes
@@ -183,14 +184,13 @@ CONTAINS
   !LMarelle - this is disabled for now, see below
   REAL :: depletion_factor(naersizes)
 
-  LOGICAL :: do_snow_emissions, do_blowing_snow
 
   !---- Data declaration
   ! Calculated based on Yang et al. (2018), eq. 8, for the MOSAIC size bins
   ! ! Based on snow salinity from Massom et al. (2001)
   ! mosaic_massfrac_nacl = (/ 0.2189E-09, 0.6873E-08, 0.2122E-06, 0.6306E-05, &
   !                           0.1742E-03, 0.4182E-02, 0.7729E-01, 0.9183E+00 /)
-  ! Based on 0.1 psu snow salinity and N=5 aerosol fractioning, Huang and Jaegle (2017)
+  ! Based on 0.1 psu uniform snow salinity and N=5 aerosol fractioning, Huang and Jaeglé (2017)
   mosaic_massfrac_nacl = (/ 0.2711E-01, 0.8600E-01, 0.2181E+00, 0.3580E+00, &
                             0.2629E+00, 0.4721E-01, 0.7154E-03, 0.9098E-07 /)
   ! depletion_factor = (/ -3.8200, -3.8200, -3.6856, -2.2739, &
@@ -201,13 +201,15 @@ CONTAINS
   ! depletion factors to calculate instantaneous Br emissions.
   ! Replace depletion factors by the upper bound of 0.38 in Yang et al., (2008).
   !TODO - use explicit br aerosols instead, and br2 emissions by heterogeneous
-  ! reactions
+  ! reactions (the only thing already included is heterogeneous recycling on
+  ! aerosols)
   depletion_factor = (/ 0.38, 0.38, 0.38, 0.38, &
                         0.38, 0.38, 0.38, 0.38  /)
   do_snow_emissions = .true.
   do_blowing_snow = .true.
   itype = 1
   iphase = ai_phase
+
 
   !-------- Add emissions from snow, recycling and blowing snow --------
   ! From Toyota et al. (2011) and Yang et al. (2008)
@@ -316,8 +318,6 @@ CONTAINS
             ! Calculate the snow sublimation flux, qsnow_subl, based on Yang et
             ! al. (2008) and Dery and Yau (2001), with help from Markus Frey for
             ! the fconduction and fdiffusion terms
-            !TODO Could also use p10m or psfc instead of p_phy, and t10m instead
-            !of t2
             l_s = 2.83458E6 - (t2(i,j) - 273.15) * (340. + 10.46 * (t2(i,j) - 273.15))
             k_d = 0.023807 + 7.1128E-5 * (t2(i,j) - 273.15)
             d_v = 2.11E-5 * (t2(i,j) / 273.15) ** 1.94 * (1013.25 / (p_phy(i, kts, j) * 1.0E-2))
@@ -348,8 +348,8 @@ CONTAINS
             ENDIF
 
             !---- Br/Br2 emissions from Yang et al., (2008)
-            ! (kg/m2/s)
             DO isize = 1,nsize_aer(itype)
+              ! (kg/m2/s)
               br_emi = nacl_emi * mosaic_massfrac_nacl(isize) * br_nacl_massratio * depletion_factor(isize)
               ! Convert from kg(br)/m2/s to mole(br2)/m2/s
               br2_emi = br2_emi + br_emi * 1.0E3 / mw_br / 2.0
@@ -388,14 +388,14 @@ CONTAINS
           ! #/m2/s -> #/kg
           chem(i,kts,j,l_num) = chem(i,kts,j,l_num) + aer_num_change * conv3
         END IF
-        ! Add Br2 emissions
+        !---- Br2 emissions
         IF (chem(i,kts,j,p_br2)  + br2_emi * conv <= 0) THEN
           br2_emi = - chem(i,kts,j,p_br2) / conv 
           chem(i,kts,j,p_br2) = 0.0
         ELSE
           chem(i,kts,j,p_br2) = chem(i,kts,j,p_br2) + br2_emi * conv
         END IF
-        ! ! Add BrCl emissions
+        ! !---- BrCl emissions
         ! IF (chem(i,kts,j,p_brcl)  + brcl_emi * conv <= 0) THEN
         !   brcl_emi = - chem(i,kts,j,p_brcl) / conv
         !   chem(i,kts,j,p_brcl) = 0.0

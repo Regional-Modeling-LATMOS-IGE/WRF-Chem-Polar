@@ -5,6 +5,12 @@
 ! Calculates heterogeneous reaction rates for the halogen mechanism coupled with
 ! MOSAIC
 !
+! References:
+! - Louis Marelle, Jennie L. Thomas, Shaddy Ahmed, Katie Tuite, Jochen Stutz,
+! Aurélien Dommergue, William R. Simpson, Markus M.  Frey, Foteini Baladima.
+! Implementation and impacts of surface and blowing snow sources of Arctic
+! bromine activation within WRF-Chem 4.1.1. Submitted to the Journal of Advances
+! in Modeling Earth Systems.
 
     CONTAINS
 
@@ -293,6 +299,9 @@
     END DO !ibin, size
 
     ! Update the 3D reaction constants and convert from s-1 to min-1
+    !LMarelle TODO: this is passed to KPP using the existing code for passing
+    !photolysis rates, which explains the ph_ naming. In the future, k_het
+    !should be passed directly to KPP using the include files in the coupler
     ph_het_hobr(it, kt, jt) = k_het(i_hobr) * 60._r8
     ph_het_brono2(it, kt, jt) = k_het(i_brono2) * 60._r8
     ph_het_hcl(it, kt, jt) = k_het(i_hcl) * 60._r8
@@ -333,7 +342,8 @@
     ! Local variables
     REAL(r8) :: mw_kg
     ! Parameters
-    REAL(r8), PARAMETER :: rgas = 8.3144598_r8 !TODO use the one from model constants (J K-1 mol-1, or kg*m2/s2/K/mol)
+    !TODO use the value from model_constants
+    REAL(r8), PARAMETER :: rgas = 8.3144598_r8 !(J K-1 mol-1, or kg*m2/s2/K/mol)
 
     ! Molar weight in kg/mol
     mw_kg =  molar_weight / 1000._r8
@@ -373,12 +383,12 @@
     ! Local variables
     REAL mw_kg, c_bar
     ! Parameters
-    REAL(r8), PARAMETER :: rgas = 8.3144598_r8 !TODO use the one from model constants (J K-1 mol-1, or kg*m2/s2/K/mol)
+    !TODO use the value from model_constants
+    REAL(r8), PARAMETER :: rgas = 8.3144598_r8 !(J K-1 mol-1, or kg*m2/s2/K/mol)
     REAL(r8), PARAMETER :: m_to_cm = 100._r8
     
     ! Molar weight in kg/mol
     mw_kg =  molar_weight / 1000._r8
-
      
     ! Mean speed of molecules in m/s
     c_bar = SQRT(8._r8 * rgas * temp / (pi * mw_kg))
@@ -412,7 +422,8 @@
     ! Local variables
     REAL(r8) :: mw_kg
     ! Parameters
-    REAL(r8), PARAMETER :: rgas = 8.3144598_r8 !TODO use the one from model constants (J K-1 mol-1, or kg*m2/s2/K/mol)
+    !TODO use the value from model_constants
+    REAL(r8), PARAMETER :: rgas = 8.3144598_r8 !(J K-1 mol-1, or kg*m2/s2/K/mol)
     REAL(r8), PARAMETER :: m_to_cm = 100._r8 
 
     ! Molar weight in kg/mol
