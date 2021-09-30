@@ -56,7 +56,8 @@ CONTAINS
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &
-         its,ite, jts,jte, kts,kte                                     )
+         its,ite, jts,jte, kts,kte,                                    &
+         snow_emissions_opt, blowing_snow_opt                          ) 
 
   USE module_configure
   USE module_state_description, ONLY: param_first_scalar
@@ -75,6 +76,8 @@ CONTAINS
                          ids,ide, jds,jde, kds,kde,               &
                          ims,ime, jms,jme, kms,kme,               &
                          its,ite, jts,jte, kts,kte
+  ! Logical flag for snow emissions and blowing snow options
+  LOGICAL, INTENT(IN) :: snow_emissions_opt, blowing_snow_opt
   ! Dynamical time step (s)
   REAL, INTENT(IN) :: dtstep
   ! Vertical layer thickness (m), air temperature (K), air pressure (Pa),
@@ -205,8 +208,8 @@ CONTAINS
   ! aerosols)
   depletion_factor = (/ 0.38, 0.38, 0.38, 0.38, &
                         0.38, 0.38, 0.38, 0.38  /)
-  do_snow_emissions = .true.
-  do_blowing_snow = .true.
+  do_snow_emissions = snow_emissions_opt
+  do_blowing_snow = blowing_snow_opt
   itype = 1
   iphase = ai_phase
 

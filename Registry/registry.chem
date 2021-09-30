@@ -3945,6 +3945,9 @@ rconfig   integer     gas_drydep_opt      namelist,chem          max_domains    
 rconfig   integer     aer_drydep_opt      namelist,chem          max_domains    1       rh    "aer_drydep_opt"      ""      ""
 #LMarelle add an option for gravitational settling in MOSAIC
 rconfig   integer     mosaic_aer_settling_opt    namelist,chem          max_domains    0       rh    "mosaic_aer_settling_opt"    ""      ""
+#SAhmed add options for bromine surface snow and blowing snow emissions
+rconfig   logical     snow_emissions_opt  namelist,chem          1              .false. rh    "snow_emissions_opt"      ""      ""
+rconfig   logical     blowing_snow_opt    namelist,chem          1              .false. rh    "blowing_snow_opt"    ""      ""
 rconfig   integer     diagnostic_chem     namelist,chem          max_domains    1       rh    "diagnostic_chem"     ""      ""
 rconfig   integer     aero_diag_opt       namelist,chem          max_domains    0       rh    "diagnostic_aerosol"  ""      ""
 rconfig   integer     aero_cw_diag_opt    namelist,chem          max_domains    0       rh    "diagnostic_cw_aerosol"     ""      ""

@@ -214,6 +214,8 @@
 !TODO !lm add these options: 
 ! radeffectdt                         = 30,
  mosaic_aer_settling_opt             = 1, 1, 1,
+ snow_emissions_opt                  = .false.
+ blowing_snow_opt                    = .false.
  aero_cw_diag_opt                    = 1, 1, 1,
  chemdiag                            = 0, 0, 0,
  diagnostic_chem                     = 0, 0, 0,

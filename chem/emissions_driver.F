@@ -812,7 +812,8 @@ CONTAINS
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &
-         its,ite, jts,jte, kts,kte                                     )
+         its,ite, jts,jte, kts,kte,                                    &
+         config_flags%snow_emissions_opt, config_flags%blowing_snow_opt )
       ENDIF
 
 
