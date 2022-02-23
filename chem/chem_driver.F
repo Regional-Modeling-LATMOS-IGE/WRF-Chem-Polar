@@ -662,7 +662,11 @@
     CASE (TRACER_TEST3)
        CALL wrf_debug(15,'tracer mode: 10 tracers')
      CASE DEFAULT
-       CALL wrf_debug(15,'calling chem_opt=? from chem_driver')
+       if(config_flags%tracer_opt > 0 )then
+       CALL wrf_debug(15,'calling tracer_opt=? from chem_driver')
+       else
+       CALL wrf_debug(15,'not calling tracer transport in chem_driver')
+       endif
    END SELECT tracer_select
 
 ! initialize cam_mam local arrays
