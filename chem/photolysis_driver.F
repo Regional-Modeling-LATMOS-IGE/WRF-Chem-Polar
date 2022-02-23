@@ -148,7 +148,7 @@
    IF (config_flags%phot_opt .eq. 0) return
 
    write(dbg_msg,*) 'photolysis_driver: called for domain ',id
-   CALL wrf_message( trim(dbg_msg) )
+   CALL wrf_debug(15, trim(dbg_msg))
 !
 ! select photolysis option
 !
