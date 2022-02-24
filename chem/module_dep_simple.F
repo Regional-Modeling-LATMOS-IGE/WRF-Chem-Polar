@@ -383,10 +383,10 @@ tile_lon_loop : &
             ddvel(i, j, p_oclo) = 0.0
             ddvel(i, j, p_cl) = 0.0
             ddvel(i, j, p_clo) = 0.0
-            ddvel(i, j, p_cl2) = 0.0
-            ddvel(i, j, p_hocl) = 0.0
+!            ddvel(i, j, p_cl2) = 0.0
+!            ddvel(i, j, p_hocl) = 0.0
             ddvel(i, j, p_clno2) = 0.0
-            ddvel(i, j, p_clono2) = 0.0
+!            ddvel(i, j, p_clono2) = 0.0
             ddvel(i, j, p_bro) = 0.0
             ddvel(i, j, p_br) = 0.0
 !            ddvel(i, j, p_br2) = 0.0
@@ -401,7 +401,7 @@ tile_lon_loop : &
             ddvel(i, j, p_brcl) = 0.0
             ddvel(i, j, p_icl) = 0.0
             ddvel(i, j, p_ibr) = 0.0
-            ddvel(i, j, p_hcl) = 0.0
+!            ddvel(i, j, p_hcl) = 0.0
             ddvel(i, j, p_clono) = 0.0
             ddvel(i, j, p_ch3) = 0.0
             ddvel(i, j, p_hco) = 0.0
@@ -3297,6 +3297,21 @@ is_cbm4_kpp : &
          dhr(p_brono2) = 370.
          f0(p_brono2) = 1.
          dvj(p_brono2) = 0.084
+         ! Cl2
+         hstar(p_cl2) = 0.0932
+         dhr(p_cl2) = 2000.
+         f0(p_cl2) = 1. ! not sure
+         dvj(p_cl2) = 0.12
+         ! HOCl
+         hstar(p_hocl) = 659
+         dhr(p_hocl) = 5900.
+         f0(p_hocl) = 1. ! not sure
+         dvj(p_hocl) = 0.14
+         ! ClONO2
+         hstar(p_clono2) = 1.51E+3 ! assumed to be same as HCl
+         dhr(p_clono2) = 2300. ! assumed to be same as HCl
+         f0(p_clono2) = 1. ! not sure
+         dvj(p_clono2) = 0.12
        END IF
      end if
 

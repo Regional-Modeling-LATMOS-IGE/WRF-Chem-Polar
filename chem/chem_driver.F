@@ -986,8 +986,13 @@
               grid%ph_mekooh,grid%ph_tolooh,grid%ph_terpooh,grid%ph_mvk,              &
               grid%ph_glyald,grid%ph_hyac,                                            &
               grid%ph_cl2,grid%ph_hocl,grid%ph_fmcl,                                  &
+              !LMarelle Additional photolysis rates for halogen mechanisms
               grid%ph_bro, grid%ph_br2, grid%ph_hobr, grid%ph_brno2,                  &
-              grid%ph_brono2_br, grid%ph_brono2_bro,                                  &
+              grid%ph_brono2_br, grid%ph_brono2_bro, grid%ph_clo_o3p,                 &
+              grid%ph_clo_o1d, &
+              grid%ph_clono2_no2, grid%ph_clono2_no3, grid%ph_brcl,                   &
+              grid%ph_oclo,                                                           &
+              !LMarelle--
               config_flags%track_tuv_lev,                                             &
               config_flags%track_rad_num,                                             &
               config_flags%track_tuv_num,                                             &
@@ -1223,7 +1228,8 @@
        call mosaic_set_heterogeneous(                                  &
         chem, t_phy, p_phy, grid%alt,                                  &
         grid%ph_het_hobr, grid%ph_het_brono2, grid%ph_het_hcl,         &
-        grid%ph_het_hbr, grid%ph_het_n2o5,                             &
+        grid%ph_het_hbr, grid%ph_het_n2o5, grid%ph_het_hocl,           &
+        grid%ph_het_clono2, grid%ph_het_oh,                            &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )

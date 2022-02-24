@@ -8,6 +8,10 @@
 !TODO check the resulting rates
 !TODO include a control on Cl- content and on pH: species should react only on
 !  acidic aerosols containing some Cl-
+!TODO change the critical temperature to OK but include a memory to this,
+!everytime the temperature rises above 0K or if liquid rain falls bromine
+!emissions and recycling are turned off, until new snow falls again and
+!temperatures are below 0K.
 
     CONTAINS
 
@@ -16,7 +20,7 @@
     SUBROUTINE mosaic_set_heterogeneous(                               &
         chem, t_phy, p_phy, alt,                                       &
         ph_het_hobr, ph_het_brono2, ph_het_hcl, ph_het_hbr,            &
-        ph_het_n2o5,                                        &
+        ph_het_n2o5, ph_het_hocl, ph_het_clono2, ph_het_oh,            &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )
@@ -52,7 +56,8 @@
         chem
     REAL, INTENT(OUT), &
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: ph_het_hobr, ph_het_brono2, &
-        ph_het_hcl, ph_het_hbr, ph_het_n2o5
+        ph_het_hcl, ph_het_hbr, ph_het_n2o5, ph_het_hocl, ph_het_clono2, &
+        ph_het_oh
 
     ! Local variables
     INTEGER it, jt, kt
@@ -63,7 +68,7 @@
          drydp, drydens, drymass, dryvol, dryarea, wetarea
     REAL(r8) :: freepath, molar_weight, diffusion_constant
     REAL(r8) :: mean_speed, knudsen, j_corr, upper, lower
-    INTEGER,  PARAMETER :: nspecies = 5
+    INTEGER,  PARAMETER :: nspecies = 8
     REAL(r8), DIMENSION(nspecies) :: k_het
 
     ! Parameters and data declarations
@@ -81,6 +86,9 @@
     INTEGER,  PARAMETER :: i_hcl = 3
     INTEGER,  PARAMETER :: i_hbr = 4
     INTEGER,  PARAMETER :: i_n2o5 = 5
+    INTEGER,  PARAMETER :: i_hocl = 6
+    INTEGER,  PARAMETER :: i_clono2 = 7
+    INTEGER,  PARAMETER :: i_oh = 8
     ! CHARACTER*6, DIMENSION(nspecies) :: specnames
     REAL(r8), DIMENSION(nspecies) :: gamma_factors
     REAL(r8), DIMENSION(nspecies) :: molar_weights
@@ -91,14 +99,17 @@
     ! data specnames &
     !   / &
     !   'HOBr  ', 'BrONO2', 'HCl   ', 'HBr   ', 'N2O5  ' &
+    !   'HOCl  ', 'ClONO2', 'OH    '                     &
     !   /
     data gamma_factors &
       / &
-      0.1_r8, 0.14_r8, 0.02_r8, 0.02_r8, 0.044_r8 &
+      0.1_r8, 0.14_r8, 0.02_r8, 0.02_r8, 0.044_r8, &
+      4.0E-4_r8, 0.11_r8, 0.2_r8 &
       /
     data molar_weights &
       / &
-      97._r8, 142._r8, 36.5_r8, 81._r8, 108._r8 &
+      97._r8, 142._r8, 36.5_r8, 81._r8, 108._r8, &
+      52.5_r8, 97.5_r8, 17._r8 &
       /
 
 ! ********************** Description of variables ****************************
@@ -266,6 +277,9 @@
     ph_het_hcl(it, kt, jt) = k_het(i_hcl) * 60._r8
     ph_het_hbr(it, kt, jt) = k_het(i_hbr) * 60._r8
     ph_het_n2o5(it, kt, jt) = k_het(i_n2o5) * 60._r8
+    ph_het_hocl(it, kt, jt) = k_het(i_hocl) * 60._r8
+    ph_het_clono2(it, kt, jt) = k_het(i_clono2) * 60._r8
+    ph_het_oh(it, kt, jt) = k_het(i_oh) * 60._r8
 
     END DO !kt
     END DO !it

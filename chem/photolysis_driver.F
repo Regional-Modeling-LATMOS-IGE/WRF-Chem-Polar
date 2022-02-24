@@ -19,8 +19,13 @@
                ph_mekooh,ph_tolooh,ph_terpooh,ph_mvk,                    &
                ph_glyald,ph_hyac,                                        &
                ph_cl2,ph_hocl,ph_fmcl,                                   &
+               !LMarelle Additional photolysis rates for halogen mechanisms
                ph_bro, ph_br2, ph_hobr, ph_brno2,                        &
-               ph_brono2_br, ph_brono2_bro,                              &
+               ph_brono2_br, ph_brono2_bro, ph_clo_o3p,                  &
+               ph_clo_o1d,                    &
+               ph_clono2_no2, ph_clono2_no3, ph_brcl,                    &
+               ph_oclo,                                                  &
+               !LMarelle--
                nref0, nw0, tuv_jmax0,                                    &
                ph_radfld, ph_adjcoe, ph_prate,                           &
                wc, zref,                                                 &
@@ -79,8 +84,10 @@
            ph_xooh,ph_isopooh,ph_alkooh,ph_mekooh,ph_tolooh,           &
            ph_terpooh,ph_mvk,ph_glyald,ph_hyac,                        &
            ph_cl2,ph_hocl,ph_fmcl,                                     &
+           !LMarelle Additional photolysis rates for halogen mechanisms
            ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,            &
-           ph_brono2_bro
+           ph_brono2_bro, ph_clo_o3p, ph_clo_o1d,                      &
+           ph_clono2_no2, ph_clono2_no3, ph_brcl, ph_oclo
 
    REAL, INTENT(INOUT)  ::                                             &
            dt_cld(ims:ime,kms:kme,jms:jme),                            &
@@ -189,8 +196,12 @@
                ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,         &
                ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob,&
                ph_n2o5,                                                &
+               !LMarelle Additional photolysis rates for halogen mechanisms
                ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,        &
-               ph_brono2_bro,                                          &
+               ph_brono2_bro, ph_clo_o3p, ph_clo_o1d, ph_cl2, ph_hocl, &
+               ph_clno2, ph_clono2_no2, ph_clono2_no3, ph_brcl,        &
+               ph_oclo,                                                 &
+               !LMarelle--
                snowh, snowc, xice,                                     &
                tauaer1,tauaer2,tauaer3,tauaer4,                        &
                gaer1,gaer2,gaer3,gaer4,                                &

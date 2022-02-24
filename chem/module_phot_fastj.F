@@ -76,8 +76,12 @@
                ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,         &
                ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob,&
                ph_n2o5,                                                &
+               !LMarelle Additional photolysis rates for halogen mechanisms
                ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,        &
-               ph_brono2_bro,                                          &
+               ph_brono2_bro, ph_clo_o3p, ph_clo_o1d, ph_cl2, ph_hocl, &
+               ph_clno2, ph_clono2_no2, ph_clono2_no3, ph_brcl,        &
+               ph_oclo,                                                &
+               !LMarelle--
                snowh, snowc, xice,                                     &
                tauaer1,tauaer2,tauaer3,tauaer4,                        &
                gaer1,gaer2,gaer3,gaer4,                                &
@@ -105,7 +109,7 @@
    integer, parameter :: single = 4        !compiler dependent value real*4
    integer, parameter :: double = 8        !compiler dependent value real*8
    integer,parameter :: ipar_fastj=1,jpar=1
-   integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+   integer,parameter :: jppj=29        !Number of photolytic reactions supplied
    logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
    integer,save :: lpar           !Number of levels in CTM
    integer,save :: jpnl           !Number of levels requiring chemistry
@@ -125,13 +129,18 @@
    data wavmid     &
        / 0.30e-4, 0.40e-4, 0.60e-4 ,0.999e-04 /
    integer nphoto_fastj
-   parameter (nphoto_fastj = 21)
+   parameter (nphoto_fastj = 30)
    integer   &
    lfastj_no2,   lfastj_o3a,   lfastj_o3b,    lfastj_h2o2,   &
    lfastj_hchoa, lfastj_hchob, lfastj_ch3ooh, lfastj_no3x,   &
    lfastj_no3l,  lfastj_hono,  lfastj_n2o5,   lfastj_hno3,   &
-   lfastj_hno4,  lfastj_bro,   lfastj_br2,    lfastj_hobr,   &
-   lfastj_brno2, lfastj_brono2_br, lfastj_brono2_bro
+   lfastj_hno4,                                              &
+   lfastj_bro, lfastj_br2, lfastj_hobr, lfastj_brno2,        &
+   lfastj_brono2_br, lfastj_brono2_bro, lfastj_clo_o3p,      &
+   lfastj_clo_o1d, lfastj_cl2, lfastj_hocl, lfastj_clno2,    &
+   lfastj_clono2_no2, lfastj_clono2_no3, lfastj_brcl,        &
+   lfastj_oclo
+
    parameter( lfastj_no2   = 1 )
    parameter( lfastj_o3a   = 2 )
    parameter( lfastj_o3b   = 3 )
@@ -151,6 +160,15 @@
    parameter( lfastj_brno2 = 18 )
    parameter( lfastj_brono2_br = 19 )
    parameter( lfastj_brono2_bro = 20 )
+   parameter( lfastj_clo_o3p = 21)
+   parameter( lfastj_clo_o1d = 22)
+   parameter( lfastj_cl2 = 23)
+   parameter( lfastj_hocl = 24)
+   parameter( lfastj_clno2 = 25)
+   parameter( lfastj_clono2_no2 = 26)
+   parameter( lfastj_clono2_no3 = 27)
+   parameter( lfastj_brcl = 28)
+   parameter( lfastj_oclo = 29)
 !jdf
    INTEGER,      INTENT(IN   ) :: id,julday,                    &
                                   ids,ide, jds,jde, kds,kde,    &
@@ -166,8 +184,10 @@
            ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,          &
            ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob, &
            ph_n2o5,                                                 &
-           ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,         &
-           ph_brono2_bro
+           !LMarelle Additional photolysis rates for halogen mechanisms
+           ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,            &
+           ph_brono2_bro, ph_clo_o3p, ph_clo_o1d, ph_cl2, ph_hocl,     &
+           ph_clno2, ph_clono2_no2, ph_clono2_no3, ph_brcl, ph_oclo
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                    &
          INTENT(IN ) ::                                             &
            tauaer1,tauaer2,tauaer3,tauaer4,                         &
@@ -386,8 +406,10 @@
            ph_hno3,ph_hno4,ph_h2o2,ph_ch2or,ph_ch2om,ph_ch3cho,   	&
            ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,        	&
            ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob, &
-           ph_n2o5, ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,&
-           ph_brono2_bro )
+           ph_n2o5,                                                 &
+           ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,         &
+           ph_brono2_bro, ph_clo_o3p, ph_clo_o1d, ph_cl2, ph_hocl,  &
+           ph_clno2, ph_clono2_no2, ph_clono2_no3, ph_brcl, ph_oclo)
 ! put the aerosol optical properties into the wrf arrays (this is hard-
 ! coded to 4 spectral bins, nspint)
 !     do k=kts,kte
@@ -426,21 +448,27 @@
         ph_hno3,ph_hno4,ph_h2o2,ph_ch2or,ph_ch2om,ph_ch3cho,   	    &
         ph_ch3coch3,ph_ch3coc2h5,ph_hcocho,ph_ch3cocho,        	    &
         ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob,    &
-        ph_n2o5, ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,   &
-        ph_brono2_bro )
+        ph_n2o5,                                                    &
+        ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,            &
+        ph_brono2_bro, ph_clo_o3p, ph_clo_o1d, ph_cl2, ph_hocl,     &
+        ph_clno2, ph_clono2_no2, ph_clono2_no3, ph_brcl, ph_oclo)
 
 	USE module_data_cbmz
 
    implicit none
 !jdf
    integer nphoto_fastj
-   parameter (nphoto_fastj = 21)
+   parameter (nphoto_fastj = 30)
    integer   &
    lfastj_no2,   lfastj_o3a,   lfastj_o3b,    lfastj_h2o2,   &
    lfastj_hchoa, lfastj_hchob, lfastj_ch3ooh, lfastj_no3x,   &
    lfastj_no3l,  lfastj_hono,  lfastj_n2o5,   lfastj_hno3,   &
    lfastj_hno4,  lfastj_bro,   lfastj_br2,    lfastj_hobr,   &
-   lfastj_brno2, lfastj_brono2_br, lfastj_brono2_bro
+   lfastj_brno2,                                             &
+   lfastj_brono2_br, lfastj_brono2_bro, lfastj_clo_o3p,      &
+   lfastj_clo_o1d, lfastj_cl2, lfastj_hocl, lfastj_clno2,    &
+   lfastj_clono2_no2, lfastj_clono2_no3, lfastj_brcl,        &
+   lfastj_oclo
    parameter( lfastj_no2   = 1 )
    parameter( lfastj_o3a   = 2 )
    parameter( lfastj_o3b   = 3 )
@@ -460,6 +488,15 @@
    parameter( lfastj_brno2 = 18 )
    parameter( lfastj_brono2_br = 19 )
    parameter( lfastj_brono2_bro = 20 )
+   parameter( lfastj_clo_o3p = 21)
+   parameter( lfastj_clo_o1d = 22)
+   parameter( lfastj_cl2 = 23)
+   parameter( lfastj_hocl = 24)
+   parameter( lfastj_clno2 = 25)
+   parameter( lfastj_clono2_no2 = 26)
+   parameter( lfastj_clono2_no3 = 27)
+   parameter( lfastj_brcl = 28)
+   parameter( lfastj_oclo = 29)
 !jdf
    INTEGER,      INTENT(IN   ) :: iflag,                        &
                                   ims,ime, jms,jme, kms,kme,    &
@@ -473,7 +510,8 @@
            ph_hcochest,ph_ch3o2h,ph_ch3coo2h,ph_ch3ono2,ph_hcochob,&
            ph_n2o5,                                                & 
            ph_bro, ph_br2, ph_hobr, ph_brno2, ph_brono2_br,        &
-           ph_brono2_bro
+           ph_brono2_bro, ph_clo_o3p, ph_clo_o1d, ph_cl2, ph_hocl, &
+           ph_clno2, ph_clono2_no2, ph_clono2_no3, ph_brcl, ph_oclo
 
    REAL, DIMENSION( kte,nphoto_fastj ), INTENT(INOUT) :: valuej
 
@@ -499,12 +537,21 @@
 	  ph_ch2or(iclm,kt,jclm)     = valuej(kt,lfastj_hchoa) * ft
 	  ph_ch2om(iclm,kt,jclm)     = valuej(kt,lfastj_hchob) * ft
 	  ph_n2o5(iclm,kt,jclm)      = valuej(kt,lfastj_n2o5) * ft
-          ph_bro(iclm,kt,jclm)       = valuej(kt,lfastj_bro) * ft
-          ph_br2(iclm,kt,jclm)       = valuej(kt,lfastj_br2) * ft
-          ph_hobr(iclm,kt,jclm)      = valuej(kt,lfastj_hobr) * ft
-          ph_brno2(iclm,kt,jclm)     = valuej(kt,lfastj_brno2) * ft
-          ph_brono2_br(iclm,kt,jclm) = valuej(kt,lfastj_brono2_br) * ft
+          ph_bro(iclm,kt,jclm)        = valuej(kt,lfastj_bro) * ft
+          ph_br2(iclm,kt,jclm)        = valuej(kt,lfastj_br2) * ft
+          ph_hobr(iclm,kt,jclm)       = valuej(kt,lfastj_hobr) * ft
+          ph_brno2(iclm,kt,jclm)      = valuej(kt,lfastj_brno2) * ft
+          ph_brono2_br(iclm,kt,jclm)  = valuej(kt,lfastj_brono2_br) * ft
           ph_brono2_bro(iclm,kt,jclm) = valuej(kt,lfastj_brono2_bro) * ft
+          ph_clo_o3p(iclm,kt,jclm)    = valuej(kt,lfastj_clo_o3p) * ft
+          ph_clo_o1d(iclm,kt,jclm)    = valuej(kt,lfastj_clo_o1d) * ft
+          ph_cl2(iclm,kt,jclm)        = valuej(kt,lfastj_cl2) * ft
+          ph_hocl(iclm,kt,jclm)       = valuej(kt,lfastj_hocl) * ft
+          ph_clno2(iclm,kt,jclm)      = valuej(kt,lfastj_clno2) * ft
+          ph_clono2_no2(iclm,kt,jclm) = valuej(kt,lfastj_clono2_no2) * ft
+          ph_clono2_no3(iclm,kt,jclm) = valuej(kt,lfastj_clono2_no3) * ft
+          ph_brcl(iclm,kt,jclm)       = valuej(kt,lfastj_brcl) * ft
+          ph_oclo(iclm,kt,jclm)       = valuej(kt,lfastj_oclo) * ft
 
 	  ph_o2(iclm,kt,jclm)        = 0.0
 	  ph_ch3cho(iclm,kt,jclm)    = 0.0
@@ -536,12 +583,22 @@
 	  valuej(kt,lfastj_hchoa)  = ph_ch2or(iclm,kt,jclm)/ ft
 	  valuej(kt,lfastj_hchob)  = ph_ch2om(iclm,kt,jclm)/ ft
 	  valuej(kt,lfastj_n2o5)   = ph_n2o5(iclm,kt,jclm) / ft
-	  valuej(kt,lfastj_bro)    = ph_bro(iclm,kt,jclm) / ft
-	  valuej(kt,lfastj_br2)    = ph_br2(iclm,kt,jclm) / ft
-	  valuej(kt,lfastj_hobr)   = ph_hobr(iclm,kt,jclm) / ft
-	  valuej(kt,lfastj_brno2)  = ph_brno2(iclm,kt,jclm) / ft
-	  valuej(kt,lfastj_brono2_br) = ph_brono2_br(iclm,kt,jclm) / ft
+	  valuej(kt,lfastj_bro)        = ph_bro(iclm,kt,jclm) / ft
+	  valuej(kt,lfastj_br2)        = ph_br2(iclm,kt,jclm) / ft
+	  valuej(kt,lfastj_hobr)       = ph_hobr(iclm,kt,jclm) / ft
+	  valuej(kt,lfastj_brno2)      = ph_brno2(iclm,kt,jclm) / ft
+	  valuej(kt,lfastj_brono2_br)  = ph_brono2_br(iclm,kt,jclm) / ft
 	  valuej(kt,lfastj_brono2_bro) = ph_brono2_bro(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_clo_o3p)    = ph_clo_o3p(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_clo_o1d)    = ph_clo_o1d(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_cl2)        = ph_cl2(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_hocl)       = ph_hocl(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_clno2)      = ph_clno2(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_clono2_no2) = ph_clono2_no2(iclm,kt,jclm) / ft 
+          valuej(kt,lfastj_clono2_no3) = ph_clono2_no3(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_brcl)       = ph_brcl(iclm,kt,jclm) / ft
+          valuej(kt,lfastj_oclo)       = ph_oclo(iclm,kt,jclm) / ft
+
 	end do
 
     return	!finished wrf->peg mapping
@@ -616,7 +673,7 @@
    integer, parameter :: single = 4        !compiler dependent value real*4
    integer, parameter :: double = 8        !compiler dependent value real*8
    integer,parameter :: ipar_fastj=1,jpar=1
-   integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+   integer,parameter :: jppj=29        !Number of photolytic reactions supplied
    logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
    integer lpar           !Number of levels in CTM
    integer jpnl           !Number of levels requiring chemistry
@@ -629,13 +686,17 @@
    integer month_fastj        !  Number of month (1-12)
    integer iday_fastj         !  Day of year
    integer nphoto_fastj
-   parameter (nphoto_fastj = 21)
+   parameter (nphoto_fastj = 30)
    integer   &
    lfastj_no2,   lfastj_o3a,   lfastj_o3b,    lfastj_h2o2,   &
    lfastj_hchoa, lfastj_hchob, lfastj_ch3ooh, lfastj_no3x,   &
    lfastj_no3l,  lfastj_hono,  lfastj_n2o5,   lfastj_hno3,   &
    lfastj_hno4,  lfastj_bro,   lfastj_br2,    lfastj_hobr,   &
-   lfastj_brno2, lfastj_brono2_br, lfastj_brono2_bro
+   lfastj_brno2,                                             &
+   lfastj_brono2_br, lfastj_brono2_bro, lfastj_clo_o3p,      &
+   lfastj_clo_o1d, lfastj_cl2, lfastj_hocl, lfastj_clno2,    &
+   lfastj_clono2_no2, lfastj_clono2_no3, lfastj_brcl,        &
+   lfastj_oclo
    parameter( lfastj_no2   = 1 )
    parameter( lfastj_o3a   = 2 )
    parameter( lfastj_o3b   = 3 )
@@ -655,6 +716,15 @@
    parameter( lfastj_brno2 = 18 )
    parameter( lfastj_brono2_br = 19 )
    parameter( lfastj_brono2_bro = 20 )
+   parameter( lfastj_clo_o3p = 21)
+   parameter( lfastj_clo_o1d = 22)
+   parameter( lfastj_cl2 = 23)
+   parameter( lfastj_hocl = 24)
+   parameter( lfastj_clno2 = 25)
+   parameter( lfastj_clono2_no2 = 26)
+   parameter( lfastj_clono2_no3 = 27)
+   parameter( lfastj_brcl = 28)
+   parameter( lfastj_oclo = 29)
    integer nspint           ! Num of spectral intervals across solar 
    parameter ( nspint = 4 ) ! spectrum for FAST-J
    real, dimension (nspint),save :: wavmid !cm
@@ -842,6 +912,15 @@
 	     valuej(k, lfastj_brno2) = jvalue(k,lfastj_brno2)
 	     valuej(k, lfastj_brono2_br) = jvalue(k,lfastj_brono2_br)
 	     valuej(k, lfastj_brono2_bro) = jvalue(k,lfastj_brono2_bro)
+             valuej(k, lfastj_clo_o3p)    = jvalue(k,lfastj_clo_o3p)
+             valuej(k, lfastj_clo_o1d)    = jvalue(k,lfastj_clo_o1d)
+             valuej(k, lfastj_cl2)        = jvalue(k,lfastj_cl2)
+             valuej(k, lfastj_hocl)       = jvalue(k,lfastj_hocl)
+             valuej(k, lfastj_clno2)      = jvalue(k,lfastj_clno2)
+             valuej(k, lfastj_clono2_no2) = jvalue(k,lfastj_clono2_no2) 
+             valuej(k, lfastj_clono2_no3) = jvalue(k,lfastj_clono2_no3)
+             valuej(k, lfastj_brcl)       = jvalue(k,lfastj_brcl)
+             valuej(k, lfastj_oclo)       = jvalue(k,lfastj_oclo)
 	  end do
 ! diagnostic output and zeroed value if negative photolysis rates returned
 	  do k = 1, lpar
@@ -980,7 +1059,7 @@
 ! following specific for fastj
 ! jppj will be gas phase mechanism dependent       
        integer,parameter :: ipar_fastj=1,jpar=1
-!      integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!      integer,parameter :: jppj=29        !Number of photolytic reactions supplied
        logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
 ! The vertical level variables are set in fastj_driver.
        integer lpar           !Number of levels in CTM
@@ -1118,7 +1197,7 @@
         integer, parameter :: single = 4        !compiler dependent value real*4
 !       integer, parameter :: double = 8        !compiler dependent value real*8
        integer,parameter :: ipar_fastj=1,jpar=1
-!      integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!      integer,parameter :: jppj=29        !Number of photolytic reactions supplied
        logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
        integer lpar           !Number of levels in CTM
        integer jpnl           !Number of levels requiring chemistry
@@ -1179,7 +1258,7 @@
        integer, parameter :: single = 4        !compiler dependent value real*4
 !      integer, parameter :: double = 8        !compiler dependent value real*8
        integer,parameter :: ipar_fastj=1,jpar=1
-!      integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!      integer,parameter :: jppj=29        !Number of photolytic reactions supplied
        logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
        integer lpar           !Number of levels in CTM
        integer jpnl           !Number of levels requiring chemistry
@@ -1315,7 +1394,7 @@
       integer, parameter :: single = 4        !compiler dependent value real*4
 !     integer, parameter :: double = 8        !compiler dependent value real*8
       integer,parameter :: ipar_fastj=1,jpar=1
-!     integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!     integer,parameter :: jppj=29        !Number of photolytic reactions supplied
       logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
       integer lpar           !Number of levels in CTM
       integer jpnl           !Number of levels requiring chemistry
@@ -1486,7 +1565,7 @@
       integer, parameter :: single = 4        !compiler dependent value real*4
 !     integer, parameter :: double = 8        !compiler dependent value real*8
       integer,parameter :: ipar_fastj=1,jpar=1
-!     integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!     integer,parameter :: jppj=29        !Number of photolytic reactions supplied
       logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
       integer lpar           !Number of levels in CTM
       integer jpnl           !Number of levels requiring chemistry
@@ -1585,7 +1664,7 @@
       integer, parameter :: single = 4        !compiler dependent value real*4
 !     integer, parameter :: double = 8        !compiler dependent value real*8
       integer,parameter :: ipar_fastj=1,jpar=1
-!     integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!     integer,parameter :: jppj=29        !Number of photolytic reactions supplied
       logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
       integer lpar           !Number of levels in CTM
       integer jpnl           !Number of levels requiring chemistry
@@ -1648,7 +1727,7 @@
       integer, parameter :: single = 4        !compiler dependent value real*4
 !     integer, parameter :: double = 8        !compiler dependent value real*8
       integer,parameter :: ipar_fastj=1,jpar=1
-!     integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!     integer,parameter :: jppj=29        !Number of photolytic reactions supplied
       logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
       integer lpar           !Number of levels in CTM
       integer jpnl           !Number of levels requiring chemistry
@@ -1698,6 +1777,20 @@
            elseif(TITLEJ(1,J) .eq. '2BRONO2') then
              QQQT = QQQT * (1. - xsecbr(K,dble(T(nslon,nslat,I))))
            endif
+           ! Apply quantum yields for the 2 different CLO pathways
+           ! 1 - O(3P), 2 - O(1D)
+           if(TITLEJ(1,J) .eq. '1CLO') then
+             QQQT = xsecclo(K,dble(T(nslon,nslat,I)))*QQQT
+           elseif(TITLEJ(1,J) .eq. '2CLO') then
+             QQQT = QQQT * (1. - xsecclo(K,dble(T(nslon,nslat,I))))
+           endif
+           ! Apply quantum yields for the 2 different CLONO2 pathways
+           ! 1 - NO2, 2 - NO3
+           if(TITLEJ(1,J) .eq. '1CLONO2') then
+             QQQT = QQQT * (1. - xsecclono2(K,dble(T(nslon,nslat,I))))
+           elseif(TITLEJ(1,J) .eq. '2CLONO2') then
+             QQQT = xsecclono2(K,dble(T(nslon,nslat,I)))*QQQT
+           endif
            VALJ(J) = VALJ(J) + QQQT*FFF(K,I)
 !------Additional code for pressure dependencies
 !           if(jpdep(J).ne.0) then
@@ -1737,7 +1830,7 @@
       integer, parameter :: single = 4        !compiler dependent value real*4
 !     integer, parameter :: double = 8        !compiler dependent value real*8
       integer,parameter :: ipar_fastj=1,jpar=1
-!     integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!     integer,parameter :: jppj=29        !Number of photolytic reactions supplied
       logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
       integer lpar           !Number of levels in CTM
       integer jpnl           !Number of levels requiring chemistry
@@ -1844,7 +1937,7 @@
         integer, parameter :: single = 4        !compiler dependent value real*4
 !       integer, parameter :: double = 8        !compiler dependent value real*8
        integer,parameter :: ipar_fastj=1,jpar=1
-!      integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!      integer,parameter :: jppj=29        !Number of photolytic reactions supplied
        logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
        integer lpar           !Number of levels in CTM
        integer jpnl           !Number of levels requiring chemistry
@@ -1965,6 +2058,34 @@
         flint(TTT,TQQ(1,3),TQQ(2,3),TQQ(3,3),Q1D(K,1),Q1D(K,2),Q1D(K,3))
       return
       end FUNCTION xsec1d       
+
+      FUNCTION xsecclono2(K,TTT)
+!-----------------------------------------------------------------------
+!  Quantum yields for CLONO2 --> CL + NO2 interpolated across 3 temps
+!-----------------------------------------------------------------------
+
+	USE module_fastj_data
+	
+      integer k
+      real*8 ttt,  xsecclono2
+      xsecclono2 =   &
+        flint(TTT,TQQ(1,3),TQQ(2,3),TQQ(3,3),QCLONO2(K,1),QCLONO2(K,2),QCLONO2(K,3))
+      return
+      end FUNCTION xsecclono2
+
+      FUNCTION xsecclo(K,TTT)
+!-----------------------------------------------------------------------
+!  Quantum yields for CLO --> CL + O3P interpolated across 3 temps
+!-----------------------------------------------------------------------
+
+	USE module_fastj_data
+	
+      integer k
+      real*8 ttt,  xsecclo
+      xsecclo =   &
+        flint(TTT,TQQ(1,3),TQQ(2,3),TQQ(3,3),QCLO(K,1),QCLO(K,2),QCLO(K,3))
+      return
+      end FUNCTION xsecclo
 
       FUNCTION xsecbr(K,TTT)
 !-----------------------------------------------------------------------
@@ -2161,7 +2282,7 @@
       integer, parameter :: single = 4        !compiler dependent value real*4
 !     integer, parameter :: double = 8        !compiler dependent value real*8
       integer,parameter :: ipar_fastj=1,jpar=1
-!     integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!     integer,parameter :: jppj=29        !Number of photolytic reactions supplied
       logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
       integer lpar           !Number of levels in CTM
       integer jpnl           !Number of levels requiring chemistry
@@ -3392,6 +3513,8 @@
 !     QO3      O3 cross-sections
 !     Q1D      O3 => O(1D) quantum yield
 !     QBR      BRONO2 => BR + NO3 quantum yield
+!     QCLO     CLO => CL + O3P quantum yield
+!     QCLONO2  CLONO2 => CL + NO3 quantum yield
 !     TQQ      Temperature for supplied cross sections
 !     QQQ      Supplied cross sections in each wavelength bin (cm2)
 !     NAA      Number of categories for scattering phase functions
@@ -3420,7 +3543,7 @@
         integer, parameter :: single = 4        !compiler dependent value real*4
 !       integer, parameter :: double = 8        !compiler dependent value real*8
         integer,parameter :: ipar_fastj=1,jpar=1
-!       integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+!       integer,parameter :: jppj=29        !Number of photolytic reactions supplied
         logical,parameter :: ldeg45=.false. !Logical flag for degraded CTM resolution
         integer lpar           !Number of levels in CTM
         integer jpnl           !Number of levels requiring chemistry

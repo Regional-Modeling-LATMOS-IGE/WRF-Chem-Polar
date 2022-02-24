@@ -1398,7 +1398,7 @@ state    real  ph_pan          ikj     misc        1         -      r        "PH
 state    real  ph_acet         ikj     misc        1         -      r        "PHOTR102"              "acetone photolysis rate" "min{-1}"
 state    real  ph_mglo         ikj     misc        1         -      r        "PHOTR103"              "mglo photolysis rate" "min{-1}"
 state    real  ph_hno4_2       ikj     misc        1         -      r        "PHOTR104"              "mglo photolysis rate" "min{-1}"
-state    real  ph_clno2        ikj     misc        1         -      r        "PHOTR204"                "CLNO2 Photolysis Rate" "min{-1}"
+state    real  ph_clno2        ikj     misc        1         -      rh       "PHOTR204"                "CLNO2 Photolysis Rate" "min{-1}"
 # mozart photolysis rates
 state    real  ph_n2o          ikj     misc        1         -      r        "PHOTR114"              "n2o photolysis rate" "min{-1}"
 state    real  ph_pooh         ikj     misc        1         -      r        "PHOTR118"              "pooh photolysis rate" "min{-1}"
@@ -1421,8 +1421,8 @@ state    real  ph_mekooh       ikj     misc        1         -      r        "PH
 state    real  ph_tolooh       ikj     misc        1         -      r        "PHOTR133"              "tolooh photolysis rate" "min{-1}"
 state    real  ph_terpooh      ikj     misc        1         -      r        "PHOTR134"              "terpooh photolysis rate" "min{-1}"
 # cb05cl photolysis rates
-state    real  ph_cl2          ikj     misc        1         -      r        "PHOTR201"              "cl2 photolysis rate" "min{-1}"
-state    real  ph_hocl         ikj     misc        1         -      r        "PHOTR202"              "hocl photolysis rate" "min{-1}"
+state    real  ph_cl2          ikj     misc        1         -      rh      "PHOTR201"              "cl2 photolysis rate" "min{-1}"
+state    real  ph_hocl         ikj     misc        1         -      rh      "PHOTR202"              "hocl photolysis rate" "min{-1}"
 state    real  ph_fmcl         ikj     misc        1         -      r        "PHOTR203"              "fmcl photolysis rate" "min{-1}"
 # SAPRC99 with halogens photolysis rates
 state    real  ph_bro          ikj     misc        1         -      rh      "PHOTR251"              "bro photolysis rate"        "min{-1}"
@@ -1431,12 +1431,21 @@ state    real  ph_hobr         ikj     misc        1         -      rh      "PHO
 state    real  ph_brno2        ikj     misc        1         -      rh      "PHOTR254"              "brno2 photolysis rate"      "min{-1}"
 state    real  ph_brono2_br    ikj     misc        1         -      rh      "PHOTR255"              "brono2_br photolysis rate"  "min{-1}"
 state    real  ph_brono2_bro   ikj     misc        1         -      rh      "PHOTR256"              "brono2_bro photolysis rate" "min{-1}"
+state    real  ph_clo_o3p      ikj     misc        1         -      rh      "PHOTR257"              "clo_o3p photolysis rate"    "min{-1}"
+state    real  ph_clo_o1d      ikj     misc        1         -      rh      "PHOTR258"              "clo_o1d photolysis rate"    "min{-1}"
+state    real  ph_clono2_no2   ikj     misc        1         -      rh      "PHOTR262"              "clono2_no2 photolysis rate" "min{-1}"
+state    real  ph_clono2_no3   ikj     misc        1         -      rh      "PHOTR263"              "clono2_no3 photolysis rate" "min{-1}"
+state    real  ph_brcl         ikj     misc        1         -      rh      "PHOTR264"              "brcl photolysis rate"       "min{-1}"
+state    real  ph_oclo         ikj     misc        1         -      rh      "PHOTR265"              "oclo photolysis rate"       "min{-1}"
 # SAPRC99 with halogens, heterogeneous reaction rates, highjacking the photolysis coupling with KPP
-state    real  ph_het_hobr     ikj     misc        1         -      rh      "PHOTR257"              "HOBr het reaction rate"   "s-1"
-state    real  ph_het_brono2   ikj     misc        1         -      rh      "PHOTR258"              "BrONO2 het reaction rate" "s-1"
-state    real  ph_het_hcl      ikj     misc        1         -      rh      "PHOTR259"              "HCl het reaction rate"    "s-1"
-state    real  ph_het_hbr      ikj     misc        1         -      rh      "PHOTR260"              "HBr het reaction rate"    "s-1"
-state    real  ph_het_n2o5     ikj     misc        1         -      rh      "PHOTR261"              "N2O5 het reaction rate"   "s-1"
+state    real  ph_het_hobr     ikj     misc        1         -      rh      "PHOTR266"              "HOBr het reaction rate"   "min{-1}"
+state    real  ph_het_brono2   ikj     misc        1         -      rh      "PHOTR267"              "BrONO2 het reaction rate" "min{-1}"
+state    real  ph_het_hcl      ikj     misc        1         -      rh      "PHOTR268"              "HCl het reaction rate"    "min{-1}"
+state    real  ph_het_hbr      ikj     misc        1         -      rh      "PHOTR269"              "HBr het reaction rate"    "min{-1}"
+state    real  ph_het_n2o5     ikj     misc        1         -      rh      "PHOTR270"              "N2O5 het reaction rate"   "min{-1}"
+state    real  ph_het_hocl     ikj     misc        1         -      rh      "PHOTR271"              "HOCl het reaction rate"   "min{-1}"
+state    real  ph_het_clono2   ikj     misc        1         -      rh      "PHOTR272"              "ClONO2 het reaction rate" "min{-1}"
+state    real  ph_het_oh       ikj     misc        1         -      rh      "PHOTR273"              "OH het reaction rate"     "min{-1}"
 
 # photolysis rad field diagnostic variables
 state    real  ph_par          ikj     misc        1         -      -        "ph_par"                "Photosynthetic Active Radiation"  "W m-2"

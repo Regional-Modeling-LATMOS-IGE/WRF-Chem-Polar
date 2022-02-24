@@ -24,12 +24,12 @@
         USE module_data_mosaic_other, only : kmaxd
 !jdf
        integer, parameter :: double = 8        !compiler dependent value real*8
-       integer,parameter :: jppj=20        !Number of photolytic reactions supplied
+       integer,parameter :: jppj=29        !Number of photolytic reactions supplied
 !jdf
 
         INTEGER  NB, NC !values set in fastj_driver, don't confuse
                         !this nc with the one in module_fastj_mie
-        INTEGER, PARAMETER :: NS=21, NW=15, NP=21, NH=7, MX=3
+        INTEGER, PARAMETER :: NS=30, NW=15, NP=21, NH=7, MX=3
 
 !titls variables
         CHARACTER*55 TITLE0(3)
@@ -44,7 +44,7 @@
 ! ccwvl variables
 	REAL(kind=double), dimension(NW) :: WL, FL, QBC 
 	REAL(kind=double), dimension(NW+1) :: WBIN, QRAYL
-	REAL(kind=double), dimension(NW,3) :: QO2, QO3, Q1D, QBR
+	REAL(kind=double), dimension(NW,3) :: QO2, QO3, Q1D, QBR, QCLO, QCLONO2
 	REAL(kind=double), dimension(NW,2,NS-3) :: QQQ
 	REAL(kind=double), dimension(3,NS) :: TQQ
 	REAL(kind=double), dimension(4,NP) :: WAA, QAA, RAA, SSA
@@ -119,7 +119,10 @@
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
-           0.1000D+01,  0.1000D+01    &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01                              &
          /
        data jlabel   &
          /   &
@@ -129,7 +132,10 @@
           'HONO   ', 'N2O5   ', 'HONO2  ',   &
           'HO2NO2 ', 'C2H5O2 ', 'BRO    ',   &
           'BR2    ', 'HOBR   ', 'BRNO2  ',   &
-          '1BRONO2', '2BRONO2'  &
+          '1BRONO2', '2BRONO2', '1CLO   ',   &
+          '2CLO   ', 'CL2    ', 'HOCL   ',   &
+          'CLNO2  ', '1CLONO2', '2CLONO2',   &
+          'BRCL   '                          &
          /         
 
 ! from rd_tjpl2
@@ -139,7 +145,7 @@
          /
        data NJVAL,NWWW,NW1,NW2   &
          /   &
-          21,    7,    1,    7   &
+          30,    7,    1,    7   &
          /
        data (WBIN(IW),IW=1,  8)   &
          /   &
@@ -262,37 +268,82 @@
           0.71742E+00,  0.74034E+00,  0.77E+00,     &
           0.77E+00     &
          /
-        data (TITLEJ(1,JTMP), JTMP=4,21)   &
+         !TODO fill QCLO with observed values
+        data (QCLO(IW, 1), IW=1,  7)   &
+         /   &
+          0.5        ,  0.5        ,  0.5        ,  &
+          0.5        ,  0.5        ,  0.5        ,  &
+          0.5          &
+         /
+        data (QCLO(IW, 2), IW=1,  7)   &
+         /   &
+          0.5        ,  0.5        ,  0.5        ,  &
+          0.5        ,  0.5        ,  0.5        ,  &
+          0.5          &
+         /
+        data (QCLO(IW, 3), IW=1,  7)   &
+         /   &
+          0.5        ,  0.5        ,  0.5        ,  &
+          0.5        ,  0.5        ,  0.5        ,  &
+          0.5          &
+         /
+        data (QCLONO2(IW, 1), IW=1,  7)   &
+         /   &
+          0.6        ,  0.6        ,  0.61433    ,  &
+          0.65719    ,  0.77862    ,  1.0        ,  &
+          1.0          &
+         /
+        data (QCLONO2(IW, 2), IW=1,  7)   &
+         /   &
+          0.6        ,  0.6        ,  0.61433    ,  &
+          0.65719    ,  0.77862    ,  1.0        ,  &
+          1.0          &
+         /
+        data (QCLONO2(IW, 3), IW=1,  7)   &
+         /   &
+          0.6        ,  0.6        ,  0.61433    ,  &
+          0.65719    ,  0.77862    ,  1.0        ,  &
+          1.0          &
+         /
+        data (TITLEJ(1,JTMP), JTMP=4,30)   &
          /   &
         'H2O2   ',  'HCHO_a ',  'HCHO_b ',  'MeOOH  ',   &
         'NO2    ',  'NO3_X  ',  'NO3_L  ',  'N2O5   ',   &
         'HONO   ',  'HONO2  ',  'HO2NO2 ',  'C2H5O2 ',   &
         'BRO    ',  'BR2    ',  'HOBR   ',  'BRNO2  ',   &
-        '1BRONO2',  '2BRONO2'  &
+        '1BRONO2',  '2BRONO2',  '1CLO   ',  '2CLO   ',   &
+        'CL2    ',  'HOCL   ',  'CLNO2  ',  '1CLONO2',   &
+        '2CLONO2',  'BRCL   ',  'OCLO   '              &
          /
-       data (TITLEJ(2,JTMP), JTMP=4,21)   &
+       data (TITLEJ(2,JTMP), JTMP=4,30)   &
          /   &
         'H2O2   ',  'HCHO_a ',  'HCHO_b ',  'MeOOH  ',   &
         'NO2    ',  'NO3_X  ',  'NO3_L  ',  'N2O5   ',   &
         'HONO   ',  'HONO2  ',  'HO2NO2 ',  'C2H5O2 ',   &
         'BRO    ',  'BR2    ',  'HOBR   ',  'BRNO2  ',   &
-        '1BRONO2',  '2BRONO2'  &
+        '1BRONO2',  '2BRONO2',  '1CLO   ',  '2CLO   ',   &
+        'CL2    ',  'HOCL   ',  'CLNO2  ',  '1CLONO2',   &
+        '2CLONO2',  'BRCL   ',  'OCLO   '              &
          /
-        data (TQQ(1,JTMP), JTMP= 4,21)   &
+        data (TQQ(1,JTMP), JTMP= 4,30)   &
          /   &
          200.,   223.,   223.,   200.,   &
          200.,   200.,   200.,   225.,   &
          200.,   200.,   200.,   200.,   &
          200.,   200.,   200.,   200.,   &
-         200.,   200.   &
+         200.,   200.,   200.,   200.,   &
+         200.,   200.,   200.,   220.,   &
+         220.,   200.,   200.            &
          /
-        data (TQQ(2,JTMP), JTMP= 4,21)   &
+        data (TQQ(2,JTMP), JTMP= 4,30)   &
          /   &
          300.,   293.,   293.,   300.,   &
          300.,   300.,   300.,   300.,   &
          300.,   300.,   300.,   300.,   &
          300.,   300.,   300.,   300.,   &
-         300. ,  300.   &
+         300.,   300.,   300.,   300.,   &
+         300.,   300.,   298.,   296.,   &
+         296.,   300.,   300.            &
          /
         data (QQQ(IW,1, 1), IW=1, 7)   &
          /   &
@@ -384,6 +435,60 @@
          2.113E-19,     1.765E-19,     1.518E-19,     1.294E-19,     &
          9.190E-20,     3.843E-20,     1.436E-21     &
          /
+        ! 1CLO, from IUPAC
+        data (QQQ(IW,1,19), IW=1, 7)   &
+         /   &
+         2.395E-19,     4.803E-19,     3.518E-19,     9.617E-20,     &
+         0.000E+00,     0.000E+00,     0.000E+00     &
+         /
+        ! 2CLO, from IUPAC
+        data (QQQ(IW,1,20), IW=1, 7)   &
+         /   &
+         2.395E-19,     4.803E-19,     3.518E-19,     9.617E-20,     &
+         0.000E+00,     0.000E+00,     0.000E+00     &
+         /
+        ! CL2, from IUPAC
+        data (QQQ(IW,1,21), IW=1, 7)   &
+         /   &
+         8.279E-20,     1.403E-19,     1.845E-19,     2.186E-19,     &
+         2.411E-19,     6.533E-20,     5.639E-22     &
+         /
+        ! HOCL, from IUPAC
+        data (QQQ(IW,1,22), IW=1, 7)   &
+         /   &
+         5.478E-20,     6.067E-20,     5.955E-20,     5.375E-20,     &
+         3.121E-20,     6.539E-21,     9.253E-24     &
+         /
+        ! CLNO2, interpolated to 200K using the factors from IUPAC
+        data (QQQ(IW,1,23), IW=1, 7)   &
+         /   &
+         1.672E-19,     1.411E-19,     1.167E-19,     9.187E-20,     &
+         4.103E-20,     3.006E-21,     5.117E-24     &
+         /
+        ! 1CLONO2, from IUPAC
+        data (QQQ(IW,1,24), IW=1, 7)   &
+         /   &
+         4.159E-20,     2.024E-20,     1.197E-20,     7.834E-21,     &
+         3.239E-21,     1.004E-21,     3.567E-24     &
+         /
+        ! 2CLONO2, from IUPAC
+        data (QQQ(IW,1,25), IW=1, 7)   &
+         /   &
+         4.159E-20,     2.024E-20,     1.197E-20,     7.834E-21,     &
+         3.239E-21,     1.004E-21,     3.567E-24     &
+         /
+        ! BRCL, from IUPAC
+        data (QQQ(IW,1,26), IW=1, 7)   &
+         /   &
+         4.536E-21,     8.749E-21,     1.626E-20,     3.170E-20,     &
+         1.228E-19,     3.199E-19,     2.042E-20     &
+         /
+        ! OCLO, from IUPAC
+        data (QQQ(IW,1,27), IW=1, 7)   &
+         /   &
+         3.308E-19,     2.347E-19,     1.566E-19 ,    1.174E-19,     &
+         4.242E-21,     1.065E-19,     1.951E-20     &
+         /
         data (QQQ(IW,2, 1), IW=1, 7)   &
          /   &
          0.98180E-20,   0.57350E-20,   0.37970E-20,   0.25850E-20,   &
@@ -473,6 +578,60 @@
          /   &
          2.113E-19,     1.765E-19,     1.518E-19,     1.294E-19,     &
          9.190E-20,     3.843E-20,     1.436E-21     &
+         /
+        ! 1CLO, from IUPAC
+        data (QQQ(IW,2,19), IW=1, 7)   &
+         /   &
+         2.395E-19,     4.803E-19,     3.518E-19,     9.617E-20,     &
+         0.000E+00,     0.000E+00,     0.000E+00     &
+         /
+        ! 2CLO, from IUPAC
+        data (QQQ(IW,2,20), IW=1, 7)   &
+         /   &
+         2.395E-19,     4.803E-19,     3.518E-19,     9.617E-20,     &
+         0.000E+00,     0.000E+00,     0.000E+00     &
+         /
+        ! CL2, from IUPAC
+        data (QQQ(IW,2,21), IW=1, 7)   &
+         /   &
+         8.279E-20,     1.403E-19,     1.845E-19,     2.186E-19,     &
+         2.411E-19,     6.533E-20,     5.639E-22     &
+         /
+        ! HOCL, from IUPAC
+        data (QQQ(IW,2,22), IW=1, 7)   &
+         /   &
+         5.478E-20,     6.067E-20,     5.955E-20,     5.375E-20,     &
+         3.121E-20,     6.539E-21,     9.253E-24     &
+         /
+        ! CLNO2, from IUPAC
+        data (QQQ(IW,2,23), IW=1, 7)   &
+         /   &
+         1.619E-19,     1.392E-19,     1.199E-19,     9.944E-20,     &
+         5.215E-20,     5.787E-21,     1.765E-23     &
+         /
+        ! 1CLONO2, from IUPAC
+        data (QQQ(IW,2,24), IW=1, 7)   &
+         /   &
+         5.027E-20,     2.589E-20,     1.616E-20,     1.061E-20,    &
+         4.393E-21,     1.219E-21,     7.058E-24     &
+         /
+        ! 2CLONO2, from IUPAC
+        data (QQQ(IW,2,25), IW=1, 7)   &
+         /   &
+         5.027E-20,     2.589E-20,     1.616E-20,     1.061E-20,    &
+         4.393E-21,     1.219E-21,     7.058E-24     &
+         /
+        ! BRCL, from IUPAC
+        data (QQQ(IW,2,26), IW=1, 7)   &
+         /   &
+         4.536E-21,     8.749E-21,     1.626E-20,     3.170E-20,     &
+         1.228E-19,     3.199E-19,     2.042E-20     &
+         /
+        ! OCLO, from IUPAC
+        data (QQQ(IW,2,27), IW=1, 7)   &
+         /   &
+         3.308E-19,     2.347E-19,     1.566E-19 ,    1.174E-19,     &
+         4.242E-21,     1.065E-19,     1.951E-20     &
          /
        data TITLE0(2)   &
          /   &
