@@ -24,12 +24,12 @@
         USE module_data_mosaic_other, only : kmaxd
 !jdf
        integer, parameter :: double = 8        !compiler dependent value real*8
-       integer,parameter :: jppj=14        !Number of photolytic reactions supplied
+       integer,parameter :: jppj=20        !Number of photolytic reactions supplied
 !jdf
 
         INTEGER  NB, NC !values set in fastj_driver, don't confuse
                         !this nc with the one in module_fastj_mie
-        INTEGER, PARAMETER :: NS=15, NW=15, NP=21, NH=7, MX=3
+        INTEGER, PARAMETER :: NS=21, NW=15, NP=21, NH=7, MX=3
 
 !titls variables
         CHARACTER*55 TITLE0(3)
@@ -44,7 +44,7 @@
 ! ccwvl variables
 	REAL(kind=double), dimension(NW) :: WL, FL, QBC 
 	REAL(kind=double), dimension(NW+1) :: WBIN, QRAYL
-	REAL(kind=double), dimension(NW,3) :: QO2, QO3, Q1D
+	REAL(kind=double), dimension(NW,3) :: QO2, QO3, Q1D, QBR
 	REAL(kind=double), dimension(NW,2,NS-3) :: QQQ
 	REAL(kind=double), dimension(3,NS) :: TQQ
 	REAL(kind=double), dimension(4,NP) :: WAA, QAA, RAA, SSA
@@ -117,7 +117,9 @@
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
-           0.1000D+01,  0.1000D+01   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01    &
          /
        data jlabel   &
          /   &
@@ -125,7 +127,9 @@
           'H2O2   ', 'HCHO_a ', 'HCHO_b ',   &
           'MeOOH  ', 'NO3_X  ', 'NO3_L  ',   &
           'HONO   ', 'N2O5   ', 'HONO2  ',   &
-          'HO2NO2 ', 'C2H5O2 '   &
+          'HO2NO2 ', 'C2H5O2 ', 'BRO    ',   &
+          'BR2    ', 'HOBR   ', 'BRNO2  ',   &
+          '1BRONO2', '2BRONO2'  &
          /         
 
 ! from rd_tjpl2
@@ -135,7 +139,7 @@
          /
        data NJVAL,NWWW,NW1,NW2   &
          /   &
-          15,    7,    1,    7   &
+          21,    7,    1,    7   &
          /
        data (WBIN(IW),IW=1,  8)   &
          /   &
@@ -240,29 +244,55 @@
           0.2370E+00,   0.8570E-01,   0.0000E+00,   &
           0.0000E+00   &
          /
-        data (TITLEJ(1,JTMP), JTMP=4,15)   &
+        data (QBR(IW, 1), IW=1,  7)   &
+         /   &
+          0.68775E+00,  0.69989E+00,  0.70933E+00,  &
+          0.71742E+00,  0.74034E+00,  0.77E+00,     &
+          0.77E+00     &
+         /
+        data (QBR(IW, 2), IW=1,  7)   &
+         /   &
+          0.68775E+00,  0.69989E+00,  0.70933E+00,  &
+          0.71742E+00,  0.74034E+00,  0.77E+00,     &
+          0.77E+00     &
+         /
+        data (QBR(IW, 3), IW=1,  7)   &
+         /   &
+          0.68775E+00,  0.69989E+00,  0.70933E+00,  &
+          0.71742E+00,  0.74034E+00,  0.77E+00,     &
+          0.77E+00     &
+         /
+        data (TITLEJ(1,JTMP), JTMP=4,21)   &
          /   &
         'H2O2   ',  'HCHO_a ',  'HCHO_b ',  'MeOOH  ',   &
         'NO2    ',  'NO3_X  ',  'NO3_L  ',  'N2O5   ',   &
-        'HONO   ',  'HONO2  ',  'HO2NO2 ',  'C2H5O2 '   &
+        'HONO   ',  'HONO2  ',  'HO2NO2 ',  'C2H5O2 ',   &
+        'BRO    ',  'BR2    ',  'HOBR   ',  'BRNO2  ',   &
+        '1BRONO2',  '2BRONO2'  &
          /
-       data (TITLEJ(2,JTMP), JTMP=4,15)   &
+       data (TITLEJ(2,JTMP), JTMP=4,21)   &
          /   &
         'H2O2   ',  'HCHO_a ',  'HCHO_b ',  'MeOOH  ',   &
         'NO2    ',  'NO3_X  ',  'NO3_L  ',  'N2O5   ',   &
-        'HONO   ',  'HONO2  ',  'HO2NO2 ',  'C2H5O2 '   &
+        'HONO   ',  'HONO2  ',  'HO2NO2 ',  'C2H5O2 ',   &
+        'BRO    ',  'BR2    ',  'HOBR   ',  'BRNO2  ',   &
+        '1BRONO2',  '2BRONO2'  &
          /
-        data (TQQ(1,JTMP), JTMP= 4,15)   &
+        data (TQQ(1,JTMP), JTMP= 4,21)   &
          /   &
          200.,   223.,   223.,   200.,   &
          200.,   200.,   200.,   225.,   &
-         200.,   200.,   200.,   200.   &
+         200.,   200.,   200.,   200.,   &
+         200.,   200.,   200.,   200.,   &
+         200.,   200.   &
          /
-        data (TQQ(2,JTMP), JTMP= 4,15)   &
+        data (TQQ(2,JTMP), JTMP= 4,21)   &
          /   &
          300.,   293.,   293.,   300.,   &
          300.,   300.,   300.,   300.,   &
-         300.,   300.,   300.,   300.   &
+         300.,   300.,   300.,   300.,   &
+         300.,   300.,   300.,   300.,   &
+         300. ,  300.   &
          /
         data (QQQ(IW,1, 1), IW=1, 7)   &
          /   &
@@ -324,6 +354,36 @@
          0.47500E-18,   0.12130E-19,   0.00000E+00,   0.00000E+00,   &
          0.00000E+00,   0.00000E+00,   0.00000E+00   &
          /
+        data (QQQ(IW,1,13), IW=1, 7)   &
+         /   &
+         2.000E-21,     2.145E-21,     3.403E-21,     4.293E-21,     &
+         6.126E-21,     6.651E-22,     0.000E+00     &
+         /
+        data (QQQ(IW,1,14), IW=1, 7)   &
+         /   &
+         2.023E-22,     1.147E-22,     1.498E-22,     3.956E-22,     & 
+         6.863E-21,     3.599E-19 ,    8.293E-20     &
+         /
+        data (QQQ(IW,1,15), IW=1, 7)   &
+         /   &
+         2.193E-19,     1.724E-19,     1.367E-19,     1.157E-19,     &
+         1.123E-19,     6.207E-20,     2.755E-21     &
+         /
+        data (QQQ(IW,1,16), IW=1, 7)   &
+         /   &
+         3.433E-22,     1.701E-22,     1.149E-22,     1.063E-22,     &
+         1.369E-22,     1.577E-22,     6.034E-24     &
+         /
+        data (QQQ(IW,1,17), IW=1, 7)   &
+         /   &
+         2.113E-19,     1.765E-19,     1.518E-19,     1.294E-19,     &
+         9.190E-20,     3.843E-20,     1.436E-21     &
+         /
+        data (QQQ(IW,1,18), IW=1, 7)   &
+         /   &
+         2.113E-19,     1.765E-19,     1.518E-19,     1.294E-19,     &
+         9.190E-20,     3.843E-20,     1.436E-21     &
+         /
         data (QQQ(IW,2, 1), IW=1, 7)   &
          /   &
          0.98180E-20,   0.57350E-20,   0.37970E-20,   0.25850E-20,   &
@@ -383,6 +443,36 @@
          /   &
          0.47500E-18,   0.12130E-19,   0.00000E+00,   0.00000E+00,   &
          0.00000E+00,   0.00000E+00,   0.00000E+00   &
+         /
+        data (QQQ(IW,2,13), IW=1, 7)   &
+         /   &
+         2.000E-21,     2.145E-21,     3.403E-21,     4.293E-21,     &
+         6.126E-21,     6.651E-22,     0.000E+00     &
+         /
+        data (QQQ(IW,2,14), IW=1, 7)   &
+         /   &
+         2.023E-22,     1.147E-22,     1.498E-22,     3.956E-22,     & 
+         6.863E-21,     3.599E-19 ,    8.293E-20     &
+         /
+        data (QQQ(IW,2,15), IW=1, 7)   &
+         /   &
+         2.193E-19,     1.724E-19,     1.367E-19,     1.157E-19,     &
+         1.123E-19,     6.207E-20,     2.755E-21     &
+         /
+        data (QQQ(IW,2,16), IW=1, 7)   &
+         /   &
+         3.433E-22,     1.701E-22,     1.149E-22,     1.063E-22,     &
+         1.369E-22,     1.577E-22,     6.034E-24     &
+         /
+        data (QQQ(IW,2,17), IW=1, 7)   &
+         /   &
+         2.113E-19,     1.765E-19,     1.518E-19,     1.294E-19,     &
+         9.190E-20,     3.843E-20,     1.436E-21     &
+         /
+        data (QQQ(IW,2,18), IW=1, 7)   &
+         /   &
+         2.113E-19,     1.765E-19,     1.518E-19,     1.294E-19,     &
+         9.190E-20,     3.843E-20,     1.436E-21     &
          /
        data TITLE0(2)   &
          /   &

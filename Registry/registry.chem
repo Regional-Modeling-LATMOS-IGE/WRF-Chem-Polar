@@ -1415,6 +1415,13 @@ state    real  ph_terpooh      ikj     misc        1         -      r        "PH
 state    real  ph_cl2          ikj     misc        1         -      r        "PHOTR201"              "cl2 photolysis rate" "min{-1}"
 state    real  ph_hocl         ikj     misc        1         -      r        "PHOTR202"              "hocl photolysis rate" "min{-1}"
 state    real  ph_fmcl         ikj     misc        1         -      r        "PHOTR203"              "fmcl photolysis rate" "min{-1}"
+# SAPRC99 with halogens photolysis rates
+state    real  ph_bro          ikj     misc        1         -      rh      "PHOTR251"              "bro photolysis rate"        "min{-1}"
+state    real  ph_br2          ikj     misc        1         -      rh      "PHOTR252"              "br2 photolysis rate"        "min{-1}"
+state    real  ph_hobr         ikj     misc        1         -      rh      "PHOTR253"              "hobr photolysis rate"       "min{-1}"
+state    real  ph_brno2        ikj     misc        1         -      rh      "PHOTR254"              "brno2 photolysis rate"      "min{-1}"
+state    real  ph_brono2_br    ikj     misc        1         -      rh      "PHOTR255"              "brono2_br photolysis rate"  "min{-1}"
+state    real  ph_brono2_bro   ikj     misc        1         -      rh      "PHOTR256"              "brono2_bro photolysis rate" "min{-1}"
 # photolysis rad field diagnostic variables
 state    real  ph_par          ikj     misc        1         -      -        "ph_par"                "Photosynthetic Active Radiation"  "W m-2"
 state    real  ph_erythema     ikj     misc        1         -      -        "ph_erythema"           "Erythema Action Spectrum"         "W m-2"
