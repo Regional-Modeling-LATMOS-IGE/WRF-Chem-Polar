@@ -3895,6 +3895,16 @@ state integer  STEPPHOT          -        misc     1         -      r        "ST
 state integer  STEPCHEM          -        misc     1         -      r        "STEPCHEM"              "NUMBER OF FUNDAMENTAL TIMESTEPS BETWEEN CHEM MECH CALLS"             "NA"
 state integer  STEPFIREPL        -        misc     1         -      r        "STEPFIREPL"            "NUMBER OF FUNDAMENTAL TIMESTEPS BETWEEN CALLSTO PLUMERISE FIRE ROUTINE"             "NA"
 
+# LMarelle: Add temporary aerosol pH output for MOSAIC 
+state   real    aer_ph_01  ikj   misc        max_domains         -     h         "aer_ph_01"  "Aerosol pH in bin 01"  ""
+state   real    aer_ph_02  ikj   misc        max_domains         -     h         "aer_ph_02"  "Aerosol pH in bin 02"  ""
+state   real    aer_ph_03  ikj   misc        max_domains         -     h         "aer_ph_03"  "Aerosol pH in bin 03"  ""
+state   real    aer_ph_04  ikj   misc        max_domains         -     h         "aer_ph_04"  "Aerosol pH in bin 04"  ""
+state   real    aer_ph_05  ikj   misc        max_domains         -     h         "aer_ph_05"  "Aerosol pH in bin 05"  ""
+state   real    aer_ph_06  ikj   misc        max_domains         -     h         "aer_ph_06"  "Aerosol pH in bin 06"  ""
+state   real    aer_ph_07  ikj   misc        max_domains         -     h         "aer_ph_07"  "Aerosol pH in bin 07"  ""
+state   real    aer_ph_08  ikj   misc        max_domains         -     h         "aer_ph_08"  "Aerosol pH in bin 08"  ""
+
                                                 
 #
 rconfig   character  emi_inname            namelist,chem        1       "wrfchemi_d<domain>_<date>"   -     "name of chem emissions infile"  ""    ""

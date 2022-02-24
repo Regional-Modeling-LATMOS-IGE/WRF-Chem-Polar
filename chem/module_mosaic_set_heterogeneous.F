@@ -5,8 +5,6 @@
 ! Calculates heterogeneous reaction rates for the halogen mechanism coupled with
 ! MOSAIC
 !
-!TODO include a control on Cl- content and on pH: species should react only on
-!  acidic aerosols containing some Cl-
 
     CONTAINS
 
@@ -16,6 +14,8 @@
         chem, t_phy, p_phy, alt,                                       &
         ph_het_hobr, ph_het_brono2, ph_het_hcl, ph_het_hbr,            &
         ph_het_n2o5, ph_het_hocl, ph_het_clono2, ph_het_oh,            &
+        aer_ph_01, aer_ph_02, aer_ph_03, aer_ph_04, &
+        aer_ph_05, aer_ph_06, aer_ph_07, aer_ph_08, &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )
@@ -53,6 +53,9 @@
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: ph_het_hobr, ph_het_brono2, &
         ph_het_hcl, ph_het_hbr, ph_het_n2o5, ph_het_hocl, ph_het_clono2, &
         ph_het_oh
+    REAL, INTENT(OUT), &
+        DIMENSION( ims:ime, kms:kme, jms:jme ) :: aer_ph_01, aer_ph_02, aer_ph_03, aer_ph_04, &
+        aer_ph_05, aer_ph_06, aer_ph_07, aer_ph_08
 
     ! Local variables
     INTEGER it, jt, kt
@@ -62,7 +65,7 @@
     REAL(r8) :: wetdp, wetdens, wetmass, wetvol, &
          drydp, drydens, drymass, dryvol, dryarea, wetarea
     REAL(r8) :: freepath, molar_weight, diffusion_constant
-    REAL(r8) :: mean_speed, knudsen, j_corr, upper, lower
+    REAL(r8) :: mean_speed, knudsen, j_corr, upper, lower, aerosol_bin_ph
     INTEGER,  PARAMETER :: nspecies = 8
     REAL(r8), DIMENSION(nspecies) :: k_het
 
@@ -256,11 +259,36 @@
             j_corr = 0._r8
         ENDIF
 
+        ! Aerosol pH, calculated in module_data_mosaic_therm
+        IF(ibin == 1) THEN
+          aerosol_bin_ph = aer_ph_01(it, kt, jt)
+        ELSEIF(ibin == 2) THEN
+          aerosol_bin_ph = aer_ph_02(it, kt, jt)
+        ELSEIF(ibin == 3) THEN
+          aerosol_bin_ph = aer_ph_03(it, kt, jt)
+        ELSEIF(ibin == 4) THEN
+          aerosol_bin_ph = aer_ph_04(it, kt, jt)
+        ELSEIF(ibin == 5) THEN
+          aerosol_bin_ph = aer_ph_05(it, kt, jt)
+        ELSEIF(ibin == 6) THEN
+          aerosol_bin_ph = aer_ph_06(it, kt, jt)
+        ELSEIF(ibin == 7) THEN
+          aerosol_bin_ph = aer_ph_07(it, kt, jt)
+        ELSEIF(ibin == 8) THEN
+          aerosol_bin_ph = aer_ph_08(it, kt, jt)
+        ENDIF
+        ! Turn off the het reaction if the aerosol is not sufficiently acidic
+        ! (using a ph == 5 threshold)
+        IF(aerosol_bin_ph > 5._r8 .OR. aerosol_bin_ph <= 0._r8) THEN
+          j_corr = 0._r8
+        ENDIF
+
         ! Calculate the effective rate constant k_het (s-1) for surface reactions
         ! Sum k_het over bins to calculate the total resulting effective rate constant
         !TODO check wetarea vs. dryarea with Jennie, check k_het sum over bins
         k_het(ispecies) = k_het(ispecies) + 0.25_r8 * mean_speed * gamma_factors(ispecies) &
                            * wetarea * j_corr
+
       END DO !ispecies
   
     END DO !ibin, size

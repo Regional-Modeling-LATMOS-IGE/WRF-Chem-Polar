@@ -41,7 +41,7 @@
 !TODO define all variables and units in declaration section
 ! Check all units !
 !
-!TODO change the critical temperature to OK but include a memory to this,
+!TODO change the critical temperature to 0K but include a memory to this,
 !everytime the temperature rises above 0K or if liquid rain falls bromine
 !emissions and recycling are turned off, until new snow falls again and
 !temperatures are below 0K.
