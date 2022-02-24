@@ -205,7 +205,7 @@ tile_lon_loop : &
 
             ! If snow height >= 10 cm or if the land type is ice, force iseason = 4
             ! ("winter, snow on ground and subfreezing" category)
-            if( snowh(i,j) >= .01 .or. iland == isice_temp) then
+            if( snowh(i,j) >= .01 .or. iland == isice_temp ) then
                iseason = 4
             end if
 
@@ -3280,18 +3280,18 @@ is_cbm4_kpp : &
          ! Cl2
          hstar(p_cl2) = 0.0932
          dhr(p_cl2) = 2000.
-         f0(p_cl2) = 1. ! not sure
+         f0(p_cl2) = 1. ! assumed to be reactive
          dvj(p_cl2) = 0.12
          ! HOCl
          hstar(p_hocl) = 659
          dhr(p_hocl) = 5900.
-         f0(p_hocl) = 1. ! not sure
+         f0(p_hocl) = 1. ! assumed to be reactive
          dvj(p_hocl) = 0.14
          ! ClONO2
          hstar(p_clono2) = 1.51E+3 ! assumed to be same as HCl
          dhr(p_clono2) = 2300. ! assumed to be same as HCl
-         f0(p_clono2) = 1. ! not sure
-         dvj(p_clono2) = 0.12
+         f0(p_clono2) = 1. ! assumed to be reactive
+         dvj(p_clono2) = 0.1
        END IF
      end if
 

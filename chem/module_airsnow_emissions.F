@@ -4,6 +4,11 @@
 ! Compute Br2 emissions from the snowpack and add them to chem(:, :, :, p_br2)
 !
 ! References:
+! - Louis Marelle, Jennie L. Thomas, Shaddy Ahmed, Katie Tuite, Jochen Stutz,
+! Aurélien Dommergue, William R. Simpson, Markus M.  Frey. Implementation and
+! impacts of surface and blowing snow sources of Arctic bromine activation
+! within WRF-Chem 4.1.1. Submitted to the Journal of Advances in Modeling Earth
+! Systems, 2020
 ! - Toyota, K., McConnell, J. C., Lupu, A., Neary, L., McLinden, C. A., Richter,
 ! A., Kwok, R., Semeniuk, K., Kaminski, J. W., Gong, S.-L., Jarosz, J.,
 ! Chipperfield, M. P., and Sioris, C. E.: Analysis of reactive bromine
@@ -21,39 +26,22 @@
 ! - Déry, S.J. & Yau, M.K. Simulation Of Blowing Snow In The Canadian Arctic
 ! Using A Double-Moment Model, Boundary-Layer Meteorology (2001) 99: 297.
 ! https://doi.org/10.1023/A:1018965008049
-!TODO Massom et al. (2001) + Sander et al 2003 references
-!TODO Blowing snow should be in a separate module, and should use snow salinity
-!data for the Arctic instead of the Antarctic data used here
 !
 ! Remarks:
 ! For now, this is only coupled to the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP
 ! gas-phase/aerosol mechanism
-!
-!TODO check blowing snow results vs. Yang2008, fig. 2
-!
-!TODO scale by snowc, xice??
-!
-!TODO add checks for numerical issues, eg divisions
-!
-!TODO, write down assumptions, e.g. it's a MOSAIC module with the standard 8
-!size bins, maybe compare the bin sizes to what I assumed offline
+! At the very least, this module assumes that MOSAIC is used with the standard 8 size bins
 !
 !TODO add a check for lake ice
+!TODO Ideally, blowing snow should be in a separate module, and if it becomes
+! available it would be better to  use snow salinity data for the Arctic instead
+! of the Antarctic data used here
+!TODO The blowing snow code can be updated with latest developments, from
+! https://doi.org/10.5194/acp-19-8407-2019, 2019. 
 !
-!TODO add BrCl emissions
-!
-!TODO define all variables and units in declaration section
-! Check all units !
-!
-!TODO change the critical temperature to 0K but include a memory to this,
-!everytime the temperature rises above 0K or if liquid rain falls bromine
-!emissions and recycling are turned off, until new snow falls again and
-!temperatures are below 0K.
 !TODO
 ! - If someone tries to use this option with another mechanism include a call
 ! to WRF_FATAL in chemics_init.F.
-! - Write a caveat for lake ice, which should not emit Br2.
-! - TODO write a caveat for mountain ice
 
 MODULE module_airsnow_emissions
 
@@ -125,10 +113,11 @@ CONTAINS
   CHARACTER (LEN=1000) :: msg
   ! Loop indices i j k, ice landuse category
   INTEGER :: i, j, k, isice_temp = 24
-  ! Br2 and BrCl emissions (mole/m2/s), Conversion factor from emissions to ppm, from
-  ! emissions to µg/kg, critical temperature for Br2
-  ! emissions & recycling (K)
-  REAL :: br2_emi = 0.0, brcl_emi = 0.0, conv, conv2, tskcrit = 273.15
+  ! Br2 and BrCl emissions (mole/m2/s), Conversion factor from emissions to ppm,
+  ! Conversion factor from emissions to µg/kg, temperature threshold for Br2
+  ! emissions & recycling (K), sea ice cover threshold for surface snow and
+  ! blowing snow emissions (area proportion)
+  REAL :: br2_emi = 0.0, brcl_emi = 0.0, conv, conv2, tskcrit = 273.15, seaice_crit = 0.75
 
   !---- Local variables for the blowing snow model
   INTEGER, PARAMETER :: naersizes = 8
@@ -160,9 +149,6 @@ CONTAINS
   REAL :: kconv_day_s = 1.1574E-5
   ! Adjustment factor for the emission flux, based on snow age (unitless),
   ! snow age (hours)
-  ! TODO add a snow age variable, starts at 3 days, resets to 0 when there is
-  ! more than XX mm of snow per day (5 mm ?)
-  ! TODO update salinity and snow age to follow Frey
   REAL ::  a_prime, snow_age = 3 * 24
   ! Reference 10m-wind speed (m/s)
   REAL :: w10_0 = 6.975
@@ -180,7 +166,7 @@ CONTAINS
   REAL :: mw_br2 = 159.81
   ! Mass proportion of total NaCl emissions going into each MOSAIC size bin,
   ! calculated offline by integrating the size distribution in Yang et al.
-  ! (2008) TODO check naersizes
+  ! (2008) TODO include a check on naersizes
   REAL :: mosaic_massfrac_nacl(naersizes)
   ! Bromine depletion factor in sea salt (unitless), from Sander et al. [2003],
   ! interpolated to the MOSAIC center size bin
@@ -189,6 +175,7 @@ CONTAINS
   LOGICAL :: do_snow_emissions, do_blowing_snow
 
   !---- Data declaration
+  ! Calculated based on Yang et al. (2018) for the MOSAIC size bins
   mosaic_massfrac_nacl = (/ 0.2189E-09, 0.6873E-08, 0.2122E-06, 0.6306E-05, &
                             0.1742E-03, 0.4182E-02, 0.7729E-01, 0.9183E+00 /)
   depletion_factor = (/ -3.8200, -3.8200, -3.6856, -2.2739, &
@@ -220,15 +207,13 @@ CONTAINS
       ! used in the whole routine also needs to be consistent with the one used
       ! to set ice-covered conditions in dry deposition (that is, the threshold
       ! used to set ivgtyp = is_ice)
-      ! xice(i, j) .GT. 0.9 to avoid cases with high deposition because of
-      ! fractional sea ice
-      IF (((snowh(i, j) .GT. 0.01 .AND. xice(i, j) .LE. 0.01) .OR. xice(i, j) .GT. 0.9) .AND. meltedsnow(i,j) .LE. 0.5) THEN
+      IF (((snowh(i, j) .GT. 0.01 .AND. xice(i, j) .LE. 0.01) .OR. xice(i, j) .GT. seaice_crit) .AND. meltedsnow(i,j) .LE. 0.5) THEN
         ! If snow melts, turn off surface emissions there for the rest of the
         ! simulation 
-        !TODO also use this for blowing snow !TODO snow might need to melt for
-        !some time (K. Toyota uses 6h continuous melt) !TODO this needs to be
-        !reset in the fall, e.g. when sea-ice reforms in october and later or
-        !with snow fall !TODO this should ideally drift with sea ice
+        !TODO this needs to be reset in the fall, e.g. when sea-ice reforms in
+        !october and later or with new snow fall !TODO this should ideally drift
+        !with sea ice !TODO this should ideally read in observed sea ice state
+        !(snow state, snow salinity etc.)
         IF(tsk(i, j) .GT. 273.15) THEN
           meltedsnow(i,j) = 1.
         ENDIF
@@ -244,31 +229,30 @@ CONTAINS
 
           IF (do_snow_emissions) THEN
             ! O3 deposition over first-year sea ice is converted to Br2 with a
-            ! molar yield of 0.075 for SZA <= 90°
-            !TODO tuned up the factors by x5
-            IF (coszen(i,j) .GE. 0.0 .AND. xice(i,j) .GT. 0.9) THEN
-              br2_emi = br2_emi + drydepflx_o3(i,j) * 0.075 * 5
-            ELSEIF (coszen(i,j) .LT. 0.0 .AND. xice(i,j) .GT. 0.9 ) THEN
-              br2_emi = br2_emi + drydepflx_o3(i,j) * 0.001 * 0.01 * 5
+            ! molar yield of 0.075 for SZA <= 85°
+            IF (coszen(i,j) .GE. 0.087 .AND. xice(i,j) .GT. seaice_crit) THEN
+              br2_emi = br2_emi + drydepflx_o3(i,j) * 0.075 * xice(i,j)
+            ELSEIF (coszen(i,j) .LT. 0.087 .AND. xice(i,j) .GT. seaice_crit) THEN
+              br2_emi = br2_emi + drydepflx_o3(i,j) * 0.001 * xice(i,j)
 
-            END IF ! coszen >= 0.0 <=> SZA <= 90°, and over ice
+            END IF ! coszen >= 0.087 <=> SZA <= 85°, and over ice
           END IF ! do_snow_emissions
 
           !---- Br2 "recycling" release
 
-          IF (xice(i,j) .GT. 0.9) THEN
+          IF (xice(i,j) .GT. seaice_crit) THEN
             ! Over FY ice, HOBr and BrONO2 deposition gets converted to Br2
-            br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j))
+            br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j)) * xice(i,j)
 
-          ! ELSEIF (xice(i,j) .GT. 0.9 .AND. seaice_age(i,j) >= 1.5) THEN
-          !   !TODO Over MY ice, 2 cases
+          ! ! This is disabled for now, as there is no strong evidence that MYI
+          ! and FYI act differently (Peterson et al., 2019)
+          ! ELSEIF (xice(i,j) .GT. 0.15 .AND. seaice_age(i,j) >= 1.5) THEN
+          !   !Over MY ice, 2 cases
           !   !   1 - if HOBr+BrONO2 deposition <= HBr deposition, it gets converted to
           !   !   Br2
           !   !   2 - if HOBr+BrONO2 deposition > HBr deposition, an amount of [HBr]
           !   !   gets converted to Br2 and the excess part gets converted to BrCl
           !   !   (or 50% Br2 if there is no chlorine in the mechanism)
-          ! ! This is disabled for now, as there is no strong evidence that MYI
-          ! and FYI act differently (Kenjiro Toyota, personal communication)
           !   IF ((drydepflx_hobr(i,j) + drydepflx_brno3(i,j)) .LE. drydepflx_hbr(i,j)) THEN
           !     br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j))
           !   ELSE
@@ -280,10 +264,10 @@ CONTAINS
 
           ! Over continental snow, the smaller of both fluxes gets converted to
           ! Br2
-          !TODO Make sure that this is not ocean/seaice. Technically, xice <
-          !0.01 should be enough to make sure that it is not a sea ice cell, and
-          !there is no snow height over the open ocean, but it would be safer to
-          !also use xland
+          ! Make sure that this is not ocean/seaice. WRF considers sea-ice as
+          ! land, so to check for continental snow we use, xice < 0.01 and
+          ! snowh>0.01 (there is no snow height over the open ocean)
+          !TODO use xland + seaice check, would be more legible
           IF (xice(i,j) .LE. 0.01 .AND. snowh(i, j) .GT. 0.01) THEN
             IF ((drydepflx_hobr(i,j) + drydepflx_brno3(i,j)) .LE. drydepflx_hbr(i,j)) THEN
               br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j))
@@ -292,16 +276,15 @@ CONTAINS
             END IF
           END IF
         END IF ! tsk <= tskcrit
-      END IF ! (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. 0.9), snow or sea ice cell
+      END IF ! (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. seaice_crit), snow or sea ice cell
 
       !-------- Halogen emissions from blowing snow
 
       IF (do_blowing_snow) THEN
         ! Only over sea-ice, and below freezing
-        IF (xice(i, j) .GT. 0.01 .AND. tsk(i,j) .LT. tskcrit) THEN
+        IF (xice(i, j) .GT. seaice_crit .AND. tsk(i,j) .LT. tskcrit) THEN
           ! Calculate the critical 10m wind speed for blowing snow, from Yang et
           ! al. (2008)
-          !TODO It would be better to use T10
           w10_crit = w10_0 + 0.0033 * (t2(i,j) - 273.15 + 27.27) ** 2.0
 
           ! Wind speed in m s-1
@@ -315,9 +298,8 @@ CONTAINS
             ! Calculate the snow sublimation flux, qsnow_subl, based on Yang et
             ! al. (2008) and Dery and Yau (2001), with help from Markus Frey for
             ! the fconduction and fdiffusion terms
-            !TODO p_phy should be p10m or psfc, t2 should be 10m
-            !TODO cross-check the l_s, k_d and d_v parameterizations and output
-            !values
+            !TODO Could also use p10m or psfc instead of p_phy, and t10m instead
+            !of t2
             l_s = 2.83458E6 - (t2(i,j) - 273.15) * (340. + 10.46 * (t2(i,j) - 273.15))
             k_d = 0.023807 + 7.1128E-5 * (t2(i,j) - 273.15)
             d_v = 2.11E-5 * (t2(i,j) / 273.15) ** 1.94 * (1013.25 / (p_phy(i, kts, j) * 1.0E-2))
@@ -340,9 +322,9 @@ CONTAINS
 
             ! Sea salt emission flux (kg/m2/s), from Yang et al., (2008), using
             ! the mean Antarctic snow salinity from Massom et al. (2001)
-            nacl_emi = qsnow_subl * snow_salinity / 1000.
+            ! scaled by the ice fraction
+            nacl_emi = qsnow_subl * snow_salinity / 1000. * xice(i, j)
             IF (nacl_emi < 0.) THEN
-            !TODO understand why this is sometimes < 0
             !  write(msg,*) 'module_airsnow_emissions: nacl_emi < 0., nacl_emi=',nacl_emi,' at i,j=',i,j
             !  CALL wrf_error_fatal( trim(msg) )
               nacl_emi = 0.
@@ -352,19 +334,16 @@ CONTAINS
             ! (kg/m2/s)
             DO isize = 1,nsize_aer(itype)
               br_emi = nacl_emi * mosaic_massfrac_nacl(isize) * br_nacl_massratio * depletion_factor(isize)
-              ! Divide by 2 to conserve bromine, and scale by the ice fraction,
-              ! convert from kg/m2/s to mole/m2/s
-              br2_emi = br2_emi + br_emi / 2. * xice(i,j) * 1.0E3 / mw_br2
+              ! Divide by 2 to conserve bromine, convert from kg/m2/s to mole/m2/s
+              br2_emi = br2_emi + br_emi / 2. * 1.0E3 / mw_br2
             END DO ! isize
 
           END IF ! w10 .gt. w10_crit
-        END IF ! xice(i, j) .GT. 0.01 .AND. tsk(i,j) .LT. tskcrit
+        END IF ! xice(i, j) .GT. 0.15 .AND. tsk(i,j) .LT. tskcrit
       END IF ! do_blowing_snow
 
 
       !-------- Add Br2 emissions from airsnow and blowing snow, and sea salt emissions from blowing snow  --------
-      !TODO Add p1st checks and variables everywhere in the module
-
       ! Conversion factor from mole/m2/s to ppm
       conv = 1.0E3 * mwdry / rho_phy(i,kts,j) * dtstep / (dz8w(i,kts,j))
       ! Conversion from kg/m2/s to µg/m3
@@ -394,23 +373,20 @@ CONTAINS
         END IF
         ! Add Br2 emissions
         IF (chem(i,kts,j,p_br2)  + br2_emi * conv <= 0) THEN
-          br2_emi = - chem(i,kts,j,p_br2) / conv
+          br2_emi = - chem(i,kts,j,p_br2) / conv 
           chem(i,kts,j,p_br2) = 0.0
         ELSE
           chem(i,kts,j,p_br2) = chem(i,kts,j,p_br2) + br2_emi * conv
         END IF
-        ! Add BrCl emissions
-        IF (chem(i,kts,j,p_brcl)  + brcl_emi * conv <= 0) THEN
-          brcl_emi = - chem(i,kts,j,p_brcl) / conv
-          chem(i,kts,j,p_brcl) = 0.0
-        ELSE
-          chem(i,kts,j,p_brcl) = chem(i,kts,j,p_brcl) + brcl_emi * conv
-        END IF
+        ! ! Add BrCl emissions
+        ! IF (chem(i,kts,j,p_brcl)  + brcl_emi * conv <= 0) THEN
+        !   brcl_emi = - chem(i,kts,j,p_brcl) / conv
+        !   chem(i,kts,j,p_brcl) = 0.0
+        ! ELSE
+        !   chem(i,kts,j,p_brcl) = chem(i,kts,j,p_brcl) + brcl_emi * conv
+        ! END IF
 
         !---- Output diagnosis, accumulated br2 emissions in mole/m2
-        ! TODO separate recycling, blowing snow, snow trigger, br2 reemissions
-        ! TODO remove br2 reemissions and replace by Br2 deposition set to 0
-        ! over snow/ice ?
         emiss_br2(i,j) = emiss_br2(i,j) + br2_emi * dtstep
 
       END DO !isize

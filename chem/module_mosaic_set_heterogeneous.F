@@ -244,7 +244,7 @@
         CALL calc_freepath(temp, molar_weight, diffusion_constant, freepath)
 
         ! Calculate the Knudsen number
-        knudsen = freepath / wetdp
+        knudsen = freepath * 2.0_r8 / wetdp
 
         ! Calculate the Fuchs and Sutugin (1871) expression j_corr from Table
         ! 11.1, Seinfeld and Pandis, 1998
@@ -285,7 +285,6 @@
 
         ! Calculate the effective rate constant k_het (s-1) for surface reactions
         ! Sum k_het over bins to calculate the total resulting effective rate constant
-        !TODO check wetarea vs. dryarea with Jennie, check k_het sum over bins
         k_het(ispecies) = k_het(ispecies) + 0.25_r8 * mean_speed * gamma_factors(ispecies) &
                            * wetarea * j_corr
 

@@ -35,6 +35,9 @@ CONTAINS
                ktau,p8w, u_phy,v_phy,rho_phy,g,dx,erod,  &  ! GOCART DUST 
                dust_emiss_active, seasalt_emiss_active,                    &
                dust_flux, seas_flux,                                       &
+               !LMarelle++
+               xice,                                                       &
+               !LMarelle--
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
                its,ite, jts,jte, kts,kte                                   )
@@ -70,6 +73,8 @@ CONTAINS
    REAL, INTENT(IN   ) ::  dx, g
    REAL, DIMENSION( ims:ime, jms:jme,3),&
          INTENT(IN ) ::     erod
+   !LMarelle -  ice fraction for sea salt and Br2 emissions
+   REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: xice
 
 
    REAL, INTENT(IN   ) ::    dtstep
@@ -712,6 +717,9 @@ size_loop: &
 	    call mosaic_seasalt_emiss(                                     &
                id, dtstep, u10, v10, alt, dz8w, xland, config_flags, chem, &
                seas_flux,                                                  &
+               !LMarelle++
+               xice,                                                       &
+               !LMarelle--
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
                its,ite, jts,jte, kts,kte, seasalt_emiss_active             )
@@ -759,6 +767,9 @@ size_loop: &
    subroutine mosaic_seasalt_emiss(                                        &
                id, dtstep, u10, v10, alt, dz8w, xland, config_flags, chem, &
                seas_flux,                                                  &
+               !LMarelle++
+               xice,                                                       &
+               !LMarelle--
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
                its,ite, jts,jte, kts,kte, seasalt_emiss_active             )
@@ -787,6 +798,8 @@ size_loop: &
 ! 10-m wind speed components (m/s)
    REAL,  DIMENSION( ims:ime , jms:jme ),                                  &
           INTENT(IN   ) ::   u10, v10, xland
+!LMarelle -  ice fraction for sea salt and Br2 emissions
+   REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: xice
 
 ! trace species mixing ratios (aerosol mass = ug/kg; number = #/kg)
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, num_chem ),                 &
@@ -811,7 +824,7 @@ size_loop: &
 	real :: ssemfact_mass( maxd_asize, maxd_atype )
 
         !++LMarelle
-        real fact_ppm_br2
+        real fact_ppm_br2, xocean
         ! Br2/NaCl mass ratio in kg/kg, from doi:10.1029/2008GL034536, also
         ! assuming an emission efficiency of 0.5. Additional 0.5 factor for Br ->
         ! Br2 conversion, to conserve Br.
@@ -895,11 +908,13 @@ size_loop: &
 		! Skip this point if over land. xland=1 for land and 2 for water.
 		! Also, there is no way to differentiate fresh from salt water.
 		! Currently, this assumes all water is salty.
-		if( xland(i,j) < 1.5 ) cycle
+		if( xland(i,j) < 1.5 .or. (xice(i,j) .le. 0.99 .and. xice(i,j) .ge. 0.01)) cycle
 	
 		!wig: As far as I can tell, only real.exe knows the fractional breakdown
 		!     of land use. So, in wrf.exe, dumoceanfrac will always be 1.
 		dumoceanfrac = 1. !fraction of grid i,j that is salt water
+                !LMarelle
+                xocean = 1.0 - xice(i,j)
 		dumspd10 = dumoceanfrac* &
 			 ( (u10(i,j)*u10(i,j) + v10(i,j)*v10(i,j))**(0.5*3.41) )
 	
@@ -932,19 +947,19 @@ size_loop: &
 				if ((l_na >= p1st) .and. (l_cl >= p1st)) then
 			
 					chem(i,k,j,l_na) = chem(i,k,j,l_na) +   &
-						factbb * ssemfact_mass(n,itype) * fracna
+						factbb * ssemfact_mass(n,itype) * fracna * xocean
 			
 					chem(i,k,j,l_cl) = chem(i,k,j,l_cl) +   &
-						factbb * ssemfact_mass(n,itype) * fraccl
+						factbb * ssemfact_mass(n,itype) * fraccl * xocean
 			
 					l = numptr_aer(n,itype,iphase)
 					if (l >= p1st) chem(i,k,j,l) = chem(i,k,j,l) +   &
-										factbb * ssemfact_numb(n,itype)
+										factbb * ssemfact_numb(n,itype) * xocean
 
                                         !++LMarelle - also apply br2 emissions only if br2 exists.
                                         if (P_br2 >= p1st) then
-                                          chem(i,k,j,P_br2) = chem(i,k,j,P_br2) +   &
-                                                  ssemfact_mass(n,itype) * br2_nacl_massratio * fact_ppm_br2
+                                           chem(i,k,j,P_br2) = chem(i,k,j,P_br2) +   &
+                                                   ssemfact_mass(n,itype) * br2_nacl_massratio * fact_ppm_br2 * xocean
 
                                         end if
                                         !--LMarelle

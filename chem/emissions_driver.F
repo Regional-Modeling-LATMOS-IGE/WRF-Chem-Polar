@@ -1675,6 +1675,9 @@ CONTAINS
             ktau,p8w,u_phy,v_phy,rho_phy,g,dx,erod,                      &
             dust_emiss_active, seasalt_emiss_active,                     &
             dust_flux, seas_flux,                                        &
+            !LMarelle++
+            xice,                                                        &
+            !LMarelle--
             ids,ide, jds,jde, kds,kde,                                   &
             ims,ime, jms,jme, kms,kme,                                   &
             its,ite, jts,jte, kts,kte                                    )
