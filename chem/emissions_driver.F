@@ -1250,6 +1250,7 @@ CONTAINS
             its,ite, jts,jte, kts,kte                                   )
       
     CASE (SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
          SAPRC99_MOSAIC_8BIN_VBS2_KPP) !FIX FOR SAPRC07A!BSINGH(12/11/2013): Added SAPRC 8 bin  
      if(config_flags%emiss_opt == 13 ) then
        do j=jts,jte
@@ -1618,6 +1619,7 @@ CONTAINS
           CBMZ_MOSAIC_DMS_4BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ,SAPRC99_MOSAIC_4BIN_VBS2_KPP,&
           MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
           CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
           SAPRC99_MOSAIC_8BIN_VBS2_KPP   )
        call wrf_debug(15,'emissions_driver calling mosaic_addemiss')
        call mosaic_addemiss( id, dtstep, u10, v10, alt, dz8w, xland,     &

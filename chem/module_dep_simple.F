@@ -357,7 +357,8 @@ tile_lon_loop : &
       if( config_flags%chem_opt == SAPRC99_KPP .or. &
           config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP .or. &
           config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP .or. &
-          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP) then
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .or. &
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) then
         do j=jts,jte
           do i=its,ite
             ! From MOZART mechanisms
@@ -3170,7 +3171,8 @@ is_cbm4_kpp : &
      if( config_flags%chem_opt == SAPRC99_KPP .or. &
          config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP .or. &
          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP .or. &
-         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP) then
+         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .or. &
+         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
        ! acet, from MOZART
        hstar(p_acet)  = 27.
        dhr(p_acet)    = 5300.

@@ -279,7 +279,8 @@
          SAPRC99_MOSAIC_4BIN_VBS2_KPP,                                 &
          MOZART_MOSAIC_4BIN_KPP,MOZART_MOSAIC_4BIN_AQ_KPP,   &
          CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,         &
-         SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(12/05/2013): Added for SAPRC 8 bin vbs and non-aq on (04/07/2014)
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP, &!BSINGH(12/05/2013): Added for SAPRC 8 bin vbs and non-aq on (04/07/2014)
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
      call optical_prep_sectional(nbin_o, chem, alt,                    &
           totoa_a01,totoa_a02,totoa_a03,totoa_a04,                     &
           totoa_a05,totoa_a06,totoa_a07,totoa_a08,                     &

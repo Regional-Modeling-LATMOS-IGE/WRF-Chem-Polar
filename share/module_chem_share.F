@@ -24,6 +24,7 @@ CONTAINS
         get_last_gas = p_ho2
 
      case (SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
           SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(12/13/2013): Added SAPRC 8 bin AQ case and non-aq on 04/03/2014
         get_last_gas = p_ch4
 

@@ -147,7 +147,8 @@ CONTAINS
    USE module_state_description, only:  cbmz_mosaic_4bin, cbmz_mosaic_4bin_aq, &
                                         cbmz_mosaic_8bin, cbmz_mosaic_8bin_aq, &
                                         saprc99_mosaic_8bin_vbs2_aq_kpp,       &
-                                        saprc99_mosaic_8bin_vbs2_kpp
+                                        saprc99_mosaic_8bin_vbs2_kpp,          &
+                                        saprc99_mosaic_8bin_vbs2_aq_halogens_kpp
    USE module_data_mosaic_asect, only:  maxd_acomp, maxd_aphase, maxd_atype, maxd_asize, &
                                         ntype_aer, nsize_aer, ncomp_aer, &
                                         ai_phase, msectional, massptr_aer, numptr_aer, &
@@ -433,7 +434,8 @@ CONTAINS
            chem_opt == cbmz_mosaic_8bin    .or. &
            chem_opt == cbmz_mosaic_8bin_aq .or. &
            chem_opt == saprc99_mosaic_8bin_vbs2_aq_kpp .or. & 
-           chem_opt == saprc99_mosaic_8bin_vbs2_kpp ) then !BSINGH (04/08/2014): Added for non-aq vbs 
+           chem_opt == saprc99_mosaic_8bin_vbs2_kpp .or. & !BSINGH (04/08/2014): Added for non-aq vbs 
+           chem_opt == saprc99_mosaic_8bin_vbs2_aq_halogens_kpp) then
 
          flag_chem = .TRUE.
       else

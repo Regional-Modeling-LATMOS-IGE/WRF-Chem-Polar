@@ -553,6 +553,9 @@
        CALL wrf_debug(15,'calling saprc99_mosaic_8bin_vbs2_kpp from chem_driver')
        haveaer = .false.
        !BSINGH - ENDS
+     CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
+       CALL wrf_debug(15,'calling saprc99_mosaic_8bin_vbs2_aq_halogens_kpp from chem_driver')
+       haveaer = .false.
      CASE (CBMZSORG)
        CALL wrf_debug(15,'calling cbmzsorg aerosols from chem_driver')
        haveaer = .true.
@@ -718,7 +721,8 @@
 
 ! Special treatment of CH4 in SAPRC99
       case (SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
-           SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP) !BSINGH -  Added for SAPRC 8 bin and non-aq on (04/04/2014)
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP, &
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) !BSINGH -  Added for SAPRC 8 bin and non-aq on (04/04/2014)
          CALL wrf_debug ( 15 , ' fixing ch4 conc using co conc' )
          do j=jps,jpe
             do k=kps,kpe
@@ -1260,7 +1264,8 @@
 #if ( WRF_KPP == 1 )
 
          if( config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP.or. &
-              config_flags%chem_opt ==SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP ) then
+             config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .or.&
+             config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) then
           do k=kts,kte
            do i=its,ite
             do j=jts,jte

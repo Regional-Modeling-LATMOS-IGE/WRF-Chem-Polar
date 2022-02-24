@@ -448,7 +448,8 @@ CONTAINS
           enddo
         endif
 !++lm New biomass burning emission package for SAPRC VBS2 mechanisms
-        CASE (SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)
+        CASE (SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP, &
+              SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
         if( biomass_burn_opt == BIOMASSB_SAPRC ) then
           call wrf_debug(15,'adding fire emissions for SAPRC')
           do j=jts,jte

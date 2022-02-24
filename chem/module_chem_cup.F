@@ -240,7 +240,7 @@
       chem_opt_select: select case(config_flags%chem_opt)
 
          case ( CBMZ_MOSAIC_4BIN, CBMZ_MOSAIC_8BIN, CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, &
-                SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP ) !BSINGH(12/11/13): Got rid of SAPRC99_MOSAIC_4BIN_VBS2_AQ_KPP pkg statement
+                SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) !BSINGH(12/11/13): Got rid of SAPRC99_MOSAIC_4BIN_VBS2_AQ_KPP pkg statement
 !-------------------------------------------------------------------------------
 ! Below lines commented by Manish Shrivastava to skip CUP chemistry
 !------------------------------------------------------------------------------

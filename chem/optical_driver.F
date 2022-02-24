@@ -126,6 +126,7 @@
           CBMZ_CAM_MAM3_NOAQ,CBMZ_CAM_MAM7_NOAQ,  CBMZ_CAM_MAM3_AQ,  &
           CBMZ_CAM_MAM7_AQ, CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
           SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP,  &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
           CB05_SORG_AQ_KPP, CB05_SORG_VBS_AQ_KPP )
       processingAerosols = .true.
       call wrf_debug(15,'optical driver: process aerosols true')
@@ -157,7 +158,8 @@
          SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
          MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
          CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
-         SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP )!BSINGH(12/05/2013): Added for SAPRC 8 bin vbs and added non-aq on 04/03/2014
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP, &!BSINGH(12/05/2013): Added for SAPRC 8 bin vbs and added non-aq on 04/03/2014
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP )
      nbin_o = nbin_a
    end select
 !
