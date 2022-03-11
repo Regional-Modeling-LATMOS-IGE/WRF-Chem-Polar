@@ -92,9 +92,9 @@
 !-----------------------------------------------------------------------
       subroutine aerchemistry( iclm, jclm, kclm_calcbgn, kclm_calcend,    &
                                dtchem_sngl, idiagaa,vbs_nbin,             &
-                               aer_ph_01_k, aer_ph_02_k, aer_ph_03_k, aer_ph_04_k, &
-                               aer_ph_05_k, aer_ph_06_k, aer_ph_07_k, aer_ph_08_k, &
-                               ph_aer1, ph_aer2, ph_aer3, ph_aer4,kms,kme )
+                               ph_aer1, ph_aer2, ph_aer3, ph_aer4, &
+                               ph_aer5, ph_aer6, ph_aer7, ph_aer8, &
+                               kms,kme )
 
       use module_data_mosaic_asect
       use module_data_mosaic_other
@@ -109,12 +109,9 @@
       integer iclm, jclm, kclm_calcbgn, kclm_calcend, idiagaa,vbs_nbin(1)
       real dtchem_sngl
       integer kms, kme
-      real, intent(inout), &
-        dimension( kms:kme ) :: & 
-        aer_ph_01_k, aer_ph_02_k, aer_ph_03_k, aer_ph_04_k, &
-        aer_ph_05_k, aer_ph_06_k, aer_ph_07_k, aer_ph_08_k
       real, intent(out), dimension(kms:kme) ::                       &
-            ph_aer1, ph_aer2, ph_aer3, ph_aer4       ! pH of the aerosols
+            ph_aer1, ph_aer2, ph_aer3, ph_aer4,  &
+            ph_aer5, ph_aer6, ph_aer7, ph_aer8       ! pH of the aerosols
 !   local variables
       real(kind=8) :: dtchem
       integer k, m
@@ -146,33 +143,6 @@
 
           call mosaic( k, m, dtchem,vbs_nbin)
 
-          ! LMarelle - calculate pH
-          do isize = 1,nbin_a
-            if(mc(jc_h,isize) .gt. 0.0) then
-              aerosol_ph  = MIN(14.0D0, MAX(0.0D0, -log10(mc(jc_h,isize)) ))
-            else
-              ! Set to invalid value
-              aerosol_ph = -999.999
-            endif
-            if (isize == 1) then
-              aer_ph_01_k(k) = aerosol_ph
-            elseif (isize == 2) then
-              aer_ph_02_k(k) = aerosol_ph
-            elseif (isize == 3) then
-              aer_ph_03_k(k) = aerosol_ph
-            elseif (isize == 4) then
-              aer_ph_04_k(k) = aerosol_ph
-            elseif (isize == 5) then
-              aer_ph_05_k(k) = aerosol_ph
-            elseif (isize == 6) then
-              aer_ph_06_k(k) = aerosol_ph
-            elseif (isize == 7) then
-              aer_ph_07_k(k) = aerosol_ph
-            elseif (isize == 8) then
-              aer_ph_08_k(k) = aerosol_ph
-            endif
-          end do
-
           if (istat_mosaic_fe1 .lt. 0) then
              nfe1_mosaic_cur = nfe1_mosaic_cur + 1
              nfe1_mosaic_tot = nfe1_mosaic_tot + 1
@@ -191,10 +161,32 @@
           call move_sections( 1, iclm, jclm, k, m)
           call specialoutaa( iclm, jclm, k, m, 'after_movesect' )
 
-          ph_aer1(k) = mc(1,1)
-          ph_aer2(k) = mc(1,2)
-          ph_aer3(k) = mc(1,3)
-          ph_aer4(k) = mc(1,4)
+          ! LMarelle - calculate pH for 8 bins if available
+          do isize = 1,nbin_a
+            if(mc(1,isize) .gt. 0.0) then
+              aerosol_ph  = MIN(14.0D0, MAX(0.0D0, -log10(mc(1,isize)) ))
+            else
+              ! Set to invalid value
+              aerosol_ph = -999.999
+            endif
+            if (isize == 1) then
+              ph_aer1(k) = aerosol_ph
+            elseif (isize == 2) then
+              ph_aer2(k) = aerosol_ph
+            elseif (isize == 3) then
+              ph_aer3(k) = aerosol_ph
+            elseif (isize == 4) then
+              ph_aer4(k) = aerosol_ph
+            elseif (isize == 5) then
+              ph_aer5(k) = aerosol_ph
+            elseif (isize == 6) then
+              ph_aer6(k) = aerosol_ph
+            elseif (isize == 7) then
+              ph_aer7(k) = aerosol_ph
+            elseif (isize == 8) then
+              ph_aer8(k) = aerosol_ph
+            endif
+          end do
 
 100     continue	! k levels
 

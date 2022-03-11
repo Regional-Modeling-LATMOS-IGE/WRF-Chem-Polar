@@ -1233,8 +1233,8 @@
         grid%ph_het_hobr, grid%ph_het_brono2, grid%ph_het_hcl,         &
         grid%ph_het_hbr, grid%ph_het_n2o5, grid%ph_het_hocl,           &
         grid%ph_het_clono2, grid%ph_het_oh,                            &
-        grid%aer_ph_01, grid%aer_ph_02, grid%aer_ph_03, grid%aer_ph_04, &
-        grid%aer_ph_05, grid%aer_ph_06, grid%aer_ph_07, grid%aer_ph_08, &
+        grid%ph_aer01, grid%ph_aer02, grid%ph_aer03, grid%ph_aer04,    &
+        grid%ph_aer05, grid%ph_aer06, grid%ph_aer07, grid%ph_aer08,    &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )
@@ -1321,7 +1321,7 @@ CALL kpp_mechanism_driver (chem,                                                
 !
    ids,ide, jds,jde, kds,kde,                                                         &
    ims,ime, jms,jme, kms,kme,                                                         &
-   its,ite,jts,jte,kts,kte,grid%id,num_irr_diag,irr_rates)
+   its,ite,jts,jte,kts,kte,grid%id)
           if( chm_is_mozart ) then
              call mozcart_lbc_set( chem, num_chem, grid%id, &
                                    ims, ime, jms, jme, kms, kme,    &
@@ -1620,8 +1620,7 @@ if ( cam_mam_aerosols ) &
               del_h2so4_gasprod,grid%dvmrdt_sv13d,grid%dvmrcwdt_sv13d,                &
               grid%is_CAMMGMP_used,                                                   &
               grid%ph_aer01, grid%ph_aer02, grid%ph_aer03, grid%ph_aer04,             &
-              grid%aer_ph_01, grid%aer_ph_02, grid%aer_ph_03, grid%aer_ph_04, &
-              grid%aer_ph_05, grid%aer_ph_06, grid%aer_ph_07, grid%aer_ph_08, &
+              grid%ph_aer05, grid%ph_aer06, grid%ph_aer07, grid%ph_aer08,             &
               ids,ide, jds,jde, kds,kde,                                              &
               ims,ime, jms,jme, kms,kme,                                              &
               its,ite,jts,jte,kts,kte                                                 )
