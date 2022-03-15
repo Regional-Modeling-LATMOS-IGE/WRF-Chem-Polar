@@ -1594,7 +1594,6 @@ if ( cam_mam_aerosols ) &
                grid%f_ice_phy,grid%f_rain_phy,grid%cldfrai, grid%cldfral,             &
                moist, grid%cldfra, grid%cldfra_mp_all, grid%ph_no2,                   &
                chem, gas_aqfrac, numgas_mam,grid%is_CAMMGMP_used,                     &
-               grid%ph_cw,                                                            &
                ids,ide, jds,jde, kds,kde,                                             &
                ims,ime, jms,jme, kms,kme,                                             &
                its,ite, jts,jte, kts,kte                                              )

@@ -194,7 +194,7 @@
                INTENT(INOUT) ::                                     &
                                vcsulf_old
 
-!  output of aerosol pH from MOSAIC 4-bin
+!  output of aerosol pH from MOSAIC
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
           INTENT(OUT  ) ::                                          &
                                ph_aer01, ph_aer02, ph_aer03, ph_aer04, &

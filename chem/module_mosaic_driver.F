@@ -466,7 +466,6 @@
                            ph_aer07(it,kms:kme,jt), ph_aer08(it,kms:kme,jt), &
                            kms,kme  )
 
-
 !  note units for aerosol is now ug/m3
 
     call wrf_debug(300,"mosaic_aerchem_driver: back from aerchemistry")
