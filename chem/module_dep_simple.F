@@ -193,7 +193,7 @@ tile_lon_loop : &
                     iseason = 1
                  endif
                else ! Southern Hemisphere case
-                 if( julday > 270 .or. julday < 90 ) then
+                 if( julday > 90 .and. julday < 270 ) then
                     iseason = 2
                     CALL wrf_debug(15,'setting iseason to 2')
                  else
