@@ -402,7 +402,7 @@ RECURSIVE SUBROUTINE adapt_timestep(grid, config_flags)
              (radt_sec) ) * (radt_sec)
         CALL WRFU_TimeIntervalSet(tmpTimeInterval, S=rad_time)
         dtInterval = tmpTimeInterval - &
-             (domain_get_current_time(grid) - domain_get_sim_start_time(grid))
+             (domain_get_current_time(grid) - domain_get_start_time(grid))
 
         use_last2 = .TRUE.
         grid%stepping_to_time = .TRUE.
