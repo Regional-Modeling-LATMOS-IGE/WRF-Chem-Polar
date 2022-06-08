@@ -371,7 +371,7 @@ real, save :: fr8b_bburn_mosaic(8) = &
 !++ SAN 2015-04-09: Mapping fire emissions to MOSAIC 
 ! get arrays for apportioning mass into MOSAIC bins for fire emissions
         fire_inpt_select: SELECT CASE (config_flags%biomass_burn_opt)
-          CASE (BIOMASSB,BIOMASSB_MOZC,BIOMASSB_SAPRC)
+          CASE (BIOMASSB,BIOMASSB_MOZC,BIOMASSB_SAPRC,BIOMASSB_CBMZ)
             if (nsize_aer(itype) .eq. 8) then
               bburn_mosaic_f(:) = fr8b_bburn_mosaic(:)
 !++SAN
@@ -594,7 +594,7 @@ real, save :: fr8b_bburn_mosaic(8) = &
   aem_num = 0.
 
  fire_select:  SELECT CASE(config_flags%biomass_burn_opt)
-   CASE (BIOMASSB,BIOMASSB_MOZC,BIOMASSB_SAPRC) 
+   CASE (BIOMASSB,BIOMASSB_MOZC,BIOMASSB_SAPRC,BIOMASSB_CBMZ) 
       CALL wrf_debug(15,'mosaic_addemiss: adding fire emissions to MOSAIC')
 !      CALL wrf_debug(15,'e_oin_fm = PM2.5 - OC - BC')
 !      CALL wrf_debug(15,'e_oin_cm = PM10 - PM2.5')

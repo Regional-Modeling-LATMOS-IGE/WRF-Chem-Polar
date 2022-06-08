@@ -243,6 +243,61 @@ subroutine plumerise_driver (id,ktau,dtstep,                           &
                ebu(i,kts,j,p_ebu_bc) = ebu_in(i,1,j,p_ebu_in_bc)
             enddo
          enddo
+! Biomass burning emission package for CBMZ
+       elseif ( config_flags%biomass_burn_opt == BIOMASSB_CBMZ ) then
+         do j=jts,jte
+           do i=its,ite
+             ebu(i,kts,j,p_ebu_no)=ebu_in(i,1,j,p_ebu_in_no)
+             ebu(i,kts,j,p_ebu_co)=ebu_in(i,1,j,p_ebu_in_co)
+             ebu(i,kts,j,p_ebu_c2h4) = ebu_in(i,1,j,p_ebu_in_c2h4)
+             ebu(i,kts,j,p_ebu_c2h5oh) = ebu_in(i,1,j,p_ebu_in_c2h5oh)
+             ebu(i,kts,j,p_ebu_c2h6) = ebu_in(i,1,j,p_ebu_in_c2h6)
+             ebu(i,kts,j,p_ebu_c3h6) = ebu_in(i,1,j,p_ebu_in_c3h6)
+             ebu(i,kts,j,p_ebu_c3h8) = ebu_in(i,1,j,p_ebu_in_c3h8)
+             ebu(i,kts,j,p_ebu_ch2o) = ebu_in(i,1,j,p_ebu_in_ch2o)
+             ebu(i,kts,j,p_ebu_ch3cho) = ebu_in(i,1,j,p_ebu_in_ch3cho)
+             ebu(i,kts,j,p_ebu_ch3coch3) = ebu_in(i,1,j,p_ebu_in_ch3coch3)
+             ebu(i,kts,j,p_ebu_ch3oh) = ebu_in(i,1,j,p_ebu_in_ch3oh)
+             ebu(i,kts,j,p_ebu_mek) = ebu_in(i,1,j,p_ebu_in_mek)
+             ebu(i,kts,j,p_ebu_so2) = ebu_in(i,1,j,p_ebu_in_so2)
+             ebu(i,kts,j,p_ebu_toluene) = ebu_in(i,1,j,p_ebu_in_toluene)
+             ebu(i,kts,j,p_ebu_nh3) = ebu_in(i,1,j,p_ebu_in_nh3)
+             ebu(i,kts,j,p_ebu_no2)=ebu_in(i,1,j,p_ebu_in_no2)
+             ebu(i,kts,j,p_ebu_open) = ebu_in(i,1,j,p_ebu_in_open)
+             ebu(i,kts,j,p_ebu_c10h16) = ebu_in(i,1,j,p_ebu_in_c10h16)
+             ebu(i,kts,j,p_ebu_mgly) = ebu_in(i,1,j,p_ebu_in_mgly)
+             ebu(i,kts,j,p_ebu_ch3cooh) = ebu_in(i,1,j,p_ebu_in_ch3cooh)
+             ebu(i,kts,j,p_ebu_glyald) = ebu_in(i,1,j,p_ebu_in_glyald)
+             ebu(i,kts,j,p_ebu_gly)=ebu_in(i,1,j,p_ebu_in_gly)
+             ebu(i,kts,j,p_ebu_acetol) = ebu_in(i,1,j,p_ebu_in_acetol)
+             ebu(i,kts,j,p_ebu_isop) = ebu_in(i,1,j,p_ebu_in_isop)
+             ebu(i,kts,j,p_ebu_macr) = ebu_in(i,1,j,p_ebu_in_macr)
+             ebu(i,kts,j,p_ebu_mvk)=ebu_in(i,1,j,p_ebu_in_mvk)
+             ebu(i,kts,j,p_ebu_ol2)=ebu_in(i,1,j,p_ebu_in_ol2)
+             ebu(i,kts,j,p_ebu_par)=ebu_in(i,1,j,p_ebu_in_par)
+             ebu(i,kts,j,p_ebu_eth)=ebu_in(i,1,j,p_ebu_in_eth)
+             ebu(i,kts,j,p_ebu_olt)=ebu_in(i,1,j,p_ebu_in_olt)
+             ebu(i,kts,j,p_ebu_oli)=ebu_in(i,1,j,p_ebu_in_oli)
+             ebu(i,kts,j,p_ebu_iso)=ebu_in(i,1,j,p_ebu_in_iso)
+             ebu(i,kts,j,p_ebu_tol)=ebu_in(i,1,j,p_ebu_in_tol)
+             ebu(i,kts,j,p_ebu_csl)=ebu_in(i,1,j,p_ebu_in_csl)
+             ebu(i,kts,j,p_ebu_hcho)=ebu_in(i,1,j,p_ebu_in_hcho)
+             ebu(i,kts,j,p_ebu_ald)=ebu_in(i,1,j,p_ebu_in_ald)
+             ebu(i,kts,j,p_ebu_ket)=ebu_in(i,1,j,p_ebu_in_ket)
+             ebu(i,kts,j,p_ebu_xyl)=ebu_in(i,1,j,p_ebu_in_xyl)
+             ebu(i,kts,j,p_ebu_ora1)=ebu_in(i,1,j,p_ebu_in_ora1)
+             ebu(i,kts,j,p_ebu_ora2)=ebu_in(i,1,j,p_ebu_in_ora2)
+             ebu(i,kts,j,p_ebu_co2)=ebu_in(i,1,j,p_ebu_in_co2)
+             ebu(i,kts,j,p_ebu_ete)=ebu_in(i,1,j,p_ebu_in_ete)
+             ebu(i,kts,j,p_ebu_dien)=ebu_in(i,1,j,p_ebu_in_dien)
+             ebu(i,kts,j,p_ebu_api)=ebu_in(i,1,j,p_ebu_in_api)
+             ebu(i,kts,j,p_ebu_lim)=ebu_in(i,1,j,p_ebu_in_lim)
+             ebu(its:ite,kts,j,p_ebu_pm10) = ebu_in(its:ite,1,j,p_ebu_in_pm10)
+             ebu(its:ite,kts,j,p_ebu_pm25) = ebu_in(its:ite,1,j,p_ebu_in_pm25)
+             ebu(its:ite,kts,j,p_ebu_oc) = ebu_in(its:ite,1,j,p_ebu_in_oc)
+             ebu(its:ite,kts,j,p_ebu_bc) = ebu_in(its:ite,1,j,p_ebu_in_bc)
+           enddo
+         enddo
 !--lm
        elseif ( config_flags%biomass_burn_opt == BIOMASSB_GHG ) then
          do j=jts,jte

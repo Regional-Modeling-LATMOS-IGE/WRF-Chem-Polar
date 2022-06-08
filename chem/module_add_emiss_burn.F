@@ -494,6 +494,43 @@ CONTAINS
             enddo
           enddo
         endif
+! Add a biomass burning emission package for CBMZ
+     CASE (CBMZSORG, CBMZSORG_AQ, CBMZ, CBMZ_BB, CBMZ_BB_KPP, &
+           CBMZ_MOSAIC_KPP, CBMZ_MOSAIC_4BIN, CBMZ_MOSAIC_8BIN, &
+           CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN &
+           CBMZ_MOSAIC_DMS_8BIN, CBMZ_MOSAIC_DMS_4BIN_AQ, &
+           CBMZ_MOSAIC_DMS_8BIN_)
+        if( biomass_burn_opt == BIOMASSB_CBMZ ) then
+          call wrf_debug(15,'adding fire emissions for CBMZ')
+          do j=jts,jte
+            do k=kts,kte
+              do i=its,ite
+                conv_rho = (r_q*4.828e-4*dtstep)/(rho_phy(i,k,j)*60.*dz8w(i,k,j))
+                chem(i,k,j,p_no2) = chem(i,k,j,p_no2) + ebu(i,k,j,p_ebu_no2)*conv_rho
+                chem(i,k,j,p_c2h5oh) = chem(i,k,j,p_c2h5oh) + ebu(i,k,j,p_ebu_c2h5oh)*conv_rho
+                chem(i,k,j,p_par) = chem(i,k,j,p_par) + ebu(i,k,j,p_ebu_par)*conv_rho
+                chem(i,k,j,p_ch3oh) = chem(i,k,j,p_ch3oh) + ebu(i,k,j,p_ebu_ch3oh)*conv_rho
+                chem(i,k,j,p_csl)  = chem(i,k,j,p_csl) + ebu(i,k,j,p_ebu_csl)*conv_rho
+                chem(i,k,j,p_so2)  = chem(i,k,j,p_so2) + ebu(i,k,j,p_ebu_so2)*conv_rho
+                chem(i,k,j,p_no)   = chem(i,k,j,p_no) + ebu(i,k,j,p_ebu_no)*conv_rho
+                chem(i,k,j,p_ald)  = chem(i,k,j,p_ald) + ebu(i,k,j,p_ebu_ald)*conv_rho
+                chem(i,k,j,p_hcho) = chem(i,k,j,p_hcho) + ebu(i,k,j,p_ebu_hcho)*conv_rho
+                chem(i,k,j,p_ora2) = chem(i,k,j,p_ora2) + ebu(i,k,j,p_ebu_ora2)*conv_rho
+                chem(i,k,j,p_nh3)  = chem(i,k,j,p_nh3) + ebu(i,k,j,p_ebu_nh3)*conv_rho
+                chem(i,k,j,p_eth)  = chem(i,k,j,p_eth) + ebu(i,k,j,p_ebu_eth)*conv_rho
+                chem(i,k,j,p_co)   = chem(i,k,j,p_co) + ebu(i,k,j,p_ebu_co)*conv_rho
+                chem(i,k,j,p_ol2)  = chem(i,k,j,p_ol2) + ebu(i,k,j,p_ebu_ol2)*conv_rho
+                chem(i,k,j,p_olt)  = chem(i,k,j,p_olt) + ebu(i,k,j,p_ebu_olt)*conv_rho
+                chem(i,k,j,p_oli)  = chem(i,k,j,p_oli) + ebu(i,k,j,p_ebu_oli)*conv_rho
+                chem(i,k,j,p_tol)  = chem(i,k,j,p_tol) + ebu(i,k,j,p_ebu_tol)*conv_rho
+                chem(i,k,j,p_xyl)  = chem(i,k,j,p_xyl) + ebu(i,k,j,p_ebu_xyl)*conv_rho
+                chem(i,k,j,p_ket)  = chem(i,k,j,p_ket) + ebu(i,k,j,p_ebu_ket)*conv_rho
+                chem(i,k,j,p_iso)  = chem(i,k,j,p_iso) + ebu(i,k,j,p_ebu_iso)*conv_rho
+                chem(i,k,j,p_ora1)  = chem(i,k,j,p_ora1) + ebu(i,k,j,p_ebu_ora1)*conv_rho
+              enddo
+            enddo
+          enddo
+        endif
 !--lm
     CASE DEFAULT
        call wrf_debug(15,'nothing done with burn emissions for chem array')
