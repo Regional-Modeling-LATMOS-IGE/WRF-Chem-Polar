@@ -397,7 +397,6 @@ tile_lon_loop : &
             ddvel(i, j, p_brcl) = 0.0
 !            ddvel(i, j, p_hcl) = 0.0
             ddvel(i, j, p_clono) = 0.0
-            ddvel(i, j, p_ch3) = 0.0
             ddvel(i, j, p_hco) = 0.0
             ddvel(i, j, p_cloo) = 0.0
             ddvel(i, j, p_chcl3) = 0.0
@@ -420,7 +419,6 @@ tile_lon_loop : &
             ddvel(i, j, p_chbr3) = 0.0
             ddvel(i, j, p_ch2brcl) = 0.0
             ddvel(i, j, p_chbrcl) = 0.0
-            ddvel(i, j, p_h) = 0.0
  !           ddvel(i, j, p_hbr) = 0.0
             ddvel(i, j, p_cbr3) = 0.0
             ddvel(i, j, p_nocl) = 0.0

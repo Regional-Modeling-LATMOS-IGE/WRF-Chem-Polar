@@ -419,7 +419,7 @@
 {388} Cl + NO2 = ClONO : RACM_TROE(TEMP,C_M,1.3D-30,2.0_dp,1D-10,1.0_dp);
 {389} Cl + NO2 = ClNO2 : RACM_TROE(TEMP,C_M,1.8D-31,2.0_dp,1D-10,1.0_dp);
 {390} Cl + NO3 = ClO + NO2 : RACM_THERMAL(TEMP,2.4D-11, 0.0_dp); 
-{391} Cl + CH4 = HCl + CH3 : RACM_THERMAL(TEMP,7.1D-12, 1270.0_dp);
+{391} Cl + CH4 = HCl + C_O2 : RACM_THERMAL(TEMP,7.1D-12, 1270.0_dp);
 {392} Cl + HCHO = HCl + HCO : RACM_THERMAL(TEMP,8.1D-11, 30.0_dp);
 {393} Cl + ClONO2 = Cl2 + NO3 : RACM_THERMAL(TEMP,6.5D-12, -135.0_dp);
 {394} ClO + OH = Cl + HO2 : RACM_THERMAL(TEMP,7.4D-12, -270.0_dp);
@@ -446,7 +446,7 @@
 {415} Cl + OClO = ClO + ClO : RACM_THERMAL(TEMP,3.2D-11, -170.0_dp);
 {416} OClO + OH = HOCl + M {O2} : RACM_THERMAL(TEMP,1.4D-12, -600.0_dp);
 {417} ClO + O3P = Cl + M {O2} : RACM_THERMAL(TEMP,2.8D-11, -85.0_dp);
-{418} Cl + M {H2} = HCl + H : RACM_THERMAL(TEMP,3.05D-11, 2270.0_dp);
+{418} Cl + M {H2} = HCl + HO2 : RACM_THERMAL(TEMP,3.05D-11, 2270.0_dp);
 {419} ClONO2 + O3P = ClO + NO3 : RACM_THERMAL(TEMP,3.65D-12, 840.0_dp);
 {420} CCl4 + O1D = ClO + CCl3 : RACM_THERMAL(TEMP,3.3D-10,0.0_dp);
 {421} CH3CCl3 + OH = H2O + CH2CCl3 : RACM_THERMAL(TEMP,1.2D-12,-1440.0_dp);
@@ -482,10 +482,10 @@
 {470} NOCl = NO + Cl : jrates('Pj_NOCl');
 {471} BrNO = Br + NO : jrates('Pj_BrNO');
 {476} OBrO = BrO + O3P : jrates('Pj_OBrO');
-{477} CH3Br = CH3 + Br : jrates('Pj_CH3Br');
+{477} CH3Br = Br + C_O2 : jrates('Pj_CH3Br');
 {478} CHBr3 = CHBr2 + Br : jrates('Pj_CHBr3');
-{479} HCl = H + Cl : jrates('Pj_HCl');
-{480} CH3Cl = Cl + CH3 : jrates('Pj_CH3Cl');
+{479} HCl = HO2 + Cl : jrates('Pj_HCl');
+{480} CH3Cl = Cl + C_O2 : jrates('Pj_CH3Cl');
 {481} CCl4 = Cl + CCl3 : jrates('Pj_CCl4');
 {482} CH3CCl3 = CH3CCl2 + Cl : jrates('Pj_CH3CCl3');
 {483} CH2Br2 = CH2Br + Br : jrates('Pj_CH2Br2');
