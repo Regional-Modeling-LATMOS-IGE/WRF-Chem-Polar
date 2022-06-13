@@ -60540,6 +60540,7 @@ end subroutine clmdrv
            SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
            SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP, &
            SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
            RADM2SORG,RADM2SORG_KPP,RADM2SORG_AQ,RADM2SORG_AQCHEM, &
            MOZCART_KPP,MOZART_MOSAIC_4BIN_KPP,MOZART_MOSAIC_4BIN_AQ_KPP
 #endif
@@ -60733,7 +60734,8 @@ end subroutine clmdrv
 
      CASE (SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
            SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP, &
-           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP)
       print*,'jdf megan_specifier'
       megan_specifier(1)='isoprene=isoprene+MBO_2m3e2ol+MBO_3m2e1ol+MBO_3m3e1ol'
       term1='myrcene+sabinene+limonene+carene_3+ocimene_t_b+pinene_b+pinene_a+phellandrene_a+thujene_a+terpinene_a+terpinene_g+terpinolene+phellandrene_b+camphene'

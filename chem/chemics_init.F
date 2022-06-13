@@ -210,6 +210,9 @@ call wrf_message("**************************************************************
     CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP )
        CALL wrf_debug(15,'calling SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP from chem_driver')
        call wrf_message("WARNING: SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP chemistry option is highly experimental and not recommended for use.")
+    CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP )
+       CALL wrf_debug(15,'calling SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP from chem_driver')
+       call wrf_message("WARNING: SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP chemistry option is highly experimental and not recommended for use.")
      CASE (MOZART_MOSAIC_4BIN_KPP )
        CALL wrf_debug(15,'calling MOZART_MOSAIC_4BIN_KPP from chem_driver')
      CASE (MOZART_MOSAIC_4BIN_AQ_KPP )
@@ -336,10 +339,11 @@ call wrf_message("**************************************************************
             ( config_flags%chem_opt == 503 .OR. config_flags%chem_opt == 504) .OR. &
             ( config_flags%chem_opt == 203) .OR. config_flags%chem_opt == 205 .OR. & !BSINGH(12/17/2013): Added for SAPRC 8 bin vbs
             ( config_flags%chem_opt == 601 .OR. config_flags%chem_opt == 611) .OR. &
-              (config_flags%chem_opt == 109) ) then
+              (config_flags%chem_opt == 109) .OR. (config_flags%chem_opt == 206) ) then
          call wrf_debug( 15, 'Chemics_init: Wet scavenging turned on' )
        else
-         call wrf_error_fatal("ERROR: wet scavenging option requires chem_opt = 8 through 13 or 31 to 36 or 41 to 42 or 109 or 203 or 205 or 503 or 504 or 601 or 611 to function.")
+         call wrf_error_fatal("ERROR: wet scavenging option requires chem_opt = 8 through 13 or 31 to 36 or 41 to 42 or 109 or 203 &
+         or 205 or 206 or 503 or 504 or 601 or 611 to function.")
        endif
        if ( config_flags%mp_physics /= 2 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 11  &
             .and. config_flags%mp_physics /= 17 .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22) then
@@ -366,7 +370,8 @@ call wrf_message("**************************************************************
            ( config_flags%chem_opt == 203) .OR. config_flags%chem_opt == 205 .OR. &
            ( config_flags%chem_opt == 131 ) .OR. ( config_flags%chem_opt == 132 ) .OR. &
            ( config_flags%chem_opt >= 601 .AND. config_flags%chem_opt <= 611)  .OR. &
-             config_flags%chem_opt == 109 .OR. config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP ) then
+             config_flags%chem_opt == 109 .OR. config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+           ( config_flags%chem_opt == 206 ) ) then
            call wrf_debug( 15, 'Chemics_init: Cloud chemistry turned on' )
       else
         call wrf_error_fatal("ERROR: cloud chemistry option requires chem_opt = 8 through 13 or 31 to 36 or 41 to 43 or 109 to function.")
@@ -386,9 +391,9 @@ call wrf_message("**************************************************************
       if(  config_flags%chem_opt /= 9   .and.  config_flags%chem_opt /= 10  .and. &
            config_flags%chem_opt /= 32  .and.  config_flags%chem_opt /= 34  .and.  &
            config_flags%chem_opt /= 202 .and.  config_flags%chem_opt /= 203 .and.  &
-           config_flags%chem_opt /= 205 .and.  &
+           config_flags%chem_opt /= 205 .and.  config_flags%chem_opt /= 206 .and. &
            config_flags%chem_opt /= 601 .and.  config_flags%chem_opt /= 611 ) then
-         call wrf_error_fatal("ERROR: kfcupscheme requires chem_opt = 9, 10, 32, 34, 202, 203, 205, 601 or 611  to function.")
+         call wrf_error_fatal("ERROR: kfcupscheme requires chem_opt = 9, 10, 32, 34, 202, 203, 205, 206, 601 or 611  to function.")
       endif
    endif
 
@@ -474,7 +479,7 @@ call wrf_message("**************************************************************
              config_flags%chem_opt == 170 .OR.  config_flags%chem_opt == 198  .OR. &
              config_flags%chem_opt == 199 .OR.  config_flags%chem_opt == 201  .OR. &
              config_flags%chem_opt == 202 .OR.  config_flags%chem_opt == 203  .OR. &
-             config_flags%chem_opt == 205  .OR. &
+             config_flags%chem_opt == 205 .OR.  config_flags%chem_opt == 206  .OR. &
              config_flags%chem_opt == 601 .OR.  config_flags%chem_opt == 611 ) then
             call wrf_debug( 15, 'using N2O5 heterogeneous chemistry without Cl- pathway')
         else
@@ -482,7 +487,7 @@ call wrf_message("**************************************************************
         endif
     elseif ( config_flags%n2o5_hetchem == 2 ) then
         if( config_flags%chem_opt == 601 .OR. config_flags%chem_opt == 611 .OR. &
-            config_flags%chem_opt == 205) then
+            config_flags%chem_opt == 205 .OR. config_flags%chem_opt == 206) then
             call wrf_debug( 15, 'using full N2O5 heterogeneous chemistry')
         else
             call wrf_error_fatal("ERROR: full N2O5 heterogenous chemistry must be run with MOSAIC aerosol coupled with gas-phase scheme which deals with ClNO2")
@@ -1333,7 +1338,8 @@ CASE(GOCARTRACM_KPP,RACM_KPP,RACMPM_KPP,RACMSORG_KPP,RACM_MIM_KPP,RACM_ESRLSORG_
        
        
        !BSINGH(12/03/2013) - Added case statement for SAPRC 8 bin 
-    CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP )!BSINGH (12/11/13): Got rid of SAPRC99_MOSAIC_4BIN_VBS2_AQ_KPP and SAPRC99_MOSAIC_4BIN_VBS2_KPP
+    CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP )!BSINGH (12/11/13): Got rid of SAPRC99_MOSAIC_4BIN_VBS2_AQ_KPP and SAPRC99_MOSAIC_4BIN_VBS2_KPP
        
        if(config_flags%chem_in_opt == 1 ) grid%vbs_nbin=2
        if(config_flags%chem_in_opt == 0 )then
@@ -1926,7 +1932,7 @@ ENDIF ghg_block
            SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
            MOZART_MOSAIC_4BIN_KPP,MOZART_MOSAIC_4BIN_AQ_KPP, &
            CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &  !BSINGH(12/03/2013): Added SAPRC 8 bin
-           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
            SAPRC99_MOSAIC_8BIN_VBS2_KPP) !BSINGH(04/03/2014): Added SAPRC 8 bin non-aq
        call wrf_debug(15,'call MOSAIC aerosols initialization')
        call init_data_mosaic_asect( id, config_flags, grid%vbs_nbin, is_aerosol )
@@ -1948,7 +1954,7 @@ ENDIF ghg_block
          RACM_SOA_VBS_AQCHEM_KPP, CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, &
          CBMZ_MOSAIC_DMS_8BIN_AQ,CBMZSORG_AQ,CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
          MOZART_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,   &
-         SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
          CB05_SORG_AQ_KPP, CB05_SORG_VBS_AQ_KPP)
       if( config_flags%progn /= 1 ) &
            call wrf_error_fatal( &
@@ -2571,7 +2577,7 @@ subroutine print_chem_species_index( chem_opt )
      print*,p_lim,"lim"
 
   case (SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-        SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)!BSINGH(12/03/2013): Added SAPRC 8 bin 
+        SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP)!BSINGH(12/03/2013): Added SAPRC 8 bin 
      print*,p_o3,"o3"
      print*,p_h2o2,"h2o2"
      print*,p_no,"no"

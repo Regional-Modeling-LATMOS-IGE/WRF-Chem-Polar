@@ -469,7 +469,8 @@ CONTAINS
 
 ! Calculate deposition fluxes for bromine species and O3, and the deposition
 ! velocity of O3
-       IF (config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) THEN
+       IF (config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .OR. &
+           config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP) THEN
          DO i = its, ite
            DO j = jts, jte
              drydepflx_o3(i, j) = chem(i, kts, j, p_o3) * p_phy(i, kts, j)          &
@@ -519,7 +520,7 @@ CONTAINS
                  CBMZ_MOSAIC_DMS_4BIN, CBMZ_MOSAIC_DMS_8BIN, CBMZ_MOSAIC_DMS_4BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ, &
                  MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
                  CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &!BSINGH(12/03/2013): Added SAPRC 8 bin
-                 SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+                 SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
                  SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(04/04/2014): Added SAPRC 8 bin non-aq
              aer_mech_id = 3
           CASE ( CBMZ_CAM_MAM3_NOAQ, CBMZ_CAM_MAM3_AQ, CBMZ_CAM_MAM7_NOAQ, CBMZ_CAM_MAM7_AQ )
@@ -599,7 +600,7 @@ CONTAINS
           MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
           CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
           SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP, & !BSINGH(12/03/2013): Added SAPRC 8 bin and non-aq on 04/04/2014
-          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP)
        CALL wrf_debug(15,'DOING DRY DEP VELOCITIES FOR MOSAIC AEROSOLS')
        call mosaic_drydep_driver(                                       &
                id, curr_secs, ktau, dtstep, config_flags,               &
@@ -780,6 +781,7 @@ CONTAINS
               CBMZ_MOSAIC_DMS_8BIN_AQ, CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,     &
               MOZART_MOSAIC_4BIN_AQ_KPP, RACM_SOA_VBS_AQCHEM_KPP,                          &
               SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP,   &
+              SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
               CB05_SORG_AQ_KPP, CB05_SORG_VBS_AQ_KPP)
             if(.not.is_aerosol(nv))then ! mix gases not aerosol
                call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
@@ -1139,7 +1141,7 @@ CONTAINS
    CASE (CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ, &
    			CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
    			MOZART_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, & !BSINGH(12/03/2013): Added SAPRC 8 bin)
-                        SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
+                        SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP)
       CALL wrf_debug(15,'call mixactivate for mosaic aerosol')
       call mosaic_mixactivate (                        &
 		id, ktau, dtstep, config_flags, idrydep_onoff,   &
@@ -1449,6 +1451,7 @@ CONTAINS
          SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
          SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
          SAPRC99_MOSAIC_8BIN_VBS2_KPP)
    if(config_flags%mosaic_aer_settling_opt==1) then
        CALL wrf_debug(15,'call mosaic settling routine')

@@ -803,8 +803,10 @@ CONTAINS
       END SELECT dms_select
 
       !LMarelle For the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP mechanism, add
-      ! Br2 emissions from sow
-      IF ( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+      ! Br2 emissions from snow 
+      !SAhmed Also include this in the SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP mechanism
+      IF ( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .OR. &
+           config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
         CALL wrf_debug(15, 'Br2 emissions from snow')
         CALL airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
          v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
@@ -1288,7 +1290,7 @@ CONTAINS
             its,ite, jts,jte, kts,kte                                   )
       
     CASE (SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
          SAPRC99_MOSAIC_8BIN_VBS2_KPP) !FIX FOR SAPRC07A!BSINGH(12/11/2013): Added SAPRC 8 bin  
      if(config_flags%emiss_opt == 13 ) then
        do j=jts,jte
@@ -1388,7 +1390,8 @@ CONTAINS
                 ! primary emissions are tranferred to OC directly in
                 ! module_mosaic_addemiss
                 if ( config_flags%biomass_burn_opt /= BIOMASSB_SAPRC .and. &
-                   config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+                   config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .and. &
+                   config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
                   !Use OM/OC of 1.25 for fossil and OM:OC of 1.57 for biomass
                   ! O:C=0.06,H:C=1.8, N:C=0.02 for fossil : OM/OC=(16*0.06+12+14*0.02+12)/12=1.25
                   !O:C=0.3 H:C=1.8, N:C=0.02 for biomass, OM/OC=1.57 for biomass
@@ -1423,7 +1426,8 @@ CONTAINS
        ! primary emissions are tranferred to OC directly in
        ! module_mosaic_addemiss
        if ( config_flags%biomass_burn_opt == BIOMASSB_SAPRC .and. &
-            config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+            config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .and. &
+            config_flags%chem_opt /= SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
          do j=jts,jte
            do i=its,ite
              do k=kts,kte
@@ -1667,7 +1671,7 @@ CONTAINS
           CBMZ_MOSAIC_DMS_4BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ,SAPRC99_MOSAIC_4BIN_VBS2_KPP,&
           MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
           CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+          SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP, &
           SAPRC99_MOSAIC_8BIN_VBS2_KPP   )
        call wrf_debug(15,'emissions_driver calling mosaic_addemiss')
        call mosaic_addemiss( id, dtstep, u10, v10, alt, dz8w, xland,     &

@@ -557,6 +557,9 @@
      CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP)
        CALL wrf_debug(15,'calling saprc99_mosaic_8bin_vbs2_aq_halogens_kpp from chem_driver')
        haveaer = .false.
+     CASE (SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP)
+       CALL wrf_debug(15,'calling saprc99_mosaic_8bin_vbs2_aq_mercury_kpp from chem_driver')
+       haveaer = .false.
      CASE (CBMZSORG)
        CALL wrf_debug(15,'calling cbmzsorg aerosols from chem_driver')
        haveaer = .true.
@@ -1226,7 +1229,8 @@
 
 !LMarelle - Calculate heterogeneous reaction rates for the MOSAIC halogen
 !mechanism
-     if(config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+     if(config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .or. &
+        config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP) then
        call wrf_debug(15,'calling mosaic_set_heterogeneous')
        call mosaic_set_heterogeneous(                                  &
         chem, t_phy, p_phy, grid%alt,                                  &
@@ -1298,7 +1302,8 @@
 
          if( config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP.or. &
              config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .or.&
-             config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) then
+             config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .or. &
+             config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
           do k=kts,kte
            do i=its,ite
             do j=jts,jte

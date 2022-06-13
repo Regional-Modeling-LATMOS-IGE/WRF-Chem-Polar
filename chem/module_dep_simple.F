@@ -359,7 +359,8 @@ tile_lon_loop : &
           config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP .or. &
           config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP .or. &
           config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .or. &
-          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) then
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .or. & 
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
         do j=jts,jte
           do i=its,ite
             ! From MOZART mechanisms
@@ -377,7 +378,8 @@ tile_lon_loop : &
         end do
       end if
 ! For SAPRC99 mechanisms with halogens, set deposition to 0 for all new species
-      if( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP ) then
+      if( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .or. &
+          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
         do j=jts,jte
           do i=its,ite
             ddvel(i,j,p_c2h6)    = 0.
@@ -3228,7 +3230,8 @@ is_cbm4_kpp : &
          config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP .or. &
          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP .or. &
          config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .or. &
-         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) then
+         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .or. &
+         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) then
        ! acet, from MOZART
        hstar(p_acet)  = 27.
        dhr(p_acet)    = 5300.
@@ -3249,8 +3252,10 @@ is_cbm4_kpp : &
        dhr(p_cres)    = 0.
        f0(p_cres)     = 0.
        dvj(p_cres)    = 0.096
-       ! Additional constants for SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP only
-       IF( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) THEN
+       ! Additional constants for SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP and
+       ! for SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP  
+       IF( config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .OR. &
+           config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) THEN
          ! hstar and dhr from Sander (2015, doi:10.5194/acp-15-4399-2015)
          ! f0 from Toyota et al. (2011, doi:10.5194/acp-11-3949-2011)
          ! dvj is 1/sqrt(molar_weight) with the molar weight in g/mol
