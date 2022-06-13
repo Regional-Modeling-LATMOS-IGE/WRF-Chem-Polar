@@ -71,6 +71,8 @@ CONTAINS
          snowc, xice, meltedsnow, coszen,                                  &
          drydepflx_o3, drydepflx_hobr,                                     &
          drydepflx_brno3, drydepflx_hbr, drydepflx_br2, emiss_br2,         &
+         ! Hg0 emissions from snow
+         drydepflx_hg2, wdflx_hg2, emiss_hg0,                              &
          ! stuff for aircraft emissions
          emis_aircraft,                                                    &
          ! stuff for GHG fluxes
@@ -346,7 +348,11 @@ CONTAINS
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: snowc, xice, coszen, drydepflx_o3, &
                             drydepflx_hobr, drydepflx_brno3, drydepflx_hbr, drydepflx_br2
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
-        INTENT(INOUT) :: emiss_br2, meltedsnow
+        INTENT(INOUT) :: emiss_br2, meltedsnow, snowh_melt
+! Hg0 emissions from snow
+      REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: drydepflx_hg2, wdflx_hg2
+  REAL, DIMENSION(ims:ime, jms:jme)               ,               &
+        INTENT(INOUT) :: emiss_hg0
 
 !
 ! Local variables...
@@ -810,13 +816,15 @@ CONTAINS
         CALL wrf_debug(15, 'Br2 emissions from snow')
         CALL airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
          v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
-         xice, meltedsnow, coszen,                                     &
+         xice, meltedsnow, coszen, snowh_melt, snowc,                  &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
+         drydepflx_hg2, wdflx_hg2, emiss_hg0,                          &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &
          its,ite, jts,jte, kts,kte,                                    &
-         config_flags%snow_emissions_opt, config_flags%blowing_snow_opt )
+         config_flags%snow_emissions_opt, config_flags%blowing_snow_opt, &
+         config_flags%mercury_snow_emiss_opt )
       ENDIF
 
 

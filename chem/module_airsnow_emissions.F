@@ -46,6 +46,7 @@
 !
 ! Revision history:
 ! Ahmed S. - 2021/12/02: Turn on re-emission of halogens after fresh snow fall
+! Ahmed S. - 2021/12/02: Add snow emissions of Hg0
 
 MODULE module_airsnow_emissions
 
@@ -54,13 +55,14 @@ CONTAINS
 !----------------------------------------------------------------------
   SUBROUTINE airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
          v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
-         xice, meltedsnow, coszen, snowh_melt,                         &
+         xice, meltedsnow, coszen, snowh_melt, snowc,                  &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
+         drydepflx_hg2, wdflx_hg2, emiss_hg0,                          &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &
          its,ite, jts,jte, kts,kte,                                    &
-         snow_emissions_opt, blowing_snow_opt                          ) 
+         snow_emissions_opt, blowing_snow_opt, mercury_snow_emiss_opt  ) 
 
   USE module_configure
   USE module_state_description, ONLY: param_first_scalar
@@ -80,7 +82,7 @@ CONTAINS
                          ims,ime, jms,jme, kms,kme,               &
                          its,ite, jts,jte, kts,kte
   ! Logical flag for snow emissions and blowing snow options
-  LOGICAL, INTENT(IN) :: snow_emissions_opt, blowing_snow_opt
+  LOGICAL, INTENT(IN) :: snow_emissions_opt, blowing_snow_opt, mercury_snow_emiss_opt
   ! Dynamical time step (s)
   REAL, INTENT(IN) :: dtstep
   ! Vertical layer thickness (m), air temperature (K), air pressure (Pa),
@@ -93,9 +95,10 @@ CONTAINS
         INTENT(IN ) :: moist
   ! 10m-x-direction-windspeed (m/s), 10m-y-direction-windspeed (m/s), friction
   ! velocity (m/s), 2m-temperature (K), Snow height (m), skin temperature (K),
-  ! ice fraction (0-1), cosine of solar zenith angle (dimensionless)
+  ! ice fraction (0-1), cosine of solar zenith angle (dimensionless), 
+  ! snow fraction (0-1)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
-        INTENT(IN) :: u10, v10, ust, t2, snowh, tsk, xice, coszen
+        INTENT(IN) :: u10, v10, ust, t2, snowh, tsk, xice, coszen, snowc
   ! Past snow melt flag (dimensionless flag)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: meltedsnow
@@ -110,6 +113,17 @@ CONTAINS
   ! Accumulated br2 emission flux diagnosis (mole/m2)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: emiss_br2
+  ! Dry deposition flux of all HgII species (mole/m2/s), calculated in
+  ! dry_dep_driver
+    REAL, DIMENSION(ims:ime, jms:jme),                             &
+          INTENT(IN) :: drydepflx_hg2
+  ! Wet deposition flux of all HgII species (mole/m2/s), calculated in
+  ! wetscav_driver
+    REAL, DIMENSION(ims:ime, jms:jme),                             &
+          INTENT(IN) :: wdflx_hg2
+  ! Accumulated hg0 emission flux diagnosis (mole/m2)
+    REAL, DIMENSION(ims:ime, jms:jme)               ,              &
+          INTENT(INOUT) :: emiss_hg0
   ! Trace species mixing ratios (gases in ppm, aerosols in microg/kg)
   REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem),           &
         INTENT(INOUT) :: chem
@@ -157,9 +171,11 @@ CONTAINS
   ! Conversion factor from emissions to ppm, conversion factor from emissions to µg/kg
   REAL :: conv, conv2
   ! Switches for enabling surface snow or blowing snow emissions
-  LOGICAL :: do_snow_emissions, do_blowing_snow
+  LOGICAL :: do_snow_emissions, do_blowing_snow, do_mercury_snow_emiss
   ! Br2 and BrCl emissions (mole/m2/s)
   REAL :: br2_emi = 0.0, brcl_emi = 0.0
+  ! Hg0 emissions (mole/m2/s)
+  REAL :: hg0_emi = 0.0
 
   !---- Local variables for the blowing snow model
   ! Br emissions (kg/m2/s), NaCl emissions (kg/m2/s), Snow sublimation flux (kg/m2/s), Normalized
@@ -216,6 +232,7 @@ CONTAINS
                         0.38, 0.38, 0.38, 0.38  /)
   do_snow_emissions = snow_emissions_opt
   do_blowing_snow = blowing_snow_opt
+  do_mercury_snow_emiss = mercury_snow_emiss_opt
   itype = 1
   iphase = ai_phase
 
@@ -228,6 +245,7 @@ CONTAINS
       br2_emi = 0.0
       brcl_emi = 0.0
       nacl_emi = 0.0
+      hg0_emi = 0.0
       aer_num_change = 0.0
 
       a_prime = 1.0 / (1.038 + 0.03758 * snow_age - 0.00014349 * snow_age ** 2.0 &
@@ -300,8 +318,14 @@ CONTAINS
           !     br2_emi = br2_emi + drydepflx_hbr(i,j)
           !     brcl_emi = brcl_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j) - drydepflx_hbr(i,j))
           !   END IF
-
-          END IF
+            IF (do_mercury_snow_emiss) THEN
+              IF (coszen(i,j) .GE. 0.0) THEN
+                ! Hg0 emissions over sea ice if sunlit
+                hg0_emi = hg0_emi + ((drydepflx_hg2(i,j) + wdflx_hg2(i,j)) * coszen(i,j) * 0.6 * xice(i,j))
+              END IF ! coszen .gt. 0
+            END IF ! do_mercury_snow_emis
+          
+          END IF ! Over sea ice
 
           ! Over continental snow
           ! Make sure that this is not ocean/seaice. WRF considers sea-ice as
@@ -314,7 +338,15 @@ CONTAINS
             ELSE
               br2_emi = br2_emi + drydepflx_hbr(i,j)
             END IF
-          END IF
+
+            IF (do_mercury_snow_emiss) THEN
+              IF (coszen(i,j) .GE. 0.0 .AND. snowc(i,j) .GT. 0.0) THEN
+                ! Hg0 emissions over continental snow if sunlit
+                hg0_emi = hg0_emi + ((drydepflx_hg2(i,j) + wdflx_hg2(i,j)) * coszen(i,j) * 0.6 * snowc(i,j))
+              END IF ! coszen .gt. 0
+            END IF ! do_mercury_snow_emis
+
+          END IF ! over continental snow
         END IF ! tsk <= tskcrit
       END IF ! (snowh(i, j) .GT. 0.01 .OR. xice(i, j) .GT. seaice_crit), snow or sea ice cell
 
@@ -427,6 +459,17 @@ CONTAINS
         emiss_br2(i,j) = emiss_br2(i,j) + br2_emi * dtstep
 
       END DO !isize
+        
+      !---- Hg0 emissions
+      IF (chem(i,kts,j,p_hg)  + hg0_emi * conv <= 0) THEN
+        hg0_emi = - chem(i,kts,j,p_hg) / conv
+        chem(i,kts,j,p_hg) = 0.0
+      ELSE
+        chem(i,kts,j,p_hg) = chem(i,kts,j,p_hg) + hg0_emi * conv
+      END IF
+
+      !---- Output diagnosis, accumulated hg0 emissions in mole/m2
+      emiss_hg0(i,j) = emiss_hg0(i,j) + hg0_emi * dtstep
 
     END DO ! i loop
   END DO ! j loop

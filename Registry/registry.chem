@@ -659,6 +659,8 @@ state    real  wdflx_hg2           ij     misc        1         Z      rh      "
 
 # Halogen emissions from snow
 state    real  emiss_br2       ij     misc        1         Z      rh      "EMISS_BR2"         "Br2 emissions"                   "mol m^-2"
+# Mercury emissions from snow
+state    real  emiss_hg0       ij     misc        1         Z      rh      "EMISS_HG0"         "Hg0 emissions"                   "mol m^-2"
 # Deposition velocity of O3
 state    real  dvel_o3         ij     misc        1         Z      rh      "DVEL_O3"           "O3 deposition velocity"          "cm s^-1"
 
@@ -4051,6 +4053,7 @@ rconfig   integer     mosaic_aer_settling_opt    namelist,chem          max_doma
 #SAhmed add options for bromine surface snow and blowing snow emissions
 rconfig   logical     snow_emissions_opt  namelist,chem          1              .false. rh    "snow_emissions_opt"      ""      ""
 rconfig   logical     blowing_snow_opt    namelist,chem          1              .false. rh    "blowing_snow_opt"    ""      ""
+rconfig   logical     mercury_snow_emiss_opt    namelist,chem          1        .false. rh    "mercury_snow_emiss_opt"    ""      ""
 rconfig   integer     diagnostic_chem     namelist,chem          max_domains    1       rh    "diagnostic_chem"     ""      ""
 rconfig   integer     aero_diag_opt       namelist,chem          max_domains    0       rh    "diagnostic_aerosol"  ""      ""
 rconfig   integer     aero_cw_diag_opt    namelist,chem          max_domains    0       rh    "diagnostic_cw_aerosol"     ""      ""

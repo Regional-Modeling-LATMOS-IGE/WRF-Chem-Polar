@@ -885,6 +885,8 @@
               grid%drydepflx_o3, grid%drydepflx_hobr,                                      &
               grid%drydepflx_brno3, grid%drydepflx_hbr, grid%drydepflx_br2,                &
               grid%emiss_br2,                                                              &
+         ! stuff for Hg0 emissions from snow
+              grid%drydepflx_hg2, grid%wdflx_hg2, grid%emiss_hg0,                          &
          ! stuff for aircraft emissions
               emis_aircraft,                                                               &
          ! stuff for the GHG fluxes
@@ -1685,6 +1687,12 @@ if ( cam_mam_aerosols ) &
               grid%hno3_col_mdel,                                                     &                
               grid%qlsink,grid%precr,grid%preci,grid%precs,grid%precg,                &
               grid%wdflx,                                                             &
+              ! Wet deposition fluxes of HgII
+              grid%wdflx_hgbroh, grid%wdflx_hgbrno2, grid%wdflx_hgbrho2, grid%wdflx_hgbrbro,  &
+              grid%wdflx_hgbrclo, grid%wdflx_hgbr2, grid%wdflx_hgbrcl, grid%wdflx_hgcloh,     &
+              grid%wdflx_hgclno2, grid%wdflx_hgclho2, grid%wdflx_hgclbro, grid%wdflx_hgclclo, &
+              grid%wdflx_hgohoh, grid%wdflx_hgohno2, grid%wdflx_hgohho2, grid%wdflx_hgohbro,  &
+              grid%wdflx_hgohclo, grid%wdflx_hgx, grid%wdflx_hgp, grid%wdflx_hg2,             &
               gas_aqfrac, numgas_mam,dz8w,                                            &
               grid%h2oaj,grid%h2oai,grid%nu3,grid%ac3,grid%cor3,                      &
               grid%asulf,grid%ahno3,grid%anh3,grid%cvaro1,grid%cvaro2,                &
