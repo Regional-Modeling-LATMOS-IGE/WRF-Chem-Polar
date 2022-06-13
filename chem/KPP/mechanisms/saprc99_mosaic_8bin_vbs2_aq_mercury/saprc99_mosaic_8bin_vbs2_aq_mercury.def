@@ -83,6 +83,31 @@ REAL(KIND=dp) FUNCTION RACM_TROE(temp,c_m,K0,N,KINF,M)
 END FUNCTION RACM_TROE
 !__________________________________________________
 
+REAL(KIND=dp) FUNCTION  RACM_HG(temp, c_m, A0, B0, C0)
+!SAhmed: Gas-phase mechanism based on Shah et al. (2021)
+  REAL(KIND=dp), INTENT(IN) :: temp
+  REAL(KIND=dp), INTENT(IN) :: c_m
+  REAL(KIND=dp), INTENT(IN) :: A0
+  REAL(KIND=dp), INTENT(IN) :: B0
+  REAL(KIND=dp), INTENT(IN) :: C0
+
+  RACM_HG = (A0) * exp(-(B0)/temp) * (temp/298._dp)**(-C0) * c_m
+
+END FUNCTION RACM_HG
+!__________________________________________________
+
+REAL(KIND=dp) FUNCTION  RACM_HGCl(temp, c_m, A0, B0)
+!SAhmed: Reaction rate from Donohoue et al. (2005)
+  REAL(KIND=dp), INTENT(IN) :: temp
+  REAL(KIND=dp), INTENT(IN) :: c_m
+  REAL(KIND=dp), INTENT(IN) :: A0
+  REAL(KIND=dp), INTENT(IN) :: B0
+
+  RACM_HGCl = (A0) * exp((B0) * ((1._dp/temp) - (1._dp/298._dp))) * c_m
+
+END FUNCTION RACM_HGCl
+!__________________________________________________
+
 !LMarelle: add these surface reaction rates as placeholders, in the end they
 ! should be passed from WRF-Chem to KPP
 REAL(KIND=dp) FUNCTION surface_reaction_rates(ii)
