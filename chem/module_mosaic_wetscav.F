@@ -205,7 +205,10 @@ CONTAINS
 !  scavenging of gas-phase gases by mass transfer and reaction
 
 !----------------------------------------------------------------------
-   USE module_configure, only: grid_config_rec_type
+   USE module_configure, only: grid_config_rec_type, p_hgbroh, p_hgbrno2, &
+            p_hgbrho2, p_hgbrbro, p_hgbrclo, p_hgbr2, p_hgbrcl, p_hgcloh, &
+            p_hgclno2, p_hgclho2, p_hgclbro, p_hgclclo, p_hgohoh, p_hgohno2, &
+            p_hgohho2, p_hgohbro, p_hgohclo, p_hgx, p_hgp
    USE module_state_description
    USE module_model_constants, only: g, rhowater, mwdry
    USE module_dep_simple, only: is_aerosol
@@ -338,7 +341,24 @@ CONTAINS
       do 270 j = jts,jte
       do 270 k = kts,kte
       do 270 i = its,ite
-         fracscav = dtstepc*qlsink(i,k,j)*gas_aqfrac(i,k,j,l)
+         ! SAhmed: For mercury mechanism, assume all divalent mercury (Hg2) has the same
+         ! solubility as HNO3 for rainout.
+         if (config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP) THEN
+           if ((l .eq. p_hgbroh) .or. (l .eq. p_hgbrno2) .or. (l .eq. p_hgbrho2) &
+              .or. (l .eq. p_hgbrbro) .or. (l .eq. p_hgbrclo) .or. (l .eq. p_hgbr2) &
+              .or. (l .eq. p_hgbrcl) .or. (l .eq. p_hgcloh) .or. (l .eq. p_hgclno2) &
+              .or. (l .eq. p_hgclho2) .or. (l .eq. p_hgclbro) .or. (l .eq. p_hgclclo) &
+              .or. (l .eq. p_hgohoh) .or. (l .eq. p_hgohno2) .or. (l .eq. p_hgohho2) &
+              .or. (l .eq. p_hgohbro) .or. (l .eq. p_hgohclo) .or. (l .eq. p_hgx) &
+              .or. (l .eq. p_hgp)) then
+             fracscav = dtstepc*qlsink(i,k,j)*gas_aqfrac(i,k,j,p_hno3)
+           else ! Rainout for all other species
+             fracscav = dtstepc*qlsink(i,k,j)*gas_aqfrac(i,k,j,l)
+           end if
+         else
+           fracscav = dtstepc*qlsink(i,k,j)*gas_aqfrac(i,k,j,l)
+         end if
+
          if (fracscav > 0.0) then ! make sure fracscav > 0
             fracscav = min(1.0,fracscav) ! make sure fracscav <= 1
             scale = 1.0 - fracscav
@@ -1282,7 +1302,11 @@ subroutine gasrainscav (ims,ime,kms,kme,jms,jme,its,ite,kts,kte,jts,jte,num_chem
   use module_configure, only:  grid_config_rec_type,   &
 		param_first_scalar,   &
 		p_so2, p_h2o2, p_sulf,p_h2so4, p_msa,   &
-		p_hno3, p_hcl, p_nh3
+		p_hno3, p_hcl, p_nh3, p_hgbroh, p_hgbrno2, &
+                p_hgbrho2, p_hgbrbro, p_hgbrclo, p_hgbr2, &
+                p_hgbrcl, p_hgcloh, p_hgclno2, p_hgclho2, &
+                p_hgclbro, p_hgclclo, p_hgohoh, p_hgohno2, &
+                p_hgohho2, p_hgohbro, p_hgohclo, p_hgx, p_hgp
 
    implicit none
 
@@ -1332,7 +1356,7 @@ subroutine gasrainscav (ims,ime,kms,kme,jms,jme,its,ite,kts,kte,jts,jte,num_chem
    integer :: p1st
    logical :: ispr_anywhere
 
-   integer, parameter :: ng = 7
+   integer, parameter :: ng = 26
    integer, parameter :: ig_so2   = 1
    integer, parameter :: ig_h2o2  = 2
    integer, parameter :: ig_h2so4 = 3
@@ -1340,6 +1364,26 @@ subroutine gasrainscav (ims,ime,kms,kme,jms,jme,its,ite,kts,kte,jts,jte,num_chem
    integer, parameter :: ig_hno3  = 5
    integer, parameter :: ig_hcl   = 6
    integer, parameter :: ig_nh3   = 7
+   ! For mercury mechansim, add HgII species
+   integer, parameter :: ig_hgbroh   = 8
+   integer, parameter :: ig_hgbrno2   = 9
+   integer, parameter :: ig_hgbrho2   = 10
+   integer, parameter :: ig_hgbrbro   = 11
+   integer, parameter :: ig_hgbrclo   = 12
+   integer, parameter :: ig_hgbr2   = 13
+   integer, parameter :: ig_hgbrcl   = 14
+   integer, parameter :: ig_hgcloh   = 15
+   integer, parameter :: ig_hgclno2   = 16
+   integer, parameter :: ig_hgclho2   = 17
+   integer, parameter :: ig_hgclbro   = 18
+   integer, parameter :: ig_hgclclo   = 19
+   integer, parameter :: ig_hgohoh   = 20
+   integer, parameter :: ig_hgohno2   = 21
+   integer, parameter :: ig_hgohho2   = 22
+   integer, parameter :: ig_hgohbro   = 23
+   integer, parameter :: ig_hgohclo   = 24
+   integer, parameter :: ig_hgp   = 25
+   integer, parameter :: ig_hgx   = 26
    integer :: ig, lg, lg_ptr(ng)
 
    real :: amtscav(ng), amtscav_sub(ng)
@@ -1373,6 +1417,25 @@ subroutine gasrainscav (ims,ime,kms,kme,jms,jme,its,ite,kts,kte,jts,jte,num_chem
    lg_ptr(ig_hno3 ) = p_hno3 
    lg_ptr(ig_hcl  ) = p_hcl  
    lg_ptr(ig_nh3  ) = p_nh3  
+   lg_ptr(ig_hgbroh  ) = p_hgbroh
+   lg_ptr(ig_hgbrno2  ) = p_hgbrno2
+   lg_ptr(ig_hgbrho2  ) = p_hgbrho2
+   lg_ptr(ig_hgbrbro  ) = p_hgbrbro
+   lg_ptr(ig_hgbrclo  ) = p_hgbrclo
+   lg_ptr(ig_hgbr2  ) = p_hgbr2
+   lg_ptr(ig_hgbrcl  ) = p_hgbrcl
+   lg_ptr(ig_hgcloh  ) = p_hgcloh
+   lg_ptr(ig_hgclno2  ) = p_hgclno2
+   lg_ptr(ig_hgclho2  ) = p_hgclho2
+   lg_ptr(ig_hgclbro  ) = p_hgclbro
+   lg_ptr(ig_hgclclo  ) = p_hgclclo
+   lg_ptr(ig_hgohoh  ) = p_hgohoh
+   lg_ptr(ig_hgohno2  ) = p_hgohno2
+   lg_ptr(ig_hgohho2  ) = p_hgohho2
+   lg_ptr(ig_hgohbro  ) = p_hgohbro
+   lg_ptr(ig_hgohclo  ) = p_hgohclo
+   lg_ptr(ig_hgp  ) = p_hgp
+   lg_ptr(ig_hgx  ) = p_hgx
 
    scavrate_factor(ig_so2  ) = 1.08
    scavrate_factor(ig_h2o2 ) = 1.38
@@ -1381,7 +1444,25 @@ subroutine gasrainscav (ims,ime,kms,kme,jms,jme,its,ite,kts,kte,jts,jte,num_chem
    scavrate_factor(ig_hno3 ) = 1.00
    scavrate_factor(ig_hcl  ) = 1.15
    scavrate_factor(ig_nh3  ) = 1.59
-
+   scavrate_factor(ig_hgbroh ) = 1.00
+   scavrate_factor(ig_hgbrno2 ) = 1.00
+   scavrate_factor(ig_hgbrho2 ) = 1.00
+   scavrate_factor(ig_hgbrbro ) = 1.00
+   scavrate_factor(ig_hgbrclo ) = 1.00
+   scavrate_factor(ig_hgbr2 ) = 1.00
+   scavrate_factor(ig_hgbrcl ) = 1.00
+   scavrate_factor(ig_hgcloh ) = 1.00
+   scavrate_factor(ig_hgclno2 ) = 1.00
+   scavrate_factor(ig_hgclho2 ) = 1.00
+   scavrate_factor(ig_hgclbro ) = 1.00
+   scavrate_factor(ig_hgclclo ) = 1.00
+   scavrate_factor(ig_hgohoh ) = 1.00
+   scavrate_factor(ig_hgohno2 ) = 1.00
+   scavrate_factor(ig_hgohho2 ) = 1.00
+   scavrate_factor(ig_hgohbro ) = 1.00
+   scavrate_factor(ig_hgohclo ) = 1.00
+   scavrate_factor(ig_hgp ) = 1.00
+   scavrate_factor(ig_hgx ) = 1.00
 
    do 5900 j = jts,jte
    do 5900 i = its,ite
@@ -1426,6 +1507,8 @@ subroutine gasrainscav (ims,ime,kms,kme,jms,jme,its,ite,kts,kte,jts,jte,num_chem
       		* ((dumtemp/298.0)**1.12)   &
       		* ((1.013e6/dumpress)**.75)
 
+        ! For mercury mechanism, assume below-cloud scavenging rate for all 
+        ! Hg2 species to be the same as HNO3
 	do ig = 1, ng
 	    scavrate(ig) = scavrate_hno3*scavrate_factor(ig)
 	    fracscav_sub(ig) = (1. - exp(-scavrate(ig)*deltat))   &
