@@ -24,12 +24,12 @@
         USE module_data_mosaic_other, only : kmaxd
 !jdf
        integer, parameter :: double = 8        !compiler dependent value real*8
-       integer,parameter :: jppj=29        !Number of photolytic reactions supplied
+       integer,parameter :: jppj=38        !Number of photolytic reactions supplied
 !jdf
 
         INTEGER  NB, NC !values set in fastj_driver, don't confuse
                         !this nc with the one in module_fastj_mie
-        INTEGER, PARAMETER :: NS=30, NW=15, NP=21, NH=7, MX=3
+        INTEGER, PARAMETER :: NS=39, NW=15, NP=21, NH=7, MX=3
 
 !titls variables
         CHARACTER*55 TITLE0(3)
@@ -122,6 +122,9 @@
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
+           0.1000D+01,  0.1000D+01,  0.1000D+01,   &
            0.1000D+01                              &
          /
        data jlabel   &
@@ -135,7 +138,10 @@
           '1BRONO2', '2BRONO2', '1CLO   ',   &
           '2CLO   ', 'CL2    ', 'HOCL   ',   &
           'CLNO2  ', '1CLONO2', '2CLONO2',   &
-          'BRCL   '                          &
+          'BRCL   ', 'HGBR'   , 'HGXOH'  ,   &
+          'HGXNO2' , 'HGXHO2' , 'HGXBRO' ,   &
+          'HGXCLO' , 'HGBR2'  , 'HGCL'   ,   &
+          'HGOH'                             &
          /         
 
 ! from rd_tjpl2
@@ -145,7 +151,7 @@
          /
        data NJVAL,NWWW,NW1,NW2   &
          /   &
-          30,    7,    1,    7   &
+          39,    7,    1,    7   &
          /
        data (WBIN(IW),IW=1,  8)   &
          /   &
@@ -305,7 +311,7 @@
           0.65719    ,  0.77862    ,  1.0        ,  &
           1.0          &
          /
-        data (TITLEJ(1,JTMP), JTMP=4,30)   &
+        data (TITLEJ(1,JTMP), JTMP=4,39)   &
          /   &
         'H2O2   ',  'HCHO_a ',  'HCHO_b ',  'MeOOH  ',   &
         'NO2    ',  'NO3_X  ',  'NO3_L  ',  'N2O5   ',   &
@@ -313,9 +319,11 @@
         'BRO    ',  'BR2    ',  'HOBR   ',  'BRNO2  ',   &
         '1BRONO2',  '2BRONO2',  '1CLO   ',  '2CLO   ',   &
         'CL2    ',  'HOCL   ',  'CLNO2  ',  '1CLONO2',   &
-        '2CLONO2',  'BRCL   ',  'OCLO   '              &
+        '2CLONO2',  'BRCL   ',  'OCLO   ',  'HGBR'   ,   &
+        'HGXOH'  ,  'HGXNO2' ,  'HGXHO2' ,  'HGXBRO' ,   &
+        'HGXCLO' ,  'HGBR2'  ,  'HGCL'   ,  'HGOH'       &
          /
-       data (TITLEJ(2,JTMP), JTMP=4,30)   &
+       data (TITLEJ(2,JTMP), JTMP=4,39)   &
          /   &
         'H2O2   ',  'HCHO_a ',  'HCHO_b ',  'MeOOH  ',   &
         'NO2    ',  'NO3_X  ',  'NO3_L  ',  'N2O5   ',   &
@@ -323,9 +331,11 @@
         'BRO    ',  'BR2    ',  'HOBR   ',  'BRNO2  ',   &
         '1BRONO2',  '2BRONO2',  '1CLO   ',  '2CLO   ',   &
         'CL2    ',  'HOCL   ',  'CLNO2  ',  '1CLONO2',   &
-        '2CLONO2',  'BRCL   ',  'OCLO   '              &
+        '2CLONO2',  'BRCL   ',  'OCLO   ',  'HGBR'   ,   &
+        'HGXOH'  ,  'HGXNO2' ,  'HGXHO2' ,  'HGXBRO' ,   &            
+        'HGXCLO' ,  'HGBR2'  ,  'HGCL'   ,  'HGOH'       &
          /
-        data (TQQ(1,JTMP), JTMP= 4,30)   &
+        data (TQQ(1,JTMP), JTMP= 4,39)   &
          /   &
          200.,   223.,   223.,   200.,   &
          200.,   200.,   200.,   225.,   &
@@ -333,9 +343,11 @@
          200.,   200.,   200.,   200.,   &
          230.,   230.,   200.,   200.,   &
          200.,   200.,   200.,   220.,   &
-         220.,   200.,   200.            &
+         220.,   200.,   200.,   297.,   &
+         297.,   297.,   297.,   297.,   &
+         297.,   297.,   297.,   297.    &
          /
-        data (TQQ(2,JTMP), JTMP= 4,30)   &
+        data (TQQ(2,JTMP), JTMP= 4,39)   &
          /   &
          300.,   293.,   293.,   300.,   &
          300.,   300.,   300.,   300.,   &
@@ -343,7 +355,9 @@
          300.,   300.,   300.,   300.,   &
          298.,   298.,   300.,   300.,   &
          300.,   300.,   298.,   296.,   &
-         296.,   300.,   300.            &
+         296.,   300.,   300.,   298.,   &
+         298.,   298.,   298.,   298.,   &
+         298.,   298.,   298.,   298.    &
          /
         data (QQQ(IW,1, 1), IW=1, 7)   &
          /   &
@@ -495,6 +509,65 @@
          3.308E-19,     2.347E-19,     1.566E-19 ,    1.174E-19,     &
          4.242E-21,     1.065E-19,     1.951E-20     &
          /
+        ! HGBR, at 298 K from Saiz-Lopez et al. (2019)
+        data (QQQ(IW,1,28), IW=1, 7)   &
+         /   &
+         0.000E+00,     0.000E+00,     0.000E+00,     0.000E+00,     &
+         0.000E+00,     0.000E+00,     3.207E-19     &
+         /
+        ! HGXOH, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOH
+        data (QQQ(IW,1,29), IW=1, 7)   &
+         /   &                          
+         6.243E-19,     6.832E-19,     4.943E-19,     7.448E-19,     &
+         3.701E-18,     6.690E-18,     7.883E-18     &
+         /
+        ! HGXNO2, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! syn-HgBrONO
+        data (QQQ(IW,1,30), IW=1, 7)   &
+         /   &
+         4.856E-18,     2.757E-18,     2.357E-18,     1.390E-18,     &
+         1.884E-19,     2.829E-21,     0.000E+00     &
+         /
+        ! HGXHO2, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOOH
+        data (QQQ(IW,1,31), IW=1, 7)   &
+         /   &
+         7.221E-18,     5.088E-18,     4.579E-18,     4.261E-18,     &
+         1.998E-18,     4.872E-20,     0.000E+00     &
+         /
+        ! HGXBRO, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOBr
+        data (QQQ(IW,1,32), IW=1, 7)   &
+         /   &
+        1.522E-19,      8.565E-20,     8.573E-20,     2.546E-19,     &
+        5.859E-18,      1.255E-18,     5.959E-21     &
+         /
+        ! HGXCLO, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOCl
+        data (QQQ(IW,1,33), IW=1, 7)   &
+         /   &
+         5.522E-18,     1.656E-17,     1.801E-17,     1.289E-17,     &
+         3.415E-18,     4.503E-20,     1.024E-21     &
+         /
+        ! HGBR2, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        data (QQQ(IW,1,34), IW=1, 7)   &
+         /   &                                                 
+         1.702E-20,     3.612E-21,     3.036E-21,     2.002E-21,     &
+         8.133E-23,     0.000E+00,     0.000E+00     &
+         /
+        ! HGCL, at 298 K from Saiz-Lopez et al. (2019), calculated for
+        data (QQQ(IW,1,35), IW=1, 7)   &
+         /   &                                                 
+         0.000E+00,     0.000E+00,     0.000E+00,     0.000E+00,     &
+         0.000E+00,     0.000E+00,     1.672E-19     &
+         /
+        ! HGOH, at 298 K from Saiz-Lopez et al. (2019), calculated for
+        data (QQQ(IW,1,36), IW=1, 7)   &
+         /   &                                                 
+         0.000E+00,     0.000E+00,     0.000E+00,     0.000E+00,     &
+         0.000E+00,     0.000E+00,     2.840E-19     &
+         /
         data (QQQ(IW,2, 1), IW=1, 7)   &
          /   &
          0.98180E-20,   0.57350E-20,   0.37970E-20,   0.25850E-20,   &
@@ -644,6 +717,65 @@
          /   &
          3.308E-19,     2.347E-19,     1.566E-19 ,    1.174E-19,     &
          4.242E-21,     1.065E-19,     1.951E-20     &
+         /
+        ! HGBR, at 298 K from Saiz-Lopez et al. (2019)
+        data (QQQ(IW,2,28), IW=1, 7)   &
+         /   &
+         0.000E+00,     0.000E+00,     0.000E+00,     0.000E+00,     &
+         0.000E+00,     0.000E+00,     3.207E-19     &
+         /
+        ! HGXOH, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOH
+        data (QQQ(IW,2,29), IW=1, 7)   &
+         /   &
+         6.243E-19,     6.832E-19,     4.943E-19,     7.448E-19,     &
+         3.701E-18,     6.690E-18,     7.883E-18     &
+         /
+        ! HGXNO2, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! syn-HgBrONO
+        data (QQQ(IW,2,30), IW=1, 7)   &
+         /   &
+         4.856E-18,     2.757E-18,     2.357E-18,     1.390E-18,     &
+         1.884E-19,     2.829E-21,     0.000E+00     &
+         /
+        ! HGXHO2, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOOH
+        data (QQQ(IW,2,31), IW=1, 7)   &
+         /   &
+         7.221E-18,     5.088E-18,     4.579E-18,     4.261E-18,     &
+         1.998E-18,     4.872E-20,     0.000E+00     &
+         /
+        ! HGXBRO, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOBr
+        data (QQQ(IW,2,32), IW=1, 7)   &
+         /   &
+        1.522E-19,      8.565E-20,     8.573E-20,     2.546E-19,     &
+        5.859E-18,      1.255E-18,     5.959E-21     &
+         /
+        ! HGXCLO, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        ! HgBrOCl
+        data (QQQ(IW,2,33), IW=1, 7)   &
+         /   &
+         5.522E-18,     1.656E-17,     1.801E-17,     1.289E-17,     &
+         3.415E-18,     4.503E-20,     1.024E-21     &
+         /
+        ! HGBR2, at 298 K from Saiz-Lopez et al. (2018), calculated for
+        data (QQQ(IW,2,34), IW=1, 7)   &
+         /   &
+         1.702E-20,     3.612E-21,     3.036E-21,     2.002E-21,     &
+         8.133E-23,     0.000E+00,     0.000E+00     &
+         /
+        ! HGCL, at 298 K from Saiz-Lopez et al. (2019), calculated for
+        data (QQQ(IW,2,35), IW=1, 7)   &
+         /   &
+         0.000E+00,     0.000E+00,     0.000E+00,     0.000E+00,     &
+         0.000E+00,     0.000E+00,     1.672E-19     &
+         /
+        ! HGOH, at 298 K from Saiz-Lopez et al. (2019), calculated for
+        data (QQQ(IW,2,36), IW=1, 7)   &
+         /   &
+         0.000E+00,     0.000E+00,     0.000E+00,     0.000E+00,     &
+         0.000E+00,     0.000E+00,     2.840E-19     &
          /
        data TITLE0(2)   &
          /   &

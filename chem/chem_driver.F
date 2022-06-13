@@ -998,6 +998,11 @@
               grid%ph_clono2_no2, grid%ph_clono2_no3, grid%ph_brcl,                   &
               grid%ph_oclo,                                                           &
               !LMarelle--
+              !SAhmed Additional photolysis rates for mercury species
+              grid%ph_hgbr, grid%ph_hgxoh, grid%ph_hgxno2, grid%ph_hgxho2,            &
+              grid%ph_hgxbro, grid%ph_hgxclo, grid%ph_hgbr2, grid%ph_hgcl,            &
+              grid%ph_hgoh,                                                           &
+              !SAhmed--
               config_flags%track_tuv_lev,                                             &
               config_flags%track_rad_num,                                             &
               config_flags%track_tuv_num,                                             &

@@ -26,6 +26,10 @@
                ph_clono2_no2, ph_clono2_no3, ph_brcl,                    &
                ph_oclo,                                                  &
                !LMarelle--
+               !SAhmed Additional photolysis rates for mercury species
+               ph_hgbr, ph_hgxoh, ph_hgxno2, ph_hgxho2, ph_hgxbro,       &
+               ph_hgxclo, ph_hgbr2, ph_hgcl, ph_hgoh,                    &
+               !SAhmed--
                nref0, nw0, tuv_jmax0,                                    &
                ph_radfld, ph_adjcoe, ph_prate,                           &
                wc, zref,                                                 &
