@@ -429,6 +429,33 @@ tile_lon_loop : &
             ddvel(i, j, p_ch3cl) = 0.0
             ddvel(i, j, p_ch3ccl2) = 0.0
             ddvel(i, j, p_ch2cl) = 0.0
+            ! Add mercury species here
+            ddvel(i, j, p_hgbr) = 0.0
+            ddvel(i, j, p_hgbro) = 0.0
+            ddvel(i, j, p_hgcl) = 0.0
+            ddvel(i, j, p_hgclo) = 0.0
+            ddvel(i, j, p_hgoh) = 0.0
+            ddvel(i, j, p_hgoho) = 0.0
+            ! Set all Hg2 dry dep vel to 1.0 cm/s
+            ddvel(i, j, p_hgbroh) = 1.0e-2
+            ddvel(i, j, p_hgbrno2) = 1.0e-2
+            ddvel(i, j, p_hgbrho2) = 1.0e-2
+            ddvel(i, j, p_hgbrbro) = 1.0e-2
+            ddvel(i, j, p_hgbrclo) = 1.0e-2
+            ddvel(i, j, p_hgbr2) = 1.0e-2
+            ddvel(i, j, p_hgbrcl) = 1.0e-2
+            ddvel(i, j, p_hgcloh) = 1.0e-2
+            ddvel(i, j, p_hgclno2) = 1.0e-2
+            ddvel(i, j, p_hgclho2) = 1.0e-2
+            ddvel(i, j, p_hgclbro) = 1.0e-2
+            ddvel(i, j, p_hgclclo) = 1.0e-2
+            ddvel(i, j, p_hgohoh) = 1.0e-2
+            ddvel(i, j, p_hgohno2) = 1.0e-2
+            ddvel(i, j, p_hgohho2) = 1.0e-2
+            ddvel(i, j, p_hgohbro) = 1.0e-2
+            ddvel(i, j, p_hgohclo) = 1.0e-2
+            ddvel(i, j, p_hgp) = 1.0e-2
+            ddvel(i, j, p_hgx) = 1.0e-2
           end do
         end do
       end if
@@ -3295,6 +3322,14 @@ is_cbm4_kpp : &
          dhr(p_clono2) = 2300. ! assumed to be same as HCl
          f0(p_clono2) = 1. ! assumed to be reactive
          dvj(p_clono2) = 0.1
+         ! Addition of Hg
+         ! hstar and dhr obtained from Sander et al. (2015)
+         ! f0 obtained from Geos-Chem dry dep parameters
+         ! Hg (Elemental mercury)
+         hstar(p_hg) = 0.11
+         dhr(p_hg) = 4800.
+         f0(p_hg) = 1.0E-5
+         dvj(p_hg) = 0.071
        END IF
      end if
 
