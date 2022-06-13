@@ -68,7 +68,7 @@ CONTAINS
          ic_flashrate, cg_flashrate,                                       &
          ! end stuff for LNOx emissions
          ! stuff for Br2 emissions from snow
-         snowc, xice, meltedsnow, coszen,                                  &
+         snowc, xice, meltedsnow, snowh_melt, coszen,                      &
          drydepflx_o3, drydepflx_hobr,                                     &
          drydepflx_brno3, drydepflx_hbr, drydepflx_br2, emiss_br2,         &
          ! Hg0 emissions from snow
