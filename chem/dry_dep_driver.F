@@ -24,6 +24,14 @@ CONTAINS
                ! Dry deposition fluxes needed for Br2 emissions from snow
                drydepflx_o3, drydepflx_hobr, drydepflx_brno3,             &
                drydepflx_hbr, drydepflx_br2, dvel_o3,                     &
+               ! HgII dry deposition fluxes needed for Hg0 emissions from snow
+               drydepflx_hgbroh, drydepflx_hgbrno2, drydepflx_hgbrho2,    &
+               drydepflx_hgbrbro, drydepflx_hgbrclo, drydepflx_hgbr2,     &
+               drydepflx_hgbrcl, drydepflx_hgcloh, drydepflx_hgclno2,     &
+               drydepflx_hgclho2, drydepflx_hgclbro, drydepflx_hgclclo,   &
+               drydepflx_hgohoh, drydepflx_hgohno2, drydepflx_hgohho2,    &
+               drydepflx_hgohbro, drydepflx_hgohclo, drydepflx_hgp,       &
+               drydepflx_hgx, drydepflx_hg2,                              &
                emis_ant,ebu_in,                                           &
                sf_urban_physics,numgas,current_month,dvel,snowh,xice,     & 
                dustdrydep_1,dustdrydep_2,dustdrydep_3,                    &
@@ -146,6 +154,17 @@ CONTAINS
    REAL,  DIMENSION(ims:ime, jms:jme),                          &
           INTENT(INOUT) :: drydepflx_o3, drydepflx_hobr,        &
           drydepflx_brno3, drydepflx_hbr, drydepflx_br2
+ 
+   ! Dry deposition fluxes of each HgII species and total HgII (mol/m2/s)
+   REAL,  DIMENSION(ims:ime, jms:jme),                          &
+          INTENT(INOUT) :: drydepflx_hgbroh, drydepflx_hgbrno2, &
+          drydepflx_hgbrho2, drydepflx_hgbrbro, drydepflx_hgbrclo, &
+          drydepflx_hgbr2, drydepflx_hgbrcl, drydepflx_hgcloh, &
+          drydepflx_hgclno2, drydepflx_hgclho2, drydepflx_hgclbro, &
+          drydepflx_hgclclo, drydepflx_hgohoh, drydepflx_hgohno2, &
+          drydepflx_hgohho2, drydepflx_hgohbro, drydepflx_hgohclo, &
+          drydepflx_hgp, drydepflx_hgx, drydepflx_hg2
+   
    ! O3 deposition velocity (cm/s)
    REAL,  DIMENSION(ims:ime, jms:jme),                          &
           INTENT(INOUT) :: dvel_o3
@@ -469,6 +488,8 @@ CONTAINS
 
 ! Calculate deposition fluxes for bromine species and O3, and the deposition
 ! velocity of O3
+! Updated to also include deposition flux calculation of each HgII species and 
+! the total HgII deposition flux
        IF (config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .OR. &
            config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP) THEN
          DO i = its, ite
@@ -489,6 +510,75 @@ CONTAINS
                / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_br2) * 1.E-6
 
              dvel_o3(i,j) = m2cm*ddvel(i,j,p_o3)
+                
+             ! HgII deposition flux
+             drydepflx_hgbroh(i, j) = chem(i, kts, j, p_hgbroh) * p_phy(i, kts, j)      &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbroh) * 1.E-6
+
+             drydepflx_hgbrno2(i, j) = chem(i, kts, j, p_hgbrno2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbrno2) * 1.E-6
+
+             drydepflx_hgbrho2(i, j) = chem(i, kts, j, p_hgbrho2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbrho2) * 1.E-6
+
+             drydepflx_hgbrbro(i, j) = chem(i, kts, j, p_hgbrbro) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbrbro) * 1.E-6
+
+             drydepflx_hgbrclo(i, j) = chem(i, kts, j, p_hgbrclo) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbrclo) * 1.E-6
+
+             drydepflx_hgbr2(i, j) = chem(i, kts, j, p_hgbr2) * p_phy(i, kts, j)        &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbr2) * 1.E-6
+
+             drydepflx_hgbrcl(i, j) = chem(i, kts, j, p_hgbrcl) * p_phy(i, kts, j)      &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbrcl) * 1.E-6
+
+             drydepflx_hgcloh(i, j) = chem(i, kts, j, p_hgcloh) * p_phy(i, kts, j)      &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgcloh) * 1.E-6
+
+             drydepflx_hgclno2(i, j) = chem(i, kts, j, p_hgclno2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgclno2) * 1.E-6
+
+             drydepflx_hgclho2(i, j) = chem(i, kts, j, p_hgclho2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgclho2) * 1.E-6
+
+             drydepflx_hgclbro(i, j) = chem(i, kts, j, p_hgclbro) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgclbro) * 1.E-6
+                
+             drydepflx_hgclclo(i, j) = chem(i, kts, j, p_hgclclo) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgclclo) * 1.E-6
+
+             drydepflx_hgohoh(i, j) = chem(i, kts, j, p_hgohoh) * p_phy(i, kts, j)      &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgohoh) * 1.E-6
+
+             drydepflx_hgohno2(i, j) = chem(i, kts, j, p_hgohno2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgohno2) * 1.E-6
+
+             drydepflx_hgohho2(i, j) = chem(i, kts, j, p_hgohho2) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgohho2) * 1.E-6
+
+             drydepflx_hgohbro(i, j) = chem(i, kts, j, p_hgohbro) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgohbro) * 1.E-6
+
+             drydepflx_hgohclo(i, j) = chem(i, kts, j, p_hgohclo) * p_phy(i, kts, j)    &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgohclo) * 1.E-6
+
+             drydepflx_hgp(i, j) = chem(i, kts, j, p_hgp) * p_phy(i, kts, j)        &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgp) * 1.E-6
+
+             drydepflx_hgx(i, j) = chem(i, kts, j, p_hgx) * p_phy(i, kts, j)        &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgx) * 1.E-6
+
+             drydepflx_hg2(i, j) = drydepflx_hgbroh(i, j) + drydepflx_hgbrno2(i, j) + &
+                                   drydepflx_hgbrho2(i, j) + drydepflx_hgbrbro(i, j) + &
+                                   drydepflx_hgbrclo(i, j) + drydepflx_hgbr2(i, j) + &
+                                   drydepflx_hgbrcl(i, j) + drydepflx_hgcloh(i, j) + &
+                                   drydepflx_hgclno2(i, j) + drydepflx_hgclho2(i, j) + &
+                                   drydepflx_hgclbro(i, j) + drydepflx_hgclclo(i, j) + &
+                                   drydepflx_hgohoh(i, j) + drydepflx_hgohno2(i, j) + &
+                                   drydepflx_hgohho2(i, j) + drydepflx_hgohbro(i, j) + &
+                                   drydepflx_hgohclo(i, j) + drydepflx_hgp(i, j) + &
+                                   drydepflx_hgx(i, j)
 
            ENDDO
          ENDDO
