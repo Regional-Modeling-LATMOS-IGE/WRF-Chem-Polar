@@ -1035,6 +1035,7 @@ state    real   FMSAND_PX        ij     misc        1         -      rh       "F
 
 #LMarelle - for halogen activation - past snow melt flag for a given season
 state    real   MELTEDSNOW       ij     misc        1         -      irh      "MELTEDSNOW"    "PAST SNOW MELT FLAG" ""
+state    real   SNOWH_MELT       ij     misc        1         -      irh      "SNOWH_MELT"    "SNOW DEPTH DURING MELTING PERIOD" ""
 
 # sfclay PBL variables
 i1      real   PSIM           ij     misc        1         -     -         "PSIM"                "SIMILARITY FUNCTION FOR MOMENTUM"     ""

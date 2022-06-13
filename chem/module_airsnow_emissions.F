@@ -43,6 +43,9 @@
 !TODO Ideally, blowing snow should be in a separate module
 !TODO If someone tries to use this option with another mechanism, include a call
 ! to WRF_FATAL in chemics_init.F.
+!
+! Revision history:
+! Ahmed S. - 2021/12/02: Turn on re-emission of halogens after fresh snow fall
 
 MODULE module_airsnow_emissions
 
@@ -51,7 +54,7 @@ CONTAINS
 !----------------------------------------------------------------------
   SUBROUTINE airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
          v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
-         xice, meltedsnow, coszen,                                     &
+         xice, meltedsnow, coszen, snowh_melt,                         &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
          ids,ide, jds,jde, kds,kde,                                    &
@@ -96,6 +99,9 @@ CONTAINS
   ! Past snow melt flag (dimensionless flag)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: meltedsnow
+  ! Snow height during melt period (m)
+  REAL, DIMENSION(ims:ime, jms:jme)               ,               &
+        INTENT(INOUT) :: snowh_melt
   ! Dry deposition fluxes of O3, HOBr, BrNO3, and HBr (mole/m2/s), calculated in
   ! dry_dep_driver
   REAL,  DIMENSION(ims:ime, jms:jme),                             &
@@ -226,6 +232,17 @@ CONTAINS
 
       a_prime = 1.0 / (1.038 + 0.03758 * snow_age - 0.00014349 * snow_age ** 2.0 &
                 + 1.911315E-7 * snow_age ** 3.0)
+
+      !SAhmed - if snow melts, turn off surface emissions there during the melt period.
+      !Snow emissions are turned back on if below freezing temperatures AND fresh
+      !snow has been deposited (at least 1 cm).
+      IF(tsk(i, j) .GT. 273) THEN
+        snowh_melt(i,j) = snowh(i,j)
+        meltedsnow(i,j) = 1.
+      ELSEIF (snowh(i,j) .GT. snowh_melt(i,j)+0.01) THEN
+        snowh_melt(i,j) = 0.0
+        meltedsnow(i,j) = 0.0
+      END IF ! Fresh snow check since last melt
 
       !-------- Halogen emissions from surface snow and recycling over snow
       ! Only valid over snow or over sea ice (assuming that ice is always snow
