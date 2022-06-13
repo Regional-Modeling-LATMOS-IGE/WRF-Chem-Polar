@@ -572,6 +572,21 @@
 {s25} BrONO2 + HCl = BrCl:  0.29*khet_halogens_aer(j(Pj_het_brono2), C_HCl, C_BrONO2);
 {s26} BrONO2 = HOBr + HNO3:  0.29*j(Pj_het_brono2);
 {s27} HOBr + HCl = BrCl:  0.5*khet_halogens_aer(j(Pj_het_hobr), C_HCl, C_HOBr);
+{s28} HgBrOH = HgP: j(Pj_het_hgbroh);
+{s29} HgBrNO2 = HgP: j(Pj_het_hgbrno2);
+{s30} HgBrHO2 = HgP: j(Pj_het_hgbrho2);
+{s31} HgBrBrO = HgP: j(Pj_het_hgbrbro);
+{s32} HgBrClO = HgP: j(Pj_het_hgbrclo);
+{s33} HgBr2 = HgP: j(Pj_het_hgbr2);
+{s34} HgBrCl = HgP: j(Pj_het_hgbrcl);
+{s35} HgClOH = HgP: j(Pj_het_hgcloh);
+{s36} HgClNO2 = HgP: j(Pj_het_hgclno2);
+{s37} HgClHO2 = HgP: j(Pj_het_hgclho2);
+{s38} HgClBrO = HgP: j(Pj_het_hgclbro);
+{s39} HgClClO = HgP: j(Pj_het_hgclclo);
+{s40} HgOHOH = HgP: j(Pj_het_hgohoh);
+{s41} HgOHNO2 = HgP: j(Pj_het_hgohno2);
+{s42} HgOHHO2 = HgP: j(Pj_het_hgohho2);
+{s43} HgOHBrO = HgP: j(Pj_het_hgohbro);
+{s44} HgOHClO = HgP: j(Pj_het_hgohclo);
 
-
- 

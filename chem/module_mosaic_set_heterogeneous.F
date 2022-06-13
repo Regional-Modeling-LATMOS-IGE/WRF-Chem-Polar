@@ -11,7 +11,10 @@
 ! Implementation and impacts of surface and blowing snow sources of Arctic
 ! bromine activation within WRF-Chem 4.1.1. Submitted to the Journal of Advances
 ! in Modeling Earth Systems.
-
+!
+! Revision history:
+! Ahmed S. 2021/11/26: Include mercury heterogeneous uptake of HgII(g) species to 
+!                      aerosols and liquid clouds.
     CONTAINS
 
 !-----------------------------------------------------------------------
@@ -20,8 +23,14 @@
         chem, t_phy, p_phy, alt,                                       &
         ph_het_hobr, ph_het_brono2, ph_het_hcl, ph_het_hbr,            &
         ph_het_n2o5, ph_het_hocl, ph_het_clono2, ph_het_oh,            &
+        ph_het_hgbroh, ph_het_hgbrno2, ph_het_hgbrho2, ph_het_hgbrbro, &
+        ph_het_hgbrclo, ph_het_hgbr2, ph_het_hgbrcl, ph_het_hgcloh,    &
+        ph_het_hgclno2, ph_het_hgclho2, ph_het_hgclbro, ph_het_hgclclo,&
+        ph_het_hgohoh, ph_het_hgohno2, ph_het_hgohho2, ph_het_hgohbro, &
+        ph_het_hgohclo,                                                &
         aer_ph_01, aer_ph_02, aer_ph_03, aer_ph_04, &
         aer_ph_05, aer_ph_06, aer_ph_07, aer_ph_08, &
+        qcloud, qndrop, cldfra,                     &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )
@@ -58,10 +67,17 @@
     REAL, INTENT(OUT), &
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: ph_het_hobr, ph_het_brono2, &
         ph_het_hcl, ph_het_hbr, ph_het_n2o5, ph_het_hocl, ph_het_clono2, &
-        ph_het_oh
+        ph_het_oh, ph_het_hgbroh, ph_het_hgbrno2, ph_het_hgbrho2, &
+        ph_het_hgbrbro, ph_het_hgbrclo, ph_het_hgbr2, ph_het_hgbrcl, &
+        ph_het_hgcloh, ph_het_hgclno2, ph_het_hgclho2, ph_het_hgclbro, &
+        ph_het_hgclclo, ph_het_hgohoh, ph_het_hgohno2, ph_het_hgohho2, &
+        ph_het_hgohbro, ph_het_hgohclo,
     REAL, INTENT(OUT), &
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: aer_ph_01, aer_ph_02, aer_ph_03, aer_ph_04, &
         aer_ph_05, aer_ph_06, aer_ph_07, aer_ph_08
+    REAL, INTENT(IN),   &
+        DIMENSION( ims:ime, kms:kme, jms:jme) :: &
+        qcloud, qndrop, cldfra
 
     ! Local variables
     INTEGER it, jt, kt
@@ -72,8 +88,11 @@
          drydp, drydens, drymass, dryvol, dryarea, wetarea
     REAL(r8) :: freepath, molar_weight, diffusion_constant
     REAL(r8) :: mean_speed, knudsen, j_corr, upper, lower, aerosol_bin_ph
-    INTEGER,  PARAMETER :: nspecies = 8
+    REAL(r8) :: cld_num, drop_num, cld_fra, cld_area
+    REAL(r8) :: droplet_mass, droplet_volume, reff_droplet
+    INTEGER,  PARAMETER :: nspecies = 25
     REAL(r8), DIMENSION(nspecies) :: k_het
+    REAL(r8), DIMENSION(nspecies) :: k_het_cld
 
     ! Parameters and data declarations
     REAL(r8), PARAMETER :: densdefault = 2.0 ! g/cm3
@@ -93,6 +112,24 @@
     INTEGER,  PARAMETER :: i_hocl = 6
     INTEGER,  PARAMETER :: i_clono2 = 7
     INTEGER,  PARAMETER :: i_oh = 8
+    INTEGER,  PARAMETER :: i_hgbroh = 9
+    INTEGER,  PARAMETER :: i_hgbrno2 = 10
+    INTEGER,  PARAMETER :: i_hgbrho2 = 11
+    INTEGER,  PARAMETER :: i_hgbrbro = 12
+    INTEGER,  PARAMETER :: i_hgbrclo = 13
+    INTEGER,  PARAMETER :: i_hgbr2 = 14
+    INTEGER,  PARAMETER :: i_hgbrcl = 15
+    INTEGER,  PARAMETER :: i_hgcloh = 16
+    INTEGER,  PARAMETER :: i_hgclno2 = 17
+    INTEGER,  PARAMETER :: i_hgclho2 = 18
+    INTEGER,  PARAMETER :: i_hgclbro = 19
+    INTEGER,  PARAMETER :: i_hgclclo = 20
+    INTEGER,  PARAMETER :: i_hgohoh = 21
+    INTEGER,  PARAMETER :: i_hgohno2 = 22
+    INTEGER,  PARAMETER :: i_hgohho2 = 23
+    INTEGER,  PARAMETER :: i_hgohbro = 24
+    INTEGER,  PARAMETER :: i_hgohclo = 25
+    
     ! CHARACTER*6, DIMENSION(nspecies) :: specnames
     REAL(r8), DIMENSION(nspecies) :: gamma_factors
     REAL(r8), DIMENSION(nspecies) :: molar_weights
@@ -102,18 +139,27 @@
     ! adding new species
     ! data specnames &
     !   / &
-    !   'HOBr  ', 'BrONO2', 'HCl   ', 'HBr   ', 'N2O5  ' &
-    !   'HOCl  ', 'ClONO2', 'OH    '                     &
+    !   'HOBr   ', 'BrONO2 ', 'HCl    ', 'HBr    ', 'N2O5   ', &
+    !   'HOCl   ', 'ClONO2 ', 'OH     ', 'HgBrOH ', 'HgBrNO2', &
+    !   'HgBrHO2', 'HgBrBrO', 'HgBrClO', 'HgBr2  ', 'HgBrCl ', &
+    !   'HgClOH ', 'HgClNO2', 'HgClHO2', 'HgClBrO', 'HgClClO', &
+    !   'HgOHOH ', 'HgOHNO2', 'HgOHHO2', 'HgOHBrO', 'HgOHClO', &
     !   /
     data gamma_factors &
       / &
       0.1_r8, 0.14_r8, 0.02_r8, 0.02_r8, 0.044_r8, &
-      4.0E-4_r8, 0.11_r8, 0.2_r8 &
+      4.0E-4_r8, 0.11_r8, 0.2_r8, 0.1_r8, 0.1_r8,  &
+      0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, &
+      0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, &
+      0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, &
       /
     data molar_weights &
       / &
       97._r8, 142._r8, 36.5_r8, 81._r8, 108._r8, &
-      52.5_r8, 97.5_r8, 17._r8 &
+      52.5_r8, 97.5_r8, 17._r8, 297.5_r8, 326.5_r8, &
+      313.5_r8, 376.5_r8, 332._r8, 360.5_r8, 316._r8, &
+      253._r8, 282._r8, 269._r8, 332._r8, 287.5_r8, &
+      234.5_r8, 263.5_r8, 250.5_r8, 313.5_r8, 269._r8, &
       /
 
 ! ********************** Description of variables ****************************
@@ -125,6 +171,9 @@
 !    ph_het_hobr, ph_het_brono2, ph_het_hcl, ph_het_hbr, ...
 !        ph_het_n2o5 - 3D heterogeneous reaction rate arrays for
 !        halogen mechanims (min-1)
+!    qcloud - Cloud water mixing ratio (kg kg-1)
+!    qndrop - Droplet number mixing ratio (# kg-1)
+!    cldfra - Cloud fraction (0 - 1)
 !
 ! *** Local variables ***
 !    it, jt, kt, iphase, itype, ibin, ll - Loop indices for wrf i dimension, wrf
@@ -144,7 +193,14 @@
 !    mean_speed - Mean molecular speed (cm/s)
 !    knudsen - Knudsen number ( )
 !    j_corr - Fuchs and Sutugin, 1971, correction factor for k_het ( )
+!    cld_num, drop_num, cld_fra - Cloud water mixing ratio (kg kg-1), droplet
+!    number mixing ratio (# kg-1), cloud fraction (0 - 1)
+!    cld_area - Effective cloud surface area (cm2/cm3 air)
+!    droplet_mass, droplet_volume, reff_droplet - Mass of a single cloud droplet
+!    (g), volume of a single cloud droplet (cm3), effective mean radius of a
+!    single cloud droplet (cm)
 !    k_het - Heterogeneous reaction rate (s-1)
+!    k_het_cld - Heterogeneous reaction rate to clouds (s-1)
 !    gamma_factors - probability that a species uptaken by an aerosol undergoes
 !        reaction ( )
 !    specnames - List of names of halogen mechanism species interacting with
@@ -161,14 +217,21 @@
     press = p_phy(it,kt,jt)
     airdens = 1._r8 / alt(it,kt,jt) * 1.E-6_r8
 
+!   Get cloud water mixing ratio (kg kg-1), droplet number mixing ratio (# kg-1) 
+!   and cloud fraction (unitless) 
+    cld_num = qcloud(it,kt,jt)
+    drop_num = qndrop(it,kt,jt)
+    cld_fra = cldfra(it,kt,jt)
+
 !   Get aerosol wet density (g/cm3) and wet diameter (cm)
     ! Only works for the interstitial phase
     iphase = ai_phase
     ! For now, only works for itype = 1, ntypes_aer = 1 (one aerosol type)
     itype = 1
 
-    ! Initalize reaction constant k_het to 0 s-1
+    ! Initalize reaction constant k_het and k_het_cld to 0 s-1
     k_het(:) = 0._r8
+    k_het_cld(:) = 0._r8
 
     DO ibin = 1, nsize_aer(itype)
       dryvol = 0.0_r8
@@ -248,51 +311,80 @@
 
         ! Calculate the  molecular free path in air (cm)
         CALL calc_freepath(temp, molar_weight, diffusion_constant, freepath)
+        
+        ! Calculate heterogeneous uptake for halogens + mercury species
+        IF (ispecies .le. 8) THEN   ! Calculate uptake for halogen species
 
-        ! Calculate the Knudsen number
-        knudsen = freepath * 2.0_r8 / wetdp
+          ! Calculate the Knudsen number
+          knudsen = freepath * 2.0_r8 / wetdp
 
-        ! Calculate the Fuchs and Sutugin (1871) expression j_corr from Table
-        ! 11.1, Seinfeld and Pandis, 1998
-        ! Only calculate j_corr for species with a reaction probability
-        ! gamma_factors(ispecies) greater than zero
-        IF (gamma_factors(ispecies) > 0._r8) THEN
-            upper = 0.75_r8 * gamma_factors(ispecies) * (1._r8 + knudsen)
-            lower = knudsen ** 2 + knudsen + 0.283_r8 * knudsen * gamma_factors(ispecies) &
-                    + 0.75_r8 * gamma_factors(ispecies)
-            j_corr = upper / lower
-        ELSE
+          ! Calculate the Fuchs and Sutugin (1871) expression j_corr from Table
+          ! 11.1, Seinfeld and Pandis, 1998
+          ! Only calculate j_corr for species with a reaction probability
+          ! gamma_factors(ispecies) greater than zero
+          IF (gamma_factors(ispecies) > 0._r8) THEN
+              upper = 0.75_r8 * gamma_factors(ispecies) * (1._r8 + knudsen)
+              lower = knudsen ** 2 + knudsen + 0.283_r8 * knudsen * gamma_factors(ispecies) &
+                      + 0.75_r8 * gamma_factors(ispecies)
+              j_corr = upper / lower
+          ELSE
+              j_corr = 0._r8
+          ENDIF
+
+          ! Aerosol pH, calculated in module_data_mosaic_therm
+          IF(ibin == 1) THEN
+            aerosol_bin_ph = aer_ph_01(it, kt, jt)
+          ELSEIF(ibin == 2) THEN
+            aerosol_bin_ph = aer_ph_02(it, kt, jt)
+          ELSEIF(ibin == 3) THEN
+            aerosol_bin_ph = aer_ph_03(it, kt, jt)
+          ELSEIF(ibin == 4) THEN
+            aerosol_bin_ph = aer_ph_04(it, kt, jt)
+          ELSEIF(ibin == 5) THEN
+            aerosol_bin_ph = aer_ph_05(it, kt, jt)
+          ELSEIF(ibin == 6) THEN
+            aerosol_bin_ph = aer_ph_06(it, kt, jt)
+          ELSEIF(ibin == 7) THEN
+            aerosol_bin_ph = aer_ph_07(it, kt, jt)
+          ELSEIF(ibin == 8) THEN
+            aerosol_bin_ph = aer_ph_08(it, kt, jt)
+          ENDIF
+          ! Turn off the het reaction if the aerosol is not sufficiently acidic
+          ! (using a ph == 5 threshold)
+          IF(aerosol_bin_ph > 5._r8 .OR. aerosol_bin_ph <= 0._r8) THEN
             j_corr = 0._r8
-        ENDIF
+          ENDIF
 
-        ! Aerosol pH, calculated in module_data_mosaic_therm
-        IF(ibin == 1) THEN
-          aerosol_bin_ph = aer_ph_01(it, kt, jt)
-        ELSEIF(ibin == 2) THEN
-          aerosol_bin_ph = aer_ph_02(it, kt, jt)
-        ELSEIF(ibin == 3) THEN
-          aerosol_bin_ph = aer_ph_03(it, kt, jt)
-        ELSEIF(ibin == 4) THEN
-          aerosol_bin_ph = aer_ph_04(it, kt, jt)
-        ELSEIF(ibin == 5) THEN
-          aerosol_bin_ph = aer_ph_05(it, kt, jt)
-        ELSEIF(ibin == 6) THEN
-          aerosol_bin_ph = aer_ph_06(it, kt, jt)
-        ELSEIF(ibin == 7) THEN
-          aerosol_bin_ph = aer_ph_07(it, kt, jt)
-        ELSEIF(ibin == 8) THEN
-          aerosol_bin_ph = aer_ph_08(it, kt, jt)
-        ENDIF
-        ! Turn off the het reaction if the aerosol is not sufficiently acidic
-        ! (using a ph == 5 threshold)
-        IF(aerosol_bin_ph > 5._r8 .OR. aerosol_bin_ph <= 0._r8) THEN
-          j_corr = 0._r8
-        ENDIF
+          ! Calculate the effective rate constant k_het (s-1) for surface reactions
+          ! Sum k_het over bins to calculate the total resulting effective rate constant
+          k_het(ispecies) = k_het(ispecies) + 0.25_r8 * mean_speed * gamma_factors(ispecies) &
+                             * wetarea * j_corr
+        ELSE    ! Calculate uptake for mercury species
+          ! Uptake to aerosols 
+          ! Calculate k_het for uptake to aerosols
+          k_het(ispecies) = k_het(ispecies) + wetarea * &
+          (((0.5_r8*wetdp)/diffusion_constant)+(4.0_r8/(mean_speed*gamma_factors(ispecies))))**-1.0_r8
 
-        ! Calculate the effective rate constant k_het (s-1) for surface reactions
-        ! Sum k_het over bins to calculate the total resulting effective rate constant
-        k_het(ispecies) = k_het(ispecies) + 0.25_r8 * mean_speed * gamma_factors(ispecies) &
-                           * wetarea * j_corr
+          ! Uptake to clouds
+          ! Do this once to make sure it is not calculated for each aerosol size bin.
+          IF (ibin == 1) THEN
+            ! Check cloud fraction in each grid cell, if there are no clouds return khet as 0 for that grid cell
+            IF (cld_fra == 0._r8) THEN
+              k_het_cld = 0._r8
+            ELSE
+              ! Calculate the liquid cloud droplet effective mean radius (cm) and surface area (cm2/cm3 air)
+              CALL calc_cloud_properties(cld_num, drop_num, airdens, reff_droplet, cld_area)
+
+              k_het_cld(ispecies) = k_het_cld(ispecies) + cld_area * &
+                        ((reff_droplet/diffusion_constant)+(4.0_r8/(mean_speed*gamma_factors(ispecies))))**-1.0_r8
+            END IF
+          ELSE ! Set to zero for other aerosol bins so its not counted multiple times
+            k_het_cld = 0._r8
+          END IF
+          ! Calculate total heterogeneous uptake of mercury species
+          k_het(ispecies) = k_het(ispecies) + k_het_cld(ispecies)
+
+        END IF ! If Hg or halogen species           
 
       END DO !ispecies
   
@@ -310,6 +402,23 @@
     ph_het_hocl(it, kt, jt) = k_het(i_hocl) * 60._r8
     ph_het_clono2(it, kt, jt) = k_het(i_clono2) * 60._r8
     ph_het_oh(it, kt, jt) = k_het(i_oh) * 60._r8
+    ph_het_hgbroh(it, kt, jt) = k_het(i_hgbroh) * 60._r8
+    ph_het_hgbrno2(it, kt, jt) = k_het(i_hgbrno2) * 60._r8
+    ph_het_hgbrho2(it, kt, jt) = k_het(i_hgbrho2) * 60._r8
+    ph_het_hgbrbro(it, kt, jt) = k_het(i_hgbrbro) * 60._r8
+    ph_het_hgbrclo(it, kt, jt) = k_het(i_hgbrclo) * 60._r8
+    ph_het_hgbr2(it, kt, jt) = k_het(i_hgbr2) * 60._r8
+    ph_het_hgbrcl(it, kt, jt) = k_het(i_hgbrcl) * 60._r8
+    ph_het_hgcloh(it, kt, jt) = k_het(i_hgcloh) * 60._r8
+    ph_het_hgclno2(it, kt, jt) = k_het(i_hgclno2) * 60._r8
+    ph_het_hgclho2(it, kt, jt) = k_het(i_hgclho2) * 60._r8
+    ph_het_hgclbro(it, kt, jt) = k_het(i_hgclbro) * 60._r8
+    ph_het_hgclclo(it, kt, jt) = k_het(i_hgclclo) * 60._r8
+    ph_het_hgohoh(it, kt, jt) = k_het(i_hgohoh) * 60._r8
+    ph_het_hgohno2(it, kt, jt) = k_het(i_hgohno2) * 60._r8
+    ph_het_hgohho2(it, kt, jt) = k_het(i_hgohho2) * 60._r8
+    ph_het_hgohbro(it, kt, jt) = k_het(i_hgohbro) * 60._r8
+    ph_het_hgohclo(it, kt, jt) = k_het(i_hgohclo) * 60._r8
 
     END DO !kt
     END DO !it
@@ -434,6 +543,50 @@
     mean_speed = SQRT(8._r8 * rgas * temp / (pi * mw_kg)) * m_to_cm
     
     END SUBROUTINE calc_mean_speed
+
+!------------------------------------------------------------------------
+
+    SUBROUTINE calc_cloud_properties(cld_num, drop_num, airdens, reff_droplet, cld_area)
+
+!   Calculates the mean radius of liquid cloud droplet (in cm) and mean cloud surface area (in cm2/cm3 air)
+!
+!   Input parameters
+!    cld_num - Cloud water mixing ratio (kg kg-1)
+!    drop_num - droplet number mixing ratio (# kg-1)
+!    airdens - Air density (kg/cm3)
+!   Output parameters
+!    reff_droplet - Effective mean radius of a single cloud droplet (cm)
+!    cld_area - Effective cloud surface area (cm2/cm3 air)
+
+    USE module_data_mosaic_other, ONLY: pi
+    USE module_data_mosaic_kind,  ONLY: r8
+
+    IMPLICIT NONE
+
+    ! Subroutine arguments
+    REAL(r8), INTENT(IN) :: cld_num, drop_num, airdens
+    REAL(r8), INTENT(OUT) :: reff_droplet, cld_area
+    ! Local variables
+    REAL(r8) :: droplet_mass
+    REAL(r8) :: droplet_volume
+    ! Parameters
+    REAL(r8), PARAMETER :: kg_to_g = 1000._r8
+    REAL(r8), PARAMETER :: water_density = 1.0 ! g/cm3
+
+    ! Calculate the mass of a single cloud droplet (in g)
+    droplet_mass = (cld_num/drop_num)*kg_to_g
+
+    ! Convert mass to volume (in cm3) by using a water density of 1g/cm3
+    droplet_volume = droplet_mass / water_density
+
+    ! Calculate the effective mean radius (in cm), assuming a spherical
+    ! droplet
+    reff_droplet = (3./(4.*pi) * droplet_volume) ** (1./3.)
+
+    ! Calculate effective mean cloud surface area (cm2/cm3 air)
+    cld_area = 4. * pi * drop_num * airdens * reff_droplet ** 2
+
+    END SUBROUTINE calc_cloud_properties
 
 !------------------------------------------------------------------------
 

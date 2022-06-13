@@ -1233,7 +1233,7 @@
      call wrf_debug(15,'calling calc_het_n2o5')
 
 !LMarelle - Calculate heterogeneous reaction rates for the MOSAIC halogen
-!mechanism
+!mechanism ! SAhmed - Update to include mercury heterogeneous chemistry
      if(config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP .or. &
         config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP) then
        call wrf_debug(15,'calling mosaic_set_heterogeneous')
@@ -1241,9 +1241,17 @@
         chem, t_phy, p_phy, grid%alt,                                  &
         grid%ph_het_hobr, grid%ph_het_brono2, grid%ph_het_hcl,         &
         grid%ph_het_hbr, grid%ph_het_n2o5, grid%ph_het_hocl,           &
-        grid%ph_het_clono2, grid%ph_het_oh,                            &
+        grid%ph_het_clono2, grid%ph_het_oh, grid%ph_het_hgbroh,        &
+        grid%ph_het_hgbrno2, grid%ph_het_hgbrho2, grid%ph_het_hgbrbro, &
+        grid%ph_het_hgbrclo, grid%ph_het_hgbr2, grid%ph_het_hgbrcl,    &
+        grid%ph_het_hgcloh, grid%ph_het_hgclno2, grid%ph_het_hgclho2,  &
+        grid%ph_het_hgclbro, grid%ph_het_hgclclo, grid%ph_het_hgohoh,  &
+        grid%ph_het_hgohno2, grid%ph_het_hgohho2, grid%ph_het_hgohbro, &
+        grid%ph_het_hgohclo,                                           &
         grid%ph_aer01, grid%ph_aer02, grid%ph_aer03, grid%ph_aer04,    &
         grid%ph_aer05, grid%ph_aer06, grid%ph_aer07, grid%ph_aer08,    &
+        moist(ims,kms,jms,p_qc), scalar(ims,kms,jms,p_qndrop),         &
+        grid%cldfra,                                                   &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )
