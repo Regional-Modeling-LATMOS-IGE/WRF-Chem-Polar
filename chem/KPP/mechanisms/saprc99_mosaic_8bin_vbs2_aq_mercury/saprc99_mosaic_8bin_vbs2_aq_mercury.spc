@@ -158,6 +158,7 @@
  HgOHBrO = IGNORE;
  HgOHClO = IGNORE;
  HgP = IGNORE;
+ HgX = IGNORE;
 #DEFFIX
  H2O = 2H + O;
  M = IGNORE;

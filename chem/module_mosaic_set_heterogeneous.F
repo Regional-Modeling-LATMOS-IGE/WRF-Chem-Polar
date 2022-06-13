@@ -11,26 +11,31 @@
 ! Implementation and impacts of surface and blowing snow sources of Arctic
 ! bromine activation within WRF-Chem 4.1.1. Submitted to the Journal of Advances
 ! in Modeling Earth Systems.
+! - H. M. Amos, D. J. Jacob, C. D. Holmes, et al., Gas-particle partitioning of 
+! atmospheric Hg(II) and its effect on global mercury deposition, Atmospheric
+! Chemistry and Physics, 2012.
 !
 ! Revision history:
 ! Ahmed S. 2021/11/26: Include mercury heterogeneous uptake of HgII(g) species to 
 !                      aerosols and liquid clouds.
+! Ahmed S. 2022/05/30: Add HgII(g) gas-particle partitioning based on the empirical 
+!                      equilibrium of Amos et al. (2012).
     CONTAINS
 
 !-----------------------------------------------------------------------
 
     SUBROUTINE mosaic_set_heterogeneous(                               &
-        chem, t_phy, p_phy, alt,                                       &
+        chem, t_phy, p_phy, alt, dtstepc,                              &
         ph_het_hobr, ph_het_brono2, ph_het_hcl, ph_het_hbr,            &
         ph_het_n2o5, ph_het_hocl, ph_het_clono2, ph_het_oh,            &
         ph_het_hgbroh, ph_het_hgbrno2, ph_het_hgbrho2, ph_het_hgbrbro, &
         ph_het_hgbrclo, ph_het_hgbr2, ph_het_hgbrcl, ph_het_hgcloh,    &
         ph_het_hgclno2, ph_het_hgclho2, ph_het_hgclbro, ph_het_hgclclo,&
         ph_het_hgohoh, ph_het_hgohno2, ph_het_hgohho2, ph_het_hgohbro, &
-        ph_het_hgohclo,                                                &
+        ph_het_hgohclo, ph_het_hgx,                                    &
         aer_ph_01, aer_ph_02, aer_ph_03, aer_ph_04, &
         aer_ph_05, aer_ph_06, aer_ph_07, aer_ph_08, &
-        qcloud, qndrop, cldfra,                     &
+        qcloud, qndrop, cldfra, pm2_5_water,        &
         ids,ide, jds,jde, kds,kde,                                     &
         ims,ime, jms,jme, kms,kme,                                     &
         its,ite, jts,jte, kts,kte                                      )
@@ -47,7 +52,10 @@
         dlo_sect, dcen_sect, dhi_sect, volumlo_sect, &
         volumhi_sect, ai_phase, ncomp_aer, nsize_aer, &
         numptr_aer, waterptr_aer, massptr_aer
-    USE module_configure, ONLY:  num_chem
+    USE module_configure, ONLY:  num_chem, p_hgbroh, p_hgbrno2, p_hgbrho2, &
+            p_hgbrbro, p_hgbrclo, p_hgbr2, p_hgbrcl, p_hgcloh, p_hgclno2, &
+            p_hgclho2, p_hgclbro, p_hgclclo, p_hgohoh, p_hgohno2, p_hgohho2, &
+            p_hgohbro, p_hgohclo, p_hgx, p_hgp
     USE module_data_mosaic_other, ONLY: pi 
     USE module_data_mosaic_kind,  ONLY: r8
 
@@ -61,9 +69,10 @@
     REAL, INTENT(IN),   &
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: &
         t_phy, p_phy, alt
-    REAL, INTENT(IN),   &
+    REAL, INTENT(INOUT),   &
         DIMENSION( ims:ime, kms:kme, jms:jme, 1:num_chem ) :: &
         chem
+    REAL, INTENT(IN) :: dtstepc
     REAL, INTENT(OUT), &
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: ph_het_hobr, ph_het_brono2, &
         ph_het_hcl, ph_het_hbr, ph_het_n2o5, ph_het_hocl, ph_het_clono2, &
@@ -71,10 +80,12 @@
         ph_het_hgbrbro, ph_het_hgbrclo, ph_het_hgbr2, ph_het_hgbrcl, &
         ph_het_hgcloh, ph_het_hgclno2, ph_het_hgclho2, ph_het_hgclbro, &
         ph_het_hgclclo, ph_het_hgohoh, ph_het_hgohno2, ph_het_hgohho2, &
-        ph_het_hgohbro, ph_het_hgohclo,
+        ph_het_hgohbro, ph_het_hgohclo, ph_het_hgx
     REAL, INTENT(OUT), &
         DIMENSION( ims:ime, kms:kme, jms:jme ) :: aer_ph_01, aer_ph_02, aer_ph_03, aer_ph_04, &
         aer_ph_05, aer_ph_06, aer_ph_07, aer_ph_08
+    REAL, INTENT(IN), &
+        DIMENSION( ims:ime, kms:kme, jms:jme ) :: pm2_5_water
     REAL, INTENT(IN),   &
         DIMENSION( ims:ime, kms:kme, jms:jme) :: &
         qcloud, qndrop, cldfra
@@ -90,9 +101,13 @@
     REAL(r8) :: mean_speed, knudsen, j_corr, upper, lower, aerosol_bin_ph
     REAL(r8) :: cld_num, drop_num, cld_fra, cld_area
     REAL(r8) :: droplet_mass, droplet_volume, reff_droplet
-    INTEGER,  PARAMETER :: nspecies = 25
+    REAL(r8) :: HgGasTot, HgAer, HgGasAerTot, HgGasTot_eq, dHgGasTot_eq, &
+                HgX_conc, new_HgX_conc, new_HgAer_conc
+    REAL(r8) :: pm25, K_part, gas_frac, conv_ppm_molcm3
+    INTEGER,  PARAMETER :: nspecies = 26
     REAL(r8), DIMENSION(nspecies) :: k_het
     REAL(r8), DIMENSION(nspecies) :: k_het_cld
+    REAL(r8) :: k_het_hgx
 
     ! Parameters and data declarations
     REAL(r8), PARAMETER :: densdefault = 2.0 ! g/cm3
@@ -129,7 +144,8 @@
     INTEGER,  PARAMETER :: i_hgohho2 = 23
     INTEGER,  PARAMETER :: i_hgohbro = 24
     INTEGER,  PARAMETER :: i_hgohclo = 25
-    
+    INTEGER,  PARAMETER :: i_hgx = 26
+
     ! CHARACTER*6, DIMENSION(nspecies) :: specnames
     REAL(r8), DIMENSION(nspecies) :: gamma_factors
     REAL(r8), DIMENSION(nspecies) :: molar_weights
@@ -144,7 +160,7 @@
     !   'HgBrHO2', 'HgBrBrO', 'HgBrClO', 'HgBr2  ', 'HgBrCl ', &
     !   'HgClOH ', 'HgClNO2', 'HgClHO2', 'HgClBrO', 'HgClClO', &
     !   'HgOHOH ', 'HgOHNO2', 'HgOHHO2', 'HgOHBrO', 'HgOHClO', &
-    !   /
+    !   'HgX (treated as HgCl2)' /
     data gamma_factors &
       / &
       0.1_r8, 0.14_r8, 0.02_r8, 0.02_r8, 0.044_r8, &
@@ -152,6 +168,7 @@
       0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, &
       0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, &
       0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, 0.1_r8, &
+      0.1_r8 &
       /
     data molar_weights &
       / &
@@ -160,6 +177,7 @@
       313.5_r8, 376.5_r8, 332._r8, 360.5_r8, 316._r8, &
       253._r8, 282._r8, 269._r8, 332._r8, 287.5_r8, &
       234.5_r8, 263.5_r8, 250.5_r8, 313.5_r8, 269._r8, &
+      271.5_r8 &
       /
 
 ! ********************** Description of variables ****************************
@@ -168,9 +186,11 @@
 !    p_phy - 3D air pressure (Pa)
 !    alt - 3D inverse air density (m3/kg)
 !    chem - Advected chemical/aer species (ppm or µg/kg air or #/kg air)
+!    dtstepc - Chemical timestep (s)
 !    ph_het_hobr, ph_het_brono2, ph_het_hcl, ph_het_hbr, ...
 !        ph_het_n2o5 - 3D heterogeneous reaction rate arrays for
 !        halogen mechanims (min-1)
+!    pm2_5_water - PM2.5 wet concentration (ug m-3)
 !    qcloud - Cloud water mixing ratio (kg kg-1)
 !    qndrop - Droplet number mixing ratio (# kg-1)
 !    cldfra - Cloud fraction (0 - 1)
@@ -199,8 +219,23 @@
 !    droplet_mass, droplet_volume, reff_droplet - Mass of a single cloud droplet
 !    (g), volume of a single cloud droplet (cm3), effective mean radius of a
 !    single cloud droplet (cm)
+!    HgGasTot -  Total HgII gas-phase concentration (molec cm-3)
+!    HgAer - Aerosol-phase Hg concentration (HgP, molec cm-3 )
+!    HgGasAerTot - Sum of total HgII gas and particle phases (molec cm-3)
+!    HgGasTot_eq - Amount of HgII gas in equilibrium with the aerosol phase, following
+!                  gas-particle partitioning function of Amos et al. (2012) (molec cm-3)
+!    dHgGasTot_eq - Amount of HgII gas formed after volatilization from the aerosol-phase
+!                   to the unspeciated HgII gas-phase species HgX (molec cm-3)
+!    HgX_conc - Concentration of the unspeciated HgII gas-phase species formed
+!               via volatilization of HgII on aerosolsosols (molec cm-3)
+!    new_HgX_conc, new_HgAer_conc - Updated concentrations of HgX and HgP following volatilization (molec cm-3)
+!    pm25 - PM2.5 wet concentration (ug m-3)
+!    K_part - HgII gas-particle partitioning equilibrium function following Amos et al. (2012)
+!    gas_frac - Amount of HgII in the gas-phase (unitless)
+!    conv_ppm_molcm3 - Conversion factor from ppm to molec cm-3
 !    k_het - Heterogeneous reaction rate (s-1)
 !    k_het_cld - Heterogeneous reaction rate to clouds (s-1)
+!    k_het_hgx - Mass transfer rate coefficient (s-1) for volatilization of HgII(g) from HgP
 !    gamma_factors - probability that a species uptaken by an aerosol undergoes
 !        reaction ( )
 !    specnames - List of names of halogen mechanism species interacting with
@@ -229,9 +264,10 @@
     ! For now, only works for itype = 1, ntypes_aer = 1 (one aerosol type)
     itype = 1
 
-    ! Initalize reaction constant k_het and k_het_cld to 0 s-1
+    ! Initalize reaction constant k_het, k_het_cld, and k_het_hgx to 0 s-1
     k_het(:) = 0._r8
     k_het_cld(:) = 0._r8
+    k_het_hgx = 0.0_r8
 
     DO ibin = 1, nsize_aer(itype)
       dryvol = 0.0_r8
@@ -388,7 +424,85 @@
 
       END DO !ispecies
   
+      ! Volatilization of particle-bound mercury (HgP) to unspeciated gas-phase HgII (HgX(g))
+      ! Following the empirical gas-particle equilibrium of Amos et al. (2012)
+      ! HgX(g) is treated as HgCl2.
+      ! Do volatilization for fine-mode aerosols (<2.5 um)
+      IF (ibin .LE. 6) THEN
+        ! Calculate the mean molecular speed (cm/s)
+        CALL calc_mean_speed(temp, molar_weights(i_hgx), mean_speed)
+
+        ! Calculate the diffusion constant (m2/s) for species ispecies
+        CALL calc_diffusion_constant(temp, press, molar_weights(i_hgx), diffusion_constant)
+
+        ! Calculate the  molecular free path in air (cm)
+        CALL calc_freepath(temp, molar_weights(i_hgx), diffusion_constant, freepath)
+
+        ! Calculate mercury mass transfer from aerosol to gas-phase
+        ! Calculate k_het for HgX and sum over aerosol bins 1-6
+        k_het_hgx = k_het_hgx + wetarea * &
+        (((0.5_r8*wetdp)/diffusion_constant)+(4.0_r8/(mean_speed*gamma_factors(i_hgx))))**-1.0_r8
+      END IF ! Volatilization of fine aerosols
+
     END DO !ibin, size
+    
+    ! Update concentrations of HgX and HgP following volatilization
+    ! Initialize total gas-phase HgII concentration
+    HgGasTot = 0.0_r8
+
+    ! Get total gas-phase concentration of HgII species
+    HgGasTot = HgGasTot + chem(it,kt,jt,p_hgbroh) + chem(it,kt,jt,p_hgbrno2) &
+                        + chem(it,kt,jt,p_hgbrho2) + chem(it,kt,jt,p_hgbrbro) &
+                        + chem(it,kt,jt,p_hgbrclo) + chem(it,kt,jt,p_hgbr2) &
+                        + chem(it,kt,jt,p_hgbrcl) + chem(it,kt,jt,p_hgcloh) &
+                        + chem(it,kt,jt,p_hgclno2) + chem(it,kt,jt,p_hgclho2) &
+                        + chem(it,kt,jt,p_hgclbro) + chem(it,kt,jt,p_hgclclo) &
+                        + chem(it,kt,jt,p_hgohoh)  + chem(it,kt,jt,p_hgohno2) &
+                        + chem(it,kt,jt,p_hgohho2) + chem(it,kt,jt,p_hgohbro) &
+                        + chem(it,kt,jt,p_hgohclo) + chem(it,kt,jt,p_hgx)
+
+    ! Get the conversion from ppmv to molec cm-3
+    CALL ppmv_to_molcm3(temp, press, conv_ppm_molcm3)
+
+    ! Convert chem units from ppmv to molec cm-3
+    HgGasTot = HgGasTot * conv_ppm_molcm3
+
+    ! Get PM2.5 concentration (in ug m-3)
+    pm25 = pm2_5_water(it,kt,jt)
+
+    ! Calculate gas-particle partitioning coefficient (m-3/ug) based on Amos et al. (2012)
+    K_part = 10.0_r8 ** ((2500.0_r8/temp) - 10.0_r8)
+
+    ! Calculate the HgII gas fraction
+    gas_frac = 1.0_r8 / (1.0_r8 + (K_part * pm25))
+
+    ! Get aerosol-phase concentration (in molec cm-3)
+    HgAer = chem(it,kt,jt,p_hgp) * conv_ppm_molcm3
+
+    ! Sum the HgII gas-phase and aerosol concentrations 
+    HgGasAerTot = HgGasTot + HgAer
+
+    ! Calculate the concentration of HgII gas at equilibrium
+    HgGasTot_eq = HgGasAerTot * gas_frac
+
+    ! Calculate the change in concentration of HgII at equilibrium after volatilization
+    ! This is the amount of HgII gas lost from particles and forming HgX
+    dHgGasTot_eq = HgGasTot_eq * (1.0_r8 - EXP(- k_het_hgx * dtstepc))
+
+    ! Make sure amount of outgas is less than amount of HgP present
+    dHgGasTot_eq = MIN( dHgGasTot_eq, HgAer )
+
+    ! Add this change of volatilized mercury to the HgX species
+    HgX_conc = chem(it,kt,jt,p_hgx)*conv_ppm_molcm3
+    new_HgX_conc = HgX_conc + dHgGasTot_eq
+    ! Convert back from molecules/cm3 to ppmv
+    chem(it,kt,jt,p_hgx) = new_HgX_conc / conv_ppm_molcm3
+
+    ! Update Hg particle concentration
+    new_HgAer_conc = HgAer - dHgGasTot_eq
+    ! Convert back from molecules/cm3 to ppmv
+    chem(it,kt,jt,p_hgp) = new_HgAer_conc / conv_ppm_molcm3
+
 
     ! Update the 3D reaction constants and convert from s-1 to min-1
     !LMarelle TODO: this is passed to KPP using the existing code for passing
@@ -419,6 +533,7 @@
     ph_het_hgohho2(it, kt, jt) = k_het(i_hgohho2) * 60._r8
     ph_het_hgohbro(it, kt, jt) = k_het(i_hgohbro) * 60._r8
     ph_het_hgohclo(it, kt, jt) = k_het(i_hgohclo) * 60._r8
+    ph_het_hgx(it, kt, jt) = k_het(i_hgx) * 60._r8
 
     END DO !kt
     END DO !it
@@ -587,6 +702,41 @@
     cld_area = 4. * pi * drop_num * airdens * reff_droplet ** 2
 
     END SUBROUTINE calc_cloud_properties
+
+!------------------------------------------------------------------------
+
+    SUBROUTINE ppmv_to_molcm3(temp, press, conv_ppm_molcm3)
+
+!   Calculate conversion factor from ppmv to molecules/cm3.
+!
+!   Input parameters
+!    temp - Temperature (K)
+!    press - Pressure (Pa)
+!   Output parameters
+!    conv_ppm_molcm3 - Conversion factor from ppmv to molecules/cm3 
+
+    USE module_data_mosaic_kind,  ONLY: r8
+
+    IMPLICIT NONE
+
+    ! Subroutine arguments
+    REAL(r8), INTENT(IN) :: temp, press
+    REAL(r8), INTENT(OUT) :: conv_ppm_molcm3
+    ! Local variables
+    REAL(r8) :: air_vol
+    ! Parameters
+    !TODO use the value from model_constants
+    REAL(r8), PARAMETER :: rgas = 8.3144598E6_r8 !(cm3 Pa K-1 mol-1)
+    REAL(r8), PARAMETER :: avogadro = 6.022E23_r8 ! (molecules mol-1)
+    REAL(r8), PARAMETER :: ppm_vmr = 1.0E6_r8 ! Parts per million to VMR
+
+    ! Volume of air (in cm3)
+    air_vol =  (rgas * temp) / press
+
+    ! Conversion factor from ppmv to molecules/cm3
+    conv_ppm_molcm3 = avogadro/(air_vol * ppm_vmr)
+
+    END SUBROUTINE ppmv_to_molcm3
 
 !------------------------------------------------------------------------
 

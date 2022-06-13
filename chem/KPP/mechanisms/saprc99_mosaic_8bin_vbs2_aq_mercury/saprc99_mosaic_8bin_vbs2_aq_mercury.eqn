@@ -589,4 +589,5 @@
 {s42} HgOHHO2 = HgP: j(Pj_het_hgohho2);
 {s43} HgOHBrO = HgP: j(Pj_het_hgohbro);
 {s44} HgOHClO = HgP: j(Pj_het_hgohclo);
+{s45} HgX = HgP: j(Pj_het_hgx);
 
