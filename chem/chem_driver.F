@@ -1083,14 +1083,14 @@
                ! Dry deposition fluxes needed for Br2 emissions from snow
                  grid%drydepflx_o3, grid%drydepflx_hobr, grid%drydepflx_brno3,        &
                  grid%drydepflx_hbr, grid%drydepflx_br2, grid%dvel_o3,                &
-                 ! Dry deposition fluxes of HgII species needed for Hg0 emissions
-                 grid%drydepflx_hgbroh, grid%drydepflx_hgbrno2, grid%drydepflx_hgbrho2,  &
-                 grid%drydepflx_hgbrbro, grid%drydepflx_hgbrclo, grid%drydepflx_hgbr2,   &
-                 grid%drydepflx_hgbrcl, grid%drydepflx_hgcloh, grid%drydepflx_hgclno2,   &
-                 grid%drydepflx_hgclho2, grid%drydepflx_hgclbro, grid%drydepflx_hgclclo, &
-                 grid%drydepflx_hgohoh, grid%drydepflx_hgohno2, grid%drydepflx_hgohho2, &
-                 grid%drydepflx_hgohbro, grid%drydepflx_hgohclo, grid%drydepflx_hgp,  &
-                 grid%drydepflx_hgx, grid%drydepflx_hg2,                              &
+                 ! Dry deposition fluxes of Hg species needed for Hg0 emissions
+                 grid%drydepflx_hg, grid%drydepflx_hgbroh, grid%drydepflx_hgbrno2,       &
+                 grid%drydepflx_hgbrho2, grid%drydepflx_hgbrbro, grid%drydepflx_hgbrclo, &
+                 grid%drydepflx_hgbr2, grid%drydepflx_hgbrcl, grid%drydepflx_hgcloh,     &
+                 grid%drydepflx_hgclno2, grid%drydepflx_hgclho2, grid%drydepflx_hgclbro, &
+                 grid%drydepflx_hgclclo, grid%drydepflx_hgohoh, grid%drydepflx_hgohno2,  &
+                 grid%drydepflx_hgohho2, grid%drydepflx_hgohbro, grid%drydepflx_hgohclo, &
+                 grid%drydepflx_hgp, grid%drydepflx_hgx, grid%drydepflx_hg2,             &
                  emis_ant,ebu_in,                                                     &
                  config_flags%sf_urban_physics,numgas,current_month,dvel,grid%snowh,  &
                  grid%xice, &

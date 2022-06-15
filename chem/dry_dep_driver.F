@@ -24,14 +24,14 @@ CONTAINS
                ! Dry deposition fluxes needed for Br2 emissions from snow
                drydepflx_o3, drydepflx_hobr, drydepflx_brno3,             &
                drydepflx_hbr, drydepflx_br2, dvel_o3,                     &
-               ! HgII dry deposition fluxes needed for Hg0 emissions from snow
-               drydepflx_hgbroh, drydepflx_hgbrno2, drydepflx_hgbrho2,    &
-               drydepflx_hgbrbro, drydepflx_hgbrclo, drydepflx_hgbr2,     &
-               drydepflx_hgbrcl, drydepflx_hgcloh, drydepflx_hgclno2,     &
-               drydepflx_hgclho2, drydepflx_hgclbro, drydepflx_hgclclo,   &
-               drydepflx_hgohoh, drydepflx_hgohno2, drydepflx_hgohho2,    &
-               drydepflx_hgohbro, drydepflx_hgohclo, drydepflx_hgp,       &
-               drydepflx_hgx, drydepflx_hg2,                              &
+               ! Hg dry deposition fluxes needed for Hg0 emissions from snow
+               drydepflx_hg, drydepflx_hgbroh, drydepflx_hgbrno2,         &
+               drydepflx_hgbrho2, drydepflx_hgbrbro, drydepflx_hgbrclo,   &
+               drydepflx_hgbr2, drydepflx_hgbrcl, drydepflx_hgcloh,       &
+               drydepflx_hgclno2, drydepflx_hgclho2, drydepflx_hgclbro,   &
+               drydepflx_hgclclo, drydepflx_hgohoh, drydepflx_hgohno2,    &
+               drydepflx_hgohho2, drydepflx_hgohbro, drydepflx_hgohclo,   &
+               drydepflx_hgp, drydepflx_hgx, drydepflx_hg2,               &
                emis_ant,ebu_in,                                           &
                sf_urban_physics,numgas,current_month,dvel,snowh,xice,     & 
                dustdrydep_1,dustdrydep_2,dustdrydep_3,                    &
@@ -157,7 +157,7 @@ CONTAINS
  
    ! Dry deposition fluxes of each HgII species and total HgII (mol/m2/s)
    REAL,  DIMENSION(ims:ime, jms:jme),                          &
-          INTENT(INOUT) :: drydepflx_hgbroh, drydepflx_hgbrno2, &
+          INTENT(INOUT) :: drydepflx_hg, drydepflx_hgbroh, drydepflx_hgbrno2, &
           drydepflx_hgbrho2, drydepflx_hgbrbro, drydepflx_hgbrclo, &
           drydepflx_hgbr2, drydepflx_hgbrcl, drydepflx_hgcloh, &
           drydepflx_hgclno2, drydepflx_hgclho2, drydepflx_hgclbro, &
@@ -511,6 +511,10 @@ CONTAINS
 
              dvel_o3(i,j) = m2cm*ddvel(i,j,p_o3)
                 
+             ! Hg0 deposition flux
+             drydepflx_hg(i, j) = chem(i, kts, j, p_hg) * p_phy(i, kts, j)      &
+               / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hg) * 1.E-6
+
              ! HgII deposition flux
              drydepflx_hgbroh(i, j) = chem(i, kts, j, p_hgbroh) * p_phy(i, kts, j)      &
                / (RSI * t_phy(i, kts, j)) * ddvel(i, j, p_hgbroh) * 1.E-6
