@@ -726,7 +726,8 @@
 ! Special treatment of CH4 in SAPRC99
       case (SAPRC99_KPP,SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
            SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_KPP, &
-           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP) !BSINGH -  Added for SAPRC 8 bin and non-aq on (04/04/2014)
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, &
+           SAPRC99_MOSAIC_8BIN_VBS2_AQ_MERCURY_KPP ) !BSINGH -  Added for SAPRC 8 bin and non-aq on (04/04/2014)
          CALL wrf_debug ( 15 , ' fixing ch4 conc using co conc' )
          do j=jps,jpe
             do k=kps,kpe
