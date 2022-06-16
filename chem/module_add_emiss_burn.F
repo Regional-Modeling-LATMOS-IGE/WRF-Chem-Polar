@@ -496,9 +496,9 @@ CONTAINS
 ! Add a biomass burning emission package for CBMZ
      CASE (CBMZSORG, CBMZSORG_AQ, CBMZ, CBMZ_BB, CBMZ_BB_KPP, &
            CBMZ_MOSAIC_KPP, CBMZ_MOSAIC_4BIN, CBMZ_MOSAIC_8BIN, &
-           CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN &
+           CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN, &
            CBMZ_MOSAIC_DMS_8BIN, CBMZ_MOSAIC_DMS_4BIN_AQ, &
-           CBMZ_MOSAIC_DMS_8BIN_)
+           CBMZ_MOSAIC_DMS_8BIN_AQ)
         if( biomass_burn_opt == BIOMASSB_CBMZ ) then
           call wrf_debug(15,'adding fire emissions for CBMZ')
           do j=jts,jte
