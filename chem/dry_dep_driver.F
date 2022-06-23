@@ -32,6 +32,7 @@ CONTAINS
                drydepflx_hgclclo, drydepflx_hgohoh, drydepflx_hgohno2,    &
                drydepflx_hgohho2, drydepflx_hgohbro, drydepflx_hgohclo,   &
                drydepflx_hgp, drydepflx_hgx, drydepflx_hg2,               &
+               drydep_hg, drydep_hg2, drydep_totalhg,                     &
                emis_ant,ebu_in,                                           &
                sf_urban_physics,numgas,current_month,dvel,snowh,xice,     & 
                dustdrydep_1,dustdrydep_2,dustdrydep_3,                    &
@@ -165,6 +166,10 @@ CONTAINS
           drydepflx_hgohho2, drydepflx_hgohbro, drydepflx_hgohclo, &
           drydepflx_hgp, drydepflx_hgx, drydepflx_hg2
    
+   ! Accumulated Hg dry deposition flux (mol/m2)
+   REAL,  DIMENSION(ims:ime, jms:jme),                          &
+          INTENT(INOUT) :: drydep_hg, drydep_hg2, drydep_totalhg
+
    ! O3 deposition velocity (cm/s)
    REAL,  DIMENSION(ims:ime, jms:jme),                          &
           INTENT(INOUT) :: dvel_o3
@@ -583,6 +588,10 @@ CONTAINS
                                    drydepflx_hgohho2(i, j) + drydepflx_hgohbro(i, j) + &
                                    drydepflx_hgohclo(i, j) + drydepflx_hgp(i, j) + &
                                    drydepflx_hgx(i, j)
+
+             drydep_hg(i, j) = drydep_hg(i, j) + drydepflx_hg(i, j) * dtstep
+             drydep_hg2(i, j) = drydep_hg2(i, j) + drydepflx_hg2(i, j) * dtstep
+             drydep_totalhg(i, j) = drydep_hg(i, j) + drydep_hg2(i, j)
 
            ENDDO
          ENDDO

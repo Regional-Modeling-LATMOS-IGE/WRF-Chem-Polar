@@ -1092,6 +1092,7 @@
                  grid%drydepflx_hgclclo, grid%drydepflx_hgohoh, grid%drydepflx_hgohno2,  &
                  grid%drydepflx_hgohho2, grid%drydepflx_hgohbro, grid%drydepflx_hgohclo, &
                  grid%drydepflx_hgp, grid%drydepflx_hgx, grid%drydepflx_hg2,             &
+                 grid%drydep_hg, grid%drydep_hg2, grid%drydep_totalhg,                   &
                  emis_ant,ebu_in,                                                     &
                  config_flags%sf_urban_physics,numgas,current_month,dvel,grid%snowh,  &
                  grid%xice, &
@@ -1694,7 +1695,7 @@ if ( cam_mam_aerosols ) &
               grid%wdflx_hgclno2, grid%wdflx_hgclho2, grid%wdflx_hgclbro, grid%wdflx_hgclclo, &
               grid%wdflx_hgohoh, grid%wdflx_hgohno2, grid%wdflx_hgohho2, grid%wdflx_hgohbro,  &
               grid%wdflx_hgohclo, grid%wdflx_hgx, grid%wdflx_hgp, grid%wdflx_hg2,             &
-              gas_aqfrac, numgas_mam,dz8w,                                            &
+              grid%wd_hg2, gas_aqfrac, numgas_mam,dz8w,                                       &
               grid%h2oaj,grid%h2oai,grid%nu3,grid%ac3,grid%cor3,                      &
               grid%asulf,grid%ahno3,grid%anh3,grid%cvaro1,grid%cvaro2,                &
               grid%cvalk1,grid%cvole1,grid%cvapi1,grid%cvapi2,                        &

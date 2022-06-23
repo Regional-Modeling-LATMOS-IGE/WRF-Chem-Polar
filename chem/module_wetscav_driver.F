@@ -28,7 +28,7 @@ CONTAINS
                wdflx_hgbrclo, wdflx_hgbr2, wdflx_hgbrcl, wdflx_hgcloh,     &
                wdflx_hgclno2, wdflx_hgclho2, wdflx_hgclbro, wdflx_hgclclo, &
                wdflx_hgohoh, wdflx_hgohno2, wdflx_hgohho2, wdflx_hgohbro,  &
-               wdflx_hgohclo, wdflx_hgp, wdflx_hgx, wdflx_hg2,             &
+               wdflx_hgohclo, wdflx_hgp, wdflx_hgx, wdflx_hg2, wd_hg2,     &
 	       gas_aqfrac, numgas_aqfrac, dz8w,                            &
 	       h2oaj,h2oai,nu3,ac3,cor3,asulf,ahno3,anh3,cvaro1,           &
                cvaro2,cvalk1,cvole1,cvapi1,cvapi2,cvlim1,cvlim2,           &
@@ -315,6 +315,10 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
           wdflx_hgohho2, wdflx_hgohbro, wdflx_hgohclo, &
           wdflx_hgp, wdflx_hgx, wdflx_hg2
 
+! Accumulated wet deposition flux for all Hg2 species (mol/m2)
+   REAL,  DIMENSION(ims:ime, jms:jme),                          &
+          INTENT(INOUT) :: wd_hg2
+
 !-----------------------------------------------------------------
 
 ! These are unneeded, since the default behavior is to do nothing.
@@ -512,25 +516,25 @@ CASE (CBMZ_CAM_MAM3_NOAQ,CBMZ_CAM_MAM3_AQ,CBMZ_CAM_MAM7_NOAQ,CBMZ_CAM_MAM7_AQ)
       DO ii = its, ite
         DO jj = jts, jte
           ! Caluclate Hg2 wet deposition flux (mol/m2/s) - convert molar weight to kg and mmol to mol
-          wdflx_hgbroh(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbroh)/(molar_weights(1)*1.0e-3*dtstepc)
-          wdflx_hgbrno2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrno2)/(molar_weights(2)*1.0e-3*dtstepc)
-          wdflx_hgbrho2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrho2)/(molar_weights(3)*1.0e-3*dtstepc)
-          wdflx_hgbrbro(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrbro)/(molar_weights(4)*1.0e-3*dtstepc)
-          wdflx_hgbrclo(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrclo)/(molar_weights(5)*1.0e-3*dtstepc)
-          wdflx_hgbr2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbr2)/(molar_weights(6)*1.0e-3*dtstepc)
-          wdflx_hgbrcl(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrcl)/(molar_weights(7)*1.0e-3*dtstepc)
-          wdflx_hgcloh(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgcloh)/(molar_weights(8)*1.0e-3*dtstepc)
-          wdflx_hgclno2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclno2)/(molar_weights(9)*1.0e-3*dtstepc)
-          wdflx_hgclho2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclho2)/(molar_weights(10)*1.0e-3*dtstepc)
-          wdflx_hgclbro(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclbro)/(molar_weights(11)*1.0e-3*dtstepc)
-          wdflx_hgclclo(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclclo)/(molar_weights(12)*1.0e-3*dtstepc)
-          wdflx_hgohoh(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohoh)/(molar_weights(13)*1.0e-3*dtstepc)
-          wdflx_hgohno2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohno2)/(molar_weights(14)*1.0e-3*dtstepc)
-          wdflx_hgohho2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohho2)/(molar_weights(15)*1.0e-3*dtstepc)
-          wdflx_hgohbro(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohbro)/(molar_weights(16)*1.0e-3*dtstepc)
-          wdflx_hgohclo(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohclo)/(molar_weights(17)*1.0e-3*dtstepc)
-          wdflx_hgp(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgp)/(molar_weights(18)*1.0e-3*dtstepc)
-          wdflx_hgx(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgx)/(molar_weights(19)*1.0e-3*dtstepc)
+          wdflx_hgbroh(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbroh)/(molar_weights(1)*1.0e-3*dtstep)
+          wdflx_hgbrno2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrno2)/(molar_weights(2)*1.0e-3*dtstep)
+          wdflx_hgbrho2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrho2)/(molar_weights(3)*1.0e-3*dtstep)
+          wdflx_hgbrbro(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrbro)/(molar_weights(4)*1.0e-3*dtstep)
+          wdflx_hgbrclo(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrclo)/(molar_weights(5)*1.0e-3*dtstep)
+          wdflx_hgbr2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbr2)/(molar_weights(6)*1.0e-3*dtstep)
+          wdflx_hgbrcl(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgbrcl)/(molar_weights(7)*1.0e-3*dtstep)
+          wdflx_hgcloh(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgcloh)/(molar_weights(8)*1.0e-3*dtstep)
+          wdflx_hgclno2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclno2)/(molar_weights(9)*1.0e-3*dtstep)
+          wdflx_hgclho2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclho2)/(molar_weights(10)*1.0e-3*dtstep)
+          wdflx_hgclbro(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclbro)/(molar_weights(11)*1.0e-3*dtstep)
+          wdflx_hgclclo(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgclclo)/(molar_weights(12)*1.0e-3*dtstep)
+          wdflx_hgohoh(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohoh)/(molar_weights(13)*1.0e-3*dtstep)
+          wdflx_hgohno2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohno2)/(molar_weights(14)*1.0e-3*dtstep)
+          wdflx_hgohho2(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohho2)/(molar_weights(15)*1.0e-3*dtstep)
+          wdflx_hgohbro(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohbro)/(molar_weights(16)*1.0e-3*dtstep)
+          wdflx_hgohclo(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgohclo)/(molar_weights(17)*1.0e-3*dtstep)
+          wdflx_hgp(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgp)/(molar_weights(18)*1.0e-3*dtstep)
+          wdflx_hgx(ii,jj) = - 0.001*qsrflx(ii,jj,p_hgx)/(molar_weights(19)*1.0e-3*dtstep)
 
           ! Total HgII wet deposition flux
           wdflx_hg2(ii,jj) = wdflx_hgbroh(ii,jj) + wdflx_hgbrno2(ii,jj) + wdflx_hgbrho2(ii,jj) + &
@@ -540,6 +544,10 @@ CASE (CBMZ_CAM_MAM3_NOAQ,CBMZ_CAM_MAM3_AQ,CBMZ_CAM_MAM7_NOAQ,CBMZ_CAM_MAM7_AQ)
                            wdflx_hgclclo(ii,jj) + wdflx_hgohoh(ii,jj) + wdflx_hgohno2(ii,jj) + &
                            wdflx_hgohho2(ii,jj) + wdflx_hgohbro(ii,jj) + wdflx_hgohclo(ii,jj) + &
                            wdflx_hgp(ii,jj) + wdflx_hgx(ii,jj)
+
+          ! Accumulated wet deposition flux for all HgII species
+          wd_hg2(ii,jj) = wd_hg2(ii,jj) + wdflx_hg2(ii,jj) * dtstep
+
         ENDDO
       ENDDO
 
