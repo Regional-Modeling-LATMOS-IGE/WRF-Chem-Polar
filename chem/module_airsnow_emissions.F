@@ -26,6 +26,12 @@
 ! -  Huang, J. and Jaeglé, L.: Wintertime enhancements of sea salt aerosol in
 ! polar regions consistent with a sea ice source from blowing snow, Atmos. Chem.
 ! Phys., 17, 3699–3712, https://doi.org/10.5194/acp-17-3699-2017, 2017.
+! - Durnford, D., and Dastoor, A. (2011), The behavior of mercury in the cryosphere: 
+! A review of what we know from observations, J. Geophys. Res., 116, D06305, 
+! doi:10.1029/2010JD014809.
+! - Alexandre J. Poulain, Janick D. Lalonde, Marc Amyot, Justin A. Shead, Farhad Raofie, 
+! Parisa A. Ariya: Redox transformations of mercury in an Arctic snowpack at springtime, 
+! Atmospheric Environment, 38, 39, 2004, 6763-6774, https://doi.org/10.1016/j.atmosenv.2004.09.013.
 !
 ! Remarks:
 ! - For now, this is only coupled to the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP
@@ -47,6 +53,7 @@
 ! Revision history:
 ! Ahmed S. - 2021/12/02: Turn on re-emission of halogens after fresh snow fall
 ! Ahmed S. - 2021/12/02: Add snow emissions of Hg0
+! Ahmed S. - 2022/06/26: Track surface Hg2 concentration and use this for re-emission
 
 MODULE module_airsnow_emissions
 
@@ -58,7 +65,7 @@ CONTAINS
          xice, meltedsnow, coszen, snowh_melt, snowc,                  &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
-         drydepflx_hg2, wdflx_hg2, emiss_hg0,                          &
+         drydepflx_hg2, wdflx_hg2, emiss_hg0, surface_hg2_conc,        &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &
          its,ite, jts,jte, kts,kte,                                    &
@@ -124,6 +131,9 @@ CONTAINS
   ! Accumulated hg0 emission flux diagnosis (mole/m2)
     REAL, DIMENSION(ims:ime, jms:jme)               ,              &
           INTENT(INOUT) :: emiss_hg0
+  ! Surface Hg2 conc (mole/m2)
+    REAL, DIMENSION(ims:ime, jms:jme)               ,              &
+          INTENT(INOUT) :: surface_hg2_conc
   ! Trace species mixing ratios (gases in ppm, aerosols in microg/kg)
   REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem),           &
         INTENT(INOUT) :: chem
@@ -133,6 +143,9 @@ CONTAINS
   ! Temperature threshold for Br2 emissions & recycling (K), sea ice cover
   ! threshold for surface snow and blowing snow emissions (area fraction)
   REAL, PARAMETER :: tskcrit = 273.15, seaice_crit = 0.75
+  ! Hg2 net reduction rate (s-1)
+  REAL, PARAMETER :: hg0_emiss_rate_ice = 2.8E-7 ! This is 1E-3 h-1 (in the midrange of values from Durnford and Dastoor (2011))
+  REAL, PARAMETER :: hg0_emiss_rate_snow = 2.5E-5 ! This is 0.09 h-1 (Poulain et al. 2004)
 
   !---- Parameters for the blowing snow model
   INTEGER, PARAMETER :: naersizes = 8
@@ -176,6 +189,10 @@ CONTAINS
   REAL :: br2_emi = 0.0, brcl_emi = 0.0
   ! Hg0 emissions (mole/m2/s)
   REAL :: hg0_emi = 0.0
+  ! Hg0 re-emission rate constant (s-1)
+  REAL :: hg0_kemiss
+  ! Amount of reducible Hg2 in the snowpack
+  REAL :: hg2_snowpack
 
   !---- Local variables for the blowing snow model
   ! Br emissions (kg/m2/s), NaCl emissions (kg/m2/s), Snow sublimation flux (kg/m2/s), Normalized
@@ -262,6 +279,9 @@ CONTAINS
         meltedsnow(i,j) = 0.0
       END IF ! Fresh snow check since last melt
 
+      ! Update surface Hg2 concentration from newly deposited Hg2 (mol/m2)
+      surface_hg2_conc(i,j) = surface_hg2_conc(i,j) + (drydepflx_hg2(i,j) + wdflx_hg2(i,j)) * dtstep
+
       !-------- Halogen emissions from surface snow and recycling over snow
       ! Only valid over snow or over sea ice (assuming that ice is always snow
       ! covered below tskcrit
@@ -319,9 +339,18 @@ CONTAINS
           !     brcl_emi = brcl_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j) - drydepflx_hbr(i,j))
           !   END IF
             IF (do_mercury_snow_emiss) THEN
-              IF (coszen(i,j) .GE. 0.0) THEN
-                ! Hg0 emissions over sea ice if sunlit
-                hg0_emi = hg0_emi + ((drydepflx_hg2(i,j) + wdflx_hg2(i,j)) * coszen(i,j) * 0.6 * xice(i,j))
+              IF (coszen(i,j) .GE. 0.0 .AND. surface_hg2_conc(i,j) .GT. 0.0) THEN
+                ! Emission rate is solar dependent and on ice fraction
+                hg0_kemiss = hg0_emiss_rate_ice*coszen(i,j)*xice(i,j)
+                ! Assume 60 % of deposited Hg2 is available for re-emsision
+                hg2_snowpack = surface_hg2_conc(i,j) * 0.6
+                ! Calculate amount re-emitted (mol/m2)
+                hg0_emi = hg2_snowpack * (1.0 - EXP(- hg0_kemiss * dtstep))
+                hg0_emi = MAX( hg0_emi, 0.0 )
+                ! Update surface Hg2 concentrationi (mol/m2)
+                surface_hg2_conc(i,j) = surface_hg2_conc(i,j) - hg0_emi
+                ! Calculate re-emission flux (mol/m2/s)
+                hg0_emi = hg0_emi / dtstep
               END IF ! coszen .gt. 0
             END IF ! do_mercury_snow_emis
           
@@ -340,9 +369,18 @@ CONTAINS
             END IF
 
             IF (do_mercury_snow_emiss) THEN
-              IF (coszen(i,j) .GE. 0.0 .AND. snowc(i,j) .GT. 0.0) THEN
-                ! Hg0 emissions over continental snow if sunlit
-                hg0_emi = hg0_emi + ((drydepflx_hg2(i,j) + wdflx_hg2(i,j)) * coszen(i,j) * 0.6 * snowc(i,j))
+              IF (coszen(i,j) .GE. 0.0 .AND. snowc(i,j) .GT. 0.0 .AND. surface_hg2_conc(i,j) .GT. 0.0) THEN
+                ! Emission rate is solar dependent and on snow fraction
+                hg0_kemiss = hg0_emiss_rate_snow*coszen(i,j)*snowc(i,j)
+                ! Assume 60 % of deposited Hg2 is available for re-emsision
+                hg2_snowpack = surface_hg2_conc(i,j) * 0.6
+                ! Calculate amount re-emitted (mol/m2)
+                hg0_emi = hg2_snowpack * (1.0 - EXP(- hg0_kemiss * dtstep))
+                hg0_emi = MAX( hg0_emi, 0.0 )
+                ! Update surface Hg2 concentration (mol/m2)
+                surface_hg2_conc(i,j) = surface_hg2_conc(i,j) - hg0_emi
+                ! Calculate re-emission flux (mol/m2/s)
+                hg0_emi = hg0_emi / dtstep
               END IF ! coszen .gt. 0
             END IF ! do_mercury_snow_emis
 
@@ -461,12 +499,7 @@ CONTAINS
       END DO !isize
         
       !---- Hg0 emissions
-      IF (chem(i,kts,j,p_hg)  + hg0_emi * conv <= 0) THEN
-        hg0_emi = - chem(i,kts,j,p_hg) / conv
-        chem(i,kts,j,p_hg) = 0.0
-      ELSE
-        chem(i,kts,j,p_hg) = chem(i,kts,j,p_hg) + hg0_emi * conv
-      END IF
+      chem(i,kts,j,p_hg) = chem(i,kts,j,p_hg) + hg0_emi * conv
 
       !---- Output diagnosis, accumulated hg0 emissions in mole/m2
       emiss_hg0(i,j) = emiss_hg0(i,j) + hg0_emi * dtstep

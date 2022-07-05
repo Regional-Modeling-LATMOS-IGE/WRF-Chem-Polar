@@ -887,7 +887,7 @@
               grid%drydepflx_brno3, grid%drydepflx_hbr, grid%drydepflx_br2,                &
               grid%emiss_br2,                                                              &
          ! stuff for Hg0 emissions from snow
-              grid%drydepflx_hg2, grid%wdflx_hg2, grid%emiss_hg0,                          &
+              grid%drydepflx_hg2, grid%wdflx_hg2, grid%emiss_hg0, grid%surface_hg2_conc,   &
          ! stuff for aircraft emissions
               emis_aircraft,                                                               &
          ! stuff for the GHG fluxes

@@ -72,7 +72,7 @@ CONTAINS
          drydepflx_o3, drydepflx_hobr,                                     &
          drydepflx_brno3, drydepflx_hbr, drydepflx_br2, emiss_br2,         &
          ! Hg0 emissions from snow
-         drydepflx_hg2, wdflx_hg2, emiss_hg0,                              &
+         drydepflx_hg2, wdflx_hg2, emiss_hg0, surface_hg2_conc,            &
          ! stuff for aircraft emissions
          emis_aircraft,                                                    &
          ! stuff for GHG fluxes
@@ -353,6 +353,9 @@ CONTAINS
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: drydepflx_hg2, wdflx_hg2
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: emiss_hg0
+! Hg2 deposited to snow surface
+  REAL, DIMENSION(ims:ime, jms:jme)               ,               &
+        INTENT(INOUT) :: surface_hg2_conc
 
 !
 ! Local variables...
@@ -819,7 +822,7 @@ CONTAINS
          xice, meltedsnow, coszen, snowh_melt, snowc,                  &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
-         drydepflx_hg2, wdflx_hg2, emiss_hg0,                          &
+         drydepflx_hg2, wdflx_hg2, emiss_hg0, surface_hg2_conc,        &
          ids,ide, jds,jde, kds,kde,                                    &
          ims,ime, jms,jme, kms,kme,                                    &
          its,ite, jts,jte, kts,kte,                                    &
