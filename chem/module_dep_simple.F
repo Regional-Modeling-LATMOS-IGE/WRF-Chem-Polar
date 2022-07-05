@@ -454,8 +454,9 @@ tile_lon_loop : &
             ddvel(i, j, p_hgohho2) = 1.0e-2
             ddvel(i, j, p_hgohbro) = 1.0e-2
             ddvel(i, j, p_hgohclo) = 1.0e-2
-            ddvel(i, j, p_hgp) = 1.0e-2
             ddvel(i, j, p_hgx) = 1.0e-2
+            ! Set HgP dry dep vel to 0.1 cm/s
+            ddvel(i, j, p_hgp) = 1.0e-3
           end do
         end do
       end if
