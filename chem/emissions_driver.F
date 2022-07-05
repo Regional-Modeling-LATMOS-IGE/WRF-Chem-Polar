@@ -1389,6 +1389,46 @@ CONTAINS
                      +emis_ant(i,k,j,p_e_rco_oh)*conv
                 chem(i,k,j,p_nh3)  = chem(i,k,j,p_nh3)                       &
                      +emis_ant(i,k,j,p_e_nh3)*conv
+                chem(i,k,j,p_hg)  = chem(i,k,j,p_hg)                       &
+                     +emis_ant(i,k,j,p_e_hg0)*conv
+                chem(i,k,j,p_hgp)  = chem(i,k,j,p_hgp)                       &
+                     +emis_ant(i,k,j,p_e_hgp)*conv
+                chem(i,k,j,p_hgbroh)  = chem(i,k,j,p_hgbroh)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgbrno2)  = chem(i,k,j,p_hgbrno2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgbrho2)  = chem(i,k,j,p_hgbrho2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgbrbro)  = chem(i,k,j,p_hgbrbro)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgbrclo)  = chem(i,k,j,p_hgbrclo)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgbr2)  = chem(i,k,j,p_hgbr2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgbrcl)  = chem(i,k,j,p_hgbrcl)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgcloh)  = chem(i,k,j,p_hgcloh)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgclno2)  = chem(i,k,j,p_hgclno2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgclho2)  = chem(i,k,j,p_hgclho2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgclbro)  = chem(i,k,j,p_hgclbro)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgclclo)  = chem(i,k,j,p_hgclclo)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgohoh)  = chem(i,k,j,p_hgohoh)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgohno2)  = chem(i,k,j,p_hgohno2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgohho2)  = chem(i,k,j,p_hgohho2)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgohbro)  = chem(i,k,j,p_hgohbro)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgohclo)  = chem(i,k,j,p_hgohclo)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species
+                chem(i,k,j,p_hgx)  = chem(i,k,j,p_hgx)                       &
+                     +(emis_ant(i,k,j,p_e_hg2)/18.)*conv       ! Divide Hg2 emissions evenly between all Hg2 gas species   
 
                 ! If the SAPRC biomass burning package is not used, add BB
                 ! organic aerosol emissions as e.g. emis_ant(i,k,j,p_e_orgj_bb),

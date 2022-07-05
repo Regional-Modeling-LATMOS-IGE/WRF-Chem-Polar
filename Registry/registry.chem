@@ -305,10 +305,10 @@ state    real  e_psulf        i+jf     emis_ant     1         Z      i5     "E_P
 state    real  e_ccooh        i+jf     emis_ant     1         Z      i5     "E_CCOOH"              "EMISSIONS CCOOH"               "mol km^-2 hr^-1"
 state    real  e_iprod        i+jf     emis_ant     1         Z      i5     "E_IPROD"              "EMISSIONS IPROD"               "mol km^-2 hr^-1"
 
-state    real  e_hg2         i+jf     emis_ant     1         Z      i5     "E_HG2"               "EMISSIONS HG2"                "mol km^-2 hr^-1"
-state    real  e_hg0         i+jf     emis_ant     1         Z      i5     "E_HG0"               "EMISSIONS HG0"                "mol km^-2 hr^-1"
+state    real  e_hg2         i+jf     emis_ant     1         Z      i5r     "E_HG2"               "EMISSIONS HG2"                "mol km^-2 hr^-1"
+state    real  e_hg0         i+jf     emis_ant     1         Z      i5r     "E_HG0"               "EMISSIONS HG0"                "mol km^-2 hr^-1"
 state    real  e_fmcl         i+jf     emis_ant     1         Z      i5     "E_FMCL"               "EMISSIONS FMCL"                "mol km^-2 hr^-1"
-state    real  e_hgp          i+jf     emis_ant     1         Z      i5     "E_HGP"                "EMISSIONS HGP"                 "ug/m3 m/s"
+state    real  e_hgp          i+jf     emis_ant     1         Z      i5r     "E_HGP"                "EMISSIONS HGP"                 "mol km^-2 hr^-1"
 
 state    real  e_apin         i+jf     emis_ant     1         Z      i5     "E_APIN"               "EMISSIONS a-Pinene"            "mol km^-2 hr^-1"
 state    real  e_bpin         i+jf     emis_ant     1         Z      i5     "E_BPIN"               "EMISSIONS b-Pinene"            "mol km^-2 hr^-1"
@@ -4286,7 +4286,7 @@ package   cammam          emiss_opt==9                   -             emis_ant:
 package   mozmem           emiss_opt==10                   -             emis_ant:e_co,e_no,e_no2,e_bigalk,e_bigene,e_c2h4,e_c2h5oh,e_c2h6,e_c3h6,e_c3h8,e_ch2o,e_ch3cho,e_ch3coch3,e_ch3oh,e_mek,e_so2,e_toluene,e_benzene,e_xylene,e_nh3,e_isop,e_apin,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_nh4i,e_nh4j,e_nai,e_naj,e_cli,e_clj,e_co_a,e_orgi_a,e_orgj_a,e_co_bb,e_orgi_bb,e_orgj_bb,e_pm_10,e_c2h2,e_gly,e_sulf,e_macr,e_mgly,e_mvk,e_hcooh,e_hono
 package   mozc_t1_em      emiss_opt==11                  -             emis_ant:e_co,e_no,e_no2,e_bigalk,e_bigene,e_c2h4,e_c2h5oh,e_c2h6,e_c3h6,e_c3h8,e_ch2o,e_ch3cho,e_ch3coch3,e_ch3oh,e_mek,e_so2,e_toluene,e_nh3,e_isop,e_hcooh,e_ch3cn,e_ch3cooh,e_hcn,e_apin,e_mvk,e_mgly,e_benzene,e_xylene,e_sulf,e_c2h2,e_pm_10,e_pm_25,e_bc,e_oc
 #LMarelle: Add e_dms_oc, DMS oceanic content in mol/m3 (technically, this should not be in emis_ant)
-package   esaprcnov       emiss_opt==13                  -             emis_ant:e_so2,e_c2h6,e_c3h8,e_c2h2,e_alk3,e_alk4,e_alk5,e_ethene,e_c3h6,e_ole1,e_ole2,e_aro1,e_aro2,e_hcho,e_ccho,e_rcho,e_acet,e_mek,e_isoprene,e_terp,e_sesq,e_co,e_no,e_no2,e_phen,e_cres,e_meoh,e_gly,e_mgly,e_bacl,e_isoprod,e_methacro,e_mvk,e_prod2,e_ch4,e_bald,e_hcooh,e_cco_oh,e_rco_oh,e_nh3,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_orgi_a,e_orgj_a,e_orgi_bb,e_orgj_bb,e_dms_oc
+package   esaprcnov       emiss_opt==13                  -             emis_ant:e_so2,e_c2h6,e_c3h8,e_c2h2,e_alk3,e_alk4,e_alk5,e_ethene,e_c3h6,e_ole1,e_ole2,e_aro1,e_aro2,e_hcho,e_ccho,e_rcho,e_acet,e_mek,e_isoprene,e_terp,e_sesq,e_co,e_no,e_no2,e_phen,e_cres,e_meoh,e_gly,e_mgly,e_bacl,e_isoprod,e_methacro,e_mvk,e_prod2,e_ch4,e_bald,e_hcooh,e_cco_oh,e_rco_oh,e_nh3,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_orgi_a,e_orgj_a,e_orgi_bb,e_orgj_bb,e_dms_oc,e_hg0,e_hg2,e_hgp
 # For CB05 mechanism based on CBMZ speciation, used with emiss_inpt_opt = 102 
 package   ecb05_opt1      emiss_opt==14                   -             emis_ant:e_no2,e_xyl,e_tol,e_terp,e_so2,e_ora2,e_olt,e_oli,e_ol2,e_no,e_nh3,e_iso,e_hcl,e_hcho,e_eth,e_csl,e_co,e_ch3oh,e_c2h5oh,e_ald,e_aldx,e_hc3,e_hc5,e_hc8,e_ket,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_so4c,e_no3c,e_orgc,e_ecc,e_pm10
 # For CB05 emissions inventory base on CB05 speciation, used with emiss_inpt_opt = 101
