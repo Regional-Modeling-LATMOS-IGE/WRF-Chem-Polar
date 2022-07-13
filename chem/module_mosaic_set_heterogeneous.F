@@ -399,7 +399,7 @@
           ! Uptake to aerosols 
           ! Calculate k_het for uptake to aerosols
           k_het(ispecies) = k_het(ispecies) + wetarea * &
-          (((0.5_r8*wetdp)/diffusion_constant)+(4.0_r8/(mean_speed*gamma_factors(ispecies))))**-1.0_r8
+          (((0.5_r8*wetdp)/(diffusion_constant*1.0E4_r8))+(4.0_r8/(mean_speed*gamma_factors(ispecies))))**-1.0_r8
 
           ! Uptake to clouds
           ! Do this once to make sure it is not calculated for each aerosol size bin.
@@ -412,7 +412,7 @@
               CALL calc_cloud_properties(cld_num, drop_num, airdens, reff_droplet, cld_area)
 
               k_het_cld(ispecies) = k_het_cld(ispecies) + cld_area * &
-                        ((reff_droplet/diffusion_constant)+(4.0_r8/(mean_speed*gamma_factors(ispecies))))**-1.0_r8
+                        ((reff_droplet/(diffusion_constant*1.0E4_r8))+(4.0_r8/(mean_speed*gamma_factors(ispecies))))**-1.0_r8
             END IF
           ELSE ! Set to zero for other aerosol bins so its not counted multiple times
             k_het_cld = 0._r8
@@ -435,13 +435,10 @@
         ! Calculate the diffusion constant (m2/s) for species ispecies
         CALL calc_diffusion_constant(temp, press, molar_weights(i_hgx), diffusion_constant)
 
-        ! Calculate the  molecular free path in air (cm)
-        CALL calc_freepath(temp, molar_weights(i_hgx), diffusion_constant, freepath)
-
         ! Calculate mercury mass transfer from aerosol to gas-phase
         ! Calculate k_het for HgX and sum over aerosol bins 1-6
         k_het_hgx = k_het_hgx + wetarea * &
-        (((0.5_r8*wetdp)/diffusion_constant)+(4.0_r8/(mean_speed*gamma_factors(i_hgx))))**-1.0_r8
+        (((0.5_r8*wetdp)/(diffusion_constant*1.0E4_r8))+(4.0_r8/(mean_speed*gamma_factors(i_hgx))))**-1.0_r8
       END IF ! Volatilization of fine aerosols
 
     END DO !ibin, size
