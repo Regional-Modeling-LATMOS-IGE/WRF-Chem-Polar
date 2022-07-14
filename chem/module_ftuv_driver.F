@@ -29,6 +29,7 @@
 
       real(dp), private :: zref(nref), tref(nref), airref(nref), o3ref(nref)
       real(dp), private :: albedo(nw-1,2)
+      real(dp), private :: albedo_input(nw-1,2)
 
       type column_density
         integer           :: ncoldens_levs
@@ -129,6 +130,7 @@
                               p_phy, t_phy, rho_phy, p8w, t8w,         &
                               xlat, xlong,    z_at_w,                  &
                               moist, chem,gd_cloud,gd_cloud2,          &
+                              xice, snowc, snowh,                      &
                               ph_no2,ph_o31d,ph_o33p,ph_hono,          &
                               ph_hno3,ph_hno4,ph_no3o2,ph_no3o,        &
                               ph_h2o2,ph_ch2om,ph_ch2or,ph_ald,        &
@@ -184,6 +186,9 @@
                              p8w(ims:ime,kms:kme,jms:jme),       &
                              t8w(ims:ime,kms:kme,jms:jme),       &
                              z_at_w(ims:ime,kms:kme,jms:jme)
+
+      real, dimension( ims:ime , jms:jme ),                      &
+            intent(in   ) :: snowh, snowc, xice
 
 !----------------------------------------------------
 ! these arrays are for cloudwater/ice coming from 
@@ -268,6 +273,7 @@
                   waer600(kts:kte), waer999(kts:kte)
       real(dp) :: gaer300(kts:kte), gaer400(kts:kte),            &
                   gaer600(kts:kte), gaer999(kts:kte)
+      real(dp) :: seaiceconc, snowcover, snowheight
 
       real(dp) :: p_jtop(its:ite,jts:jte)
       real(dp) :: o2_exo_col(its:ite,jts:jte)
@@ -500,6 +506,10 @@ level_loop : &
           air(k) = .5_dp*air(k) + .25_dp*( air(k-1) + air(k+1) )
         enddo
 
+       seaiceconc = xice(i,j)
+       snowcover = snowc(i,j)
+       snowheight = snowh(i,j)
+
        alat  = real(xlat(i,j),kind=dp)
        along = -real(xlong(i,j),kind=dp)
        call calc_zenith( alat, along, julday, gmtp, azim, zen )
@@ -526,6 +536,7 @@ level_loop : &
                    aant,                 &
                    aso4,                 &
                    asal,                 &
+                   seaiceconc, snowcover, snowheight, &
 ! rajesh: Add aerosol optical property columns as arguments
                    tauaer300, tauaer400, &
                    tauaer600, tauaer999, &
@@ -1003,7 +1014,9 @@ include 'netcdf.inc'
                         along, o3top, o2top, o3toms, lu, zin, tlevin, &
                         airlevin, rhin, xlwcin, o3in, acb1in, &
                         acb2in, aoc1in, aoc2in, aantin, aso4in, &
-                        asalin, tauaer300in,tauaer400in,tauaer600in,tauaer999in, &
+                        asalin, &
+                        seaiceconc, snowcover, snowheight, &
+                        tauaer300in,tauaer400in,tauaer600in,tauaer999in, &
                         waer300in, waer400in, waer600in, waer999in,    &
                         gaer300in, gaer400in, gaer600in, gaer999in,    &
                         aer_ra_feedback, prate, radfld, adjcoe, prate0 )
@@ -1024,6 +1037,7 @@ include 'netcdf.inc'
       real(dp), intent(in) :: o3toms
       real(dp), intent(in) :: o3top
       real(dp), intent(in) :: o2top
+      real(dp), intent(in) :: seaiceconc, snowcover, snowheight
 
       real(dp), intent(in) :: zin(nlev)
       real(dp), intent(in) :: tlevin(nlev)
@@ -1239,10 +1253,21 @@ include 'netcdf.inc'
       end if
 
 
-      call photoin( chem_opt, nz, zen, o3toms, esfact,           & 
-                    o3top, o2top, albedo(:,lu), z_ph, tlev_ph,   & 
+      ! Use a higher albedo over snow and ice
+      albedo_input(:,:) = albedo(:,:)
+      IF(seaiceconc .GT. 0.15) THEN
+        ! Sea ice concentrations < 15 % are ignored
+        ! Bare ice albedo assumed to be 0.85
+        albedo_input(:,2) = 0.85*seaiceconc + albedo(:,2) * (1. - seaiceconc)
+      ELSEIF(seaiceconc .EQ. 0.0 .AND. snowheight .GT. 0.01) THEN
+        ! Snow heights < 10 cm are ignored
+        ! Bare snow albedo assumed to be 0.85
+        albedo_input(:,1) = 0.85*snowcover + albedo(:,1) * (1. - snowcover)
+      ENDIF
+      call photoin( chem_opt, nz, zen, o3toms, esfact,           &
+                    o3top, o2top, albedo_input(:,lu), z_ph, tlev_ph,   &
                     tlay_ph, airlev_ph, rh_ph, xlwc_ph, o3_ph,   &
-                    acb1_ph, acb2_ph, aoc1_ph, aoc2_ph, aant_ph, & 
+                    acb1_ph, acb2_ph, aoc1_ph, aoc2_ph, aant_ph, &
                     aso4_ph, asal_ph,                            &
                     tauaer300_ph, tauaer400_ph, tauaer600_ph,    &
                     tauaer999_ph, waer300_ph, waer400_ph,        &

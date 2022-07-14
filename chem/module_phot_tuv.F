@@ -39,6 +39,7 @@
    real, allocatable :: w_fac(:)
    real, allocatable :: etfl(:)
    real, allocatable :: albedo(:)
+   real, allocatable :: albedo_input(:)
    real, allocatable :: o2_xs(:)
    real, allocatable :: so2_xs(:)
    real, allocatable :: par_wght(:)
@@ -75,6 +76,7 @@
                gmt, julday, t_phy, moist, aerwrf,                         &
                p8w, t8w, p_phy, chem, rho_phy,                            &
                dz8w, xlat, xlong, z, z_at_w, gd_cloud, gd_cloud2,         &
+               xice, snowc, snowh,                      &
                tauaer1,tauaer2,tauaer3,tauaer4,                           &
                gaer1,gaer2,gaer3,gaer4,                                   &
                waer1,waer2,waer3,waer4,                                   &
@@ -118,6 +120,8 @@
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                   &
          INTENT(INOUT ) ::                                         &
                gd_cloud,gd_cloud2
+   real, dimension( ims:ime , jms:jme ),                               &
+            intent(in   ) :: snowh, snowc, xice
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),              &
          INTENT(IN   ) :: tauaer1, tauaer2, tauaer3, tauaer4, &
                           waer1, waer2, waer3, waer4,         &
@@ -570,8 +574,20 @@ has_daylight : &
                                  + chem(i,kts+1:kte,j,p_no2)*dens_air(kts+1:kte))
          endif
 
+         ! Use a higher albedo over snow and ice
+         IF(xice(i,j) .GT. 0.15) THEN
+           ! Sea ice concentrations < 15 % are ignored
+           ! Bare ice albedo assumed to be 0.85
+           albedo_input(:) = 0.85*xice(i,j) + albedo(:) * (1. - xice(i,j))
+         ELSEIF(xice(i,j) .EQ. 0.0 .AND. snowh(i,j) .GT. 0.01) THEN
+           ! Snow heights < 10 cm are ignored
+           ! Bare snow albedo assumed to be 0.85
+           albedo_input(:) = 0.85*snowc(i,j) + albedo(:) * (1. - snowc(i,j))
+         ELSE
+           albedo_input(:) = albedo(:)
+         ENDIF
          call tuv_radfld( nlambda_start, config_flags%cld_od_opt, cldfrac, &
-              nlyr, nwave, zenith, tuv_z, albedo, &
+              nlyr, nwave, zenith, tuv_z, albedo_input, &
               aircol, o2col, o3col, so2col, no2col, &
               tauaer300, tauaer400, tauaer600, tauaer999, &
               waer300, waer400, waer600, waer999, &
@@ -1283,7 +1299,7 @@ master_proc_a: &
                 air_dens_data(n_air_dens_data),stat=astat )
       ierr = astat + ierr
       allocate( wl(nwave+1), wc(nwave), dw(nwave), w_fac(nwave), &
-                etfl(nwave), albedo(nwave), stat=astat )
+                etfl(nwave), albedo(nwave), albedo_input(nwave), stat=astat )
       ierr = astat + ierr
       if( .not. is_full_tuv ) then
         allocate( temp_tab(ntemp), conc_tab(nconc), stat=astat )
