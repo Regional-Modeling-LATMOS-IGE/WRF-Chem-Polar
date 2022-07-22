@@ -55,11 +55,11 @@ CONTAINS
 		z, dz8w, p_at_w, t_at_w, exch_h
 
 	real, intent(inout),   &
-		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra_old
 
 	real, intent(in),   &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
-		qv, qc, qi
+		qv, qc, qi, cldfra
 
 	real, intent(inout), optional,  &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
@@ -312,7 +312,7 @@ subroutine mixactivate(  msectional,            &
   real, intent(in) :: t_at_w(ims:ime, kms:kme, jms:jme) ! temperature at layer interface (K)
   real, intent(in) :: kvh(ims:ime, kms:kme, jms:jme)    ! vertical diffusivity (m2/s)
   real, intent(inout) :: cldfra_old(ims:ime, kms:kme, jms:jme)! cloud fraction on previous time step
-  real, intent(inout) :: cldfra(ims:ime, kms:kme, jms:jme)    ! cloud fraction
+  real, intent(in) :: cldfra(ims:ime, kms:kme, jms:jme)    ! cloud fraction
   real, intent(in) :: hygro( its:ite, kts:kte, jts:jte, maxd_asize, maxd_atype ) ! bulk hygroscopicity   &
 
   REAL, intent(out), DIMENSION( ims:ime, jms:jme, num_chem ) ::   qsrflx ! dry deposition rate for aerosol
@@ -322,6 +322,7 @@ subroutine mixactivate(  msectional,            &
 
 !--------------------Local storage-------------------------------------
 !
+  real :: cldfra_new(ims:ime,kms:kme,jms:jme) ! Recalculated cloud fraction
   real :: dgnum_aer(maxd_asize, maxd_atype) ! median diameter (cm) of number distrib of mode
   real :: qndrop(kms:kme)      ! cloud droplet number mixing ratio (#/kg)
   real :: lcldfra(kms:kme)     ! liquid cloud fraction
@@ -492,10 +493,10 @@ subroutine mixactivate(  msectional,            &
   enddo
 
   IF( PRESENT(F_QC) .AND. PRESENT ( F_QI ) ) THEN
-     CALL cal_cldfra2(CLDFRA,qc,qi,f_qc,f_qi,     &
-          ids,ide, jds,jde, kds,kde,              &
-          ims,ime, jms,jme, kms,kme,              &
-          its,ite, jts,jte, kts,kte               )
+     CALL cal_cldfra2(cldfra_new,qc,qi,f_qc,f_qi, &
+          ids,ide, jds,jde, kds,kde,                &
+          ims,ime, jms,jme, kms,kme,                &
+          its,ite, jts,jte, kts,kte                 )
   END IF
 
   qsrflx(its:ite,jts:jte,:) = 0.
@@ -529,7 +530,7 @@ OVERALL_MAIN_I_LOOP: do i=its,ite
            call wrf_error_fatal("1")
         endif
         if(qcld.gt.1.e-20)then
-           lcldfra(k)=cldfra(i,k,j)*qc(i,k,j)/qcld
+           lcldfra(k)=cldfra_new(i,k,j)*qc(i,k,j)/qcld
            lcldfra_old(k)=cldfra_old(i,k,j)*qc(i,k,j)/qcld
         else
            lcldfra(k)=0.
@@ -910,7 +911,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
 !              no cloud
            if(qndrop(k).gt.10000.e6)then
               print *,'i,k,j,lcldfra,qndrop=',i,k,j,lcldfra(k),qndrop(k)
-              print *,'cldfra,ql,qi',cldfra(i,k,j),qc(i,k,j),qi(i,k,j)
+              print *,'cldfra,ql,qi',cldfra_new(i,k,j),qc(i,k,j),qi(i,k,j)
            endif
            nsource(i,k,j)=nsource(i,k,j)-qndrop(k)*dtinv
            qndrop(k)=0.
@@ -1146,7 +1147,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
            write(6,'(a,g12.2,a,3i5)')'qv=',qv(i,k,j),' for i,k,j=',i,k,j
            call wrf_error_fatal("1")
         endif
-        cldfra_old(i,k,j) = cldfra(i,k,j)
+        cldfra_old(i,k,j) = cldfra_new(i,k,j)
 !       if(k.gt.6.and.k.lt.11)cldfra_old(i,k,j)=1.
      enddo
 
