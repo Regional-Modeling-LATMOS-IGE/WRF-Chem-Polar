@@ -1763,6 +1763,8 @@ end if !Chemistry time step check
      &        ,TAUAER600=grid%tauaer3, TAUAER999=grid%tauaer4                                    &
      &        ,GAER300=grid%gaer1, GAER400=grid%gaer2, GAER600=grid%gaer3, GAER999=grid%gaer4    &
      &        ,WAER300=grid%waer1, WAER400=grid%waer2, WAER600=grid%waer3, WAER999=grid%waer4    &
+!LMarelle
+     &        ,AOD2D_OUT=grid%aod2d_out                                                          &
               ,ext_coeff=grid%ext_coef,bscat_coeff=grid%bscat_coef,asym_par=grid%asym_par        &
               ,num_ext_coef=num_ext_coef,num_bscat_coef=num_bscat_coef,num_asym_par=num_asym_par &
      &        ,dz8w=dz8w                                                                         &
