@@ -328,6 +328,7 @@ BENCH_START(rad_driver_tim)
      &        ,CLDFRA_CUP=grid%cldfra_cup                                 & !CuP, wig 1-Oct-2006
      &        ,SHALL=grid%shall                                           & !CuP, wig 4-Feb-2008
 !BSINGH - ENDS
+     &        ,clt=grid%clt                                               &
             ! indexes
      &        ,IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde          &
      &        ,IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme          &

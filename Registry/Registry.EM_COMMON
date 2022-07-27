@@ -1372,6 +1372,7 @@ state   real    tstar          ij      misc         1         -      r        "T
 state   real    lnterms        ikj     misc         1         -      r        "LNTERMS"        "Liquid+ice+1 ln term for cloud fraction" ""
 state   real    lnint          ij      misc         1         -      r        "LNINT"          "Integrated ln term for cloud fraction" ""
 #BSINGH -  adde CuP related variables -ENDS
+state   real    CLT            ij      misc         1         -      rh       "CLT"            "Total cloud fraction"                  ""
 
 
 # Other Misc State Variables                                            
