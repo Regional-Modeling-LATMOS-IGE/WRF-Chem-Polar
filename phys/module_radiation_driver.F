@@ -1388,6 +1388,17 @@ CONTAINS
            CALL wrf_error_fatal('Can not use icloud = 3 option, missing QC or QI field.')
         ENDIF
 
+     ELSEIF (ICLOUD == 4) THEN
+        IF ( F_QC .AND. F_QI ) THEN
+           CALL wrf_debug (150, 'DEBUG: using Siebesma cloud fraction scheme')
+           CALL cal_cldfra4(cldfra, qv, qc, qi, qc_cu, qi_cu, p, t, rho, icloud_cu,  &
+                            ids,ide, jds,jde, kds,kde,                               &
+                            ims,ime, jms,jme, kms,kme,                               &
+                            its,ite, jts,jte, kts,kte)
+        ELSE
+           CALL wrf_error_fatal('Can not use icloud = 4 option, missing QC or QI field.')
+        ENDIF
+
      END IF
 
       !Modify CLDFRA and QC for kfcupscheme cumulus scheme
@@ -3941,6 +3952,63 @@ CONTAINS
 
 
       END SUBROUTINE cal_cldfra3
+
+!+---+-----------------------------------------------------------------+
+
+      SUBROUTINE cal_cldfra4(cldfra, qv, qc, qi, qc_cu, qi_cu, p, t, rho, icloud_cu,  &
+                             ids,ide, jds,jde, kds,kde,           &
+                             ims,ime, jms,jme, kms,kme,           &
+                             its,ite, jts,jte, kts,kte)
+
+      ! LMarelle - from module_convtrans_prep.F
+      !
+      ! Siebesma et al., JAS, Vol. 60, no. 10, 1201-1219, 2003 (based on LES
+      ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of liquid
+      ! water and saturation vapor pressure must be in g/kg within the Siebesma et
+      ! al. cloud fraction scheme
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN):: ids,ide, jds,jde, kds,kde,                  &
+                            ims,ime, jms,jme, kms,kme,                  &
+                            its,ite, jts,jte, kts,kte
+      INTEGER, INTENT(IN)  :: icloud_cu
+      REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qv,p,t,rho
+      REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qc,qi,qc_cu,qi_cu
+
+      REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: cldfra
+
+      INTEGER :: i,j,k
+      REAL :: satvp,rhgrid,h2oliq
+      REAL, PARAMETER  ::  coef_p = 0.25, coef_gamm = 0.49, coef_alph = 100.
+
+      DO j = jts,jte
+         DO k = kts,kte
+            DO i = its,ite
+              cldfra(i,k,j) = 0.
+              satvp = 3.80*EXP(17.27*(t(i,k,j)-273.)/ &
+                      (t(i,k,j)-36.))/(.01*p(i,k,j))
+              rhgrid = MAX(.1, MIN( .95, qv(i,k,j) / satvp))
+              h2oliq = 1000. * (qc(i,k,j) + qi(i,k,j))
+              satvp = 1000. * satvp
+              cldfra(i,k,j) = (1. - EXP(-coef_alph*h2oliq/((1.-rhgrid)*satvp)**coef_gamm))*(rhgrid**coef_p)
+              cldfra(i,k,j) = MAX(0., MIN(1., cldfra(i,k,j)))
+              IF( icloud_cu == 1) THEN
+                ! If cu_rad_feedback is on
+                ! If the grid cell contains only cumuli, the cloud fraction should be
+                ! scaled down. Original scheme suggests 20%, but to be conservative
+                ! we use a higher value of 36% from KF-CuP
+                IF(qc(i,k,j) <= qc_cu(i,k,j) .AND. qi(i,k,j) <= qi_cu(i,k,j)) THEN
+                   cldfra(i,k,j) = 0.36 * cldfra(i,k,j)
+                ENDIF
+              ENDIF
+              IF(cldfra(i,k,j) > 0.) cldfra(i,k,j) = MAX(0.01, cldfra(i,k,j))
+            ENDDO
+         ENDDO
+      ENDDO
+
+      END SUBROUTINE cal_cldfra4
+
 
 !+---+-----------------------------------------------------------------+
 !..From cloud fraction array, find clouds of multi-level depth and compute
