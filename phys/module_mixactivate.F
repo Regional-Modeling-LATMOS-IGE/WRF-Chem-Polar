@@ -257,7 +257,6 @@ subroutine mixactivate(  msectional,            &
 !     doesn't distinguish between warm, cold clouds
 
   USE module_model_constants, only: g, rhowater, xlv, cp, rvovrd, r_d, r_v, mwdry, ep_2
-  USE module_radiation_driver, only: cal_cldfra2
 
   implicit none
 
@@ -322,7 +321,6 @@ subroutine mixactivate(  msectional,            &
 
 !--------------------Local storage-------------------------------------
 !
-  real :: cldfra_new(ims:ime,kms:kme,jms:jme) ! Recalculated cloud fraction
   real :: dgnum_aer(maxd_asize, maxd_atype) ! median diameter (cm) of number distrib of mode
   real :: qndrop(kms:kme)      ! cloud droplet number mixing ratio (#/kg)
   real :: lcldfra(kms:kme)     ! liquid cloud fraction
@@ -492,13 +490,6 @@ subroutine mixactivate(  msectional,            &
      enddo
   enddo
 
-  IF( PRESENT(F_QC) .AND. PRESENT ( F_QI ) ) THEN
-     CALL cal_cldfra2(cldfra_new,qc,qi,f_qc,f_qi, &
-          ids,ide, jds,jde, kds,kde,                &
-          ims,ime, jms,jme, kms,kme,                &
-          its,ite, jts,jte, kts,kte                 )
-  END IF
-
   qsrflx(its:ite,jts:jte,:) = 0.
 
 !     start loop over columns
@@ -530,7 +521,7 @@ OVERALL_MAIN_I_LOOP: do i=its,ite
            call wrf_error_fatal("1")
         endif
         if(qcld.gt.1.e-20)then
-           lcldfra(k)=cldfra_new(i,k,j)*qc(i,k,j)/qcld
+           lcldfra(k)=cldfra(i,k,j)*qc(i,k,j)/qcld
            lcldfra_old(k)=cldfra_old(i,k,j)*qc(i,k,j)/qcld
         else
            lcldfra(k)=0.
@@ -911,7 +902,7 @@ OLD_CLOUD_MAIN_K_LOOP: do k=kts,kte
 !              no cloud
            if(qndrop(k).gt.10000.e6)then
               print *,'i,k,j,lcldfra,qndrop=',i,k,j,lcldfra(k),qndrop(k)
-              print *,'cldfra,ql,qi',cldfra_new(i,k,j),qc(i,k,j),qi(i,k,j)
+              print *,'cldfra,ql,qi',cldfra(i,k,j),qc(i,k,j),qi(i,k,j)
            endif
            nsource(i,k,j)=nsource(i,k,j)-qndrop(k)*dtinv
            qndrop(k)=0.
@@ -1147,7 +1138,7 @@ OLD_CLOUD_NSUBMIX_LOOP: do nsub=1,nsubmix
            write(6,'(a,g12.2,a,3i5)')'qv=',qv(i,k,j),' for i,k,j=',i,k,j
            call wrf_error_fatal("1")
         endif
-        cldfra_old(i,k,j) = cldfra_new(i,k,j)
+        cldfra_old(i,k,j) = cldfra(i,k,j)
 !       if(k.gt.6.and.k.lt.11)cldfra_old(i,k,j)=1.
      enddo
 

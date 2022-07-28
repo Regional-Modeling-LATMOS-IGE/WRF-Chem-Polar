@@ -20,7 +20,7 @@ CONTAINS
       subroutine wetscav_driver( id, ktau, dtstep, ktauc, config_flags,    &
                dtstepc, alt, t_phy, moist, p8w,                            &
                t8w, dx, dy, p_phy, chem,                                   &
-               rho_phy, cldfra, cldfra2, rainprod, evapprod,               &
+               rho_phy, cldfra, cldfra2, cldfra_ls, rainprod, evapprod,    &
                hno3_col_mdel, qlsink, precr, preci, precs, precg,          &
                wdflx, &
 	       gas_aqfrac, numgas_aqfrac, dz8w,                            &
@@ -233,6 +233,7 @@ CONTAINS
                                                       dz8w,         &
 	                            qlsink,precr,preci,precs,precg, &
                                                     rho_phy,cldfra, &
+                                                    cldfra_ls,      &
 !variables needed for cam_mam_wetscav
                                      cldfrai,cldfral,cldfra_mp_all, &
                                                p_hyd,dlf3d,dlf2_3d, & 
@@ -365,7 +366,7 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
          CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP )!BSINGH(12/05/2013): Added for SAPRC 8 bin vbs )
        CALL wrf_debug(15,'wetscav_driver calling mosaic_wetscav_driver')
        call wetscav_cbmz_mosaic (id,ktau,dtstep,ktauc,config_flags,        &
-               dtstepc,alt,t_phy,p8w,t8w,p_phy,chem,rho_phy,cldfra,        &
+               dtstepc,alt,t_phy,p8w,t8w,p_phy,chem,rho_phy,cldfra_ls,     &
                qlsink,precr,preci,precs,precg, qsrflx,                     &
                gas_aqfrac, numgas_aqfrac,                                  &
                ids,ide, jds,jde, kds,kde,                                  &
@@ -391,7 +392,7 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
        endif
        call wetscav_mozcart( id, ktau, dtstep, ktauc, config_flags,             &
                              dtstepc, t_phy, p8w, t8w, p_phy,                   &
-                             chem, rho_phy, cldfra2, rainrate, evaprate,        &
+                             chem, rho_phy, cldfra_ls, rainrate, evaprate,      &
                              qv_b4mp, qc_b4mp, qi_b4mp, qs_b4mp,                &
                              gas_aqfrac, numgas_aqfrac, dz8w, dx, dy,           &
                              moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc),  &
@@ -424,7 +425,7 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
          evaprate(:,:,:) = 0.
        endif
        call wetscav_mozart_mosaic (id,ktau,dtstep,ktauc,config_flags,        &
-               dtstepc,alt,t_phy,p8w,t8w,p_phy,chem,rho_phy,cldfra,        &
+               dtstepc,alt,t_phy,p8w,t8w,p_phy,chem,rho_phy,cldfra_ls,     &
                qlsink,precr,preci,precs,precg, qsrflx,                     &
                gas_aqfrac, numgas_aqfrac,                                  &
                ids,ide, jds,jde, kds,kde,                                  &
@@ -433,7 +434,7 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
        CALL wrf_debug(15,'wetscav_driver calling wetscav_mozcart')
        call wetscav_mozcart( id, ktau, dtstep, ktauc, config_flags,             &
                              dtstepc, t_phy, p8w, t8w, p_phy,                   &
-                             chem, rho_phy, cldfra2, rainrate, evaprate,        &
+                             chem, rho_phy, cldfra_ls, rainrate, evaprate,      &
                              qv_b4mp, qc_b4mp, qi_b4mp, qs_b4mp,                &
                              gas_aqfrac, numgas_aqfrac, dz8w, dx, dy,           &
                              moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc),  &
