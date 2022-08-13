@@ -331,7 +331,7 @@ iloop : &
            tfac(kts:ktem1) = (t0 - t(kts:ktem1))/(t0*t(kts:ktem1))
            p(kts:kte)      = p_phy(i,kts:kte,j)*.01
            delp(kts:ktem1) = p8w(i,kts:ktem1,j) - p8w(i,kts+1:kte,j)
-           layer_mass(kts:ktem1) = area*delp(kts:ktem1)/g
+           layer_mass(kts:ktem1) = area*dz8w(i,kts:ktem1,j)*rho_phy(i,kts:ktem1,j)
            totprec(kts:ktem1) = rainprod(i,kts:ktem1,j)*layer_mass(kts:ktem1)
            totevap(kts:ktem1) = evapprod(i,kts:ktem1,j)*layer_mass(kts:ktem1)
            rls(kte)      = 0.
