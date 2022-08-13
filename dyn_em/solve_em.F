@@ -3937,12 +3937,6 @@ BENCH_START(moist_phys_end_tim)
                       k_start    , k_end                                )
 
        CALL microphysics_zero_outb (                                    &
-                      chem , num_chem , config_flags ,              &
-                      ids, ide, jds, jde, kds, kde,                     &
-                      ims, ime, jms, jme, kms, kme,                     &
-                      its, ite, jts, jte,                               &
-                      k_start    , k_end                                )
-       CALL microphysics_zero_outb (                                    &
                       tracer , num_tracer , config_flags ,              &
                       ids, ide, jds, jde, kds, kde,                     &
                       ims, ime, jms, jme, kms, kme,                     &
