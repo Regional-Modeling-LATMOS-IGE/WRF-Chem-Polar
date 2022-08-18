@@ -273,7 +273,7 @@
        call gocart_aqchem_driver(                     &
             id, dtstepc, config_flags,                &
             p_phy, t_phy, rho_phy,                    &
-            moist, chem, cldfra,                      &
+            moist, chem, cldfra_ls,                   &
             ids,ide, jds,jde, kds,kde,                &
             ims,ime, jms,jme, kms,kme,                &
             its,ite, jts,jte, kts,kte )

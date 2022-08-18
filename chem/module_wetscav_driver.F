@@ -410,7 +410,7 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
          CALL wrf_debug(15,'wetscav_driver calling wetscav_gocart')
          call wetscav_gocart( id, dtstep, config_flags,             &
                               t_phy, p_phy,                   &
-                              chem, rho_phy, cldfra, rainrate, evaprate,      &
+                              chem, rho_phy, cldfra_ls, rainrate, evaprate,    &
                               precr, preci, precs, precg, dx, dy,           &
                               moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc),&
                               moist(ims,kms,jms,p_qi), moist(ims,kms,jms,p_qs),&
