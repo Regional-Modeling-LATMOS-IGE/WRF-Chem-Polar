@@ -6,6 +6,7 @@ MODULE module_aer_opt_out
    REAL,    PARAMETER, PRIVATE ::   afwahiwv2   = 12. ! upper wavelength for second AFWA band average extinction coefficent
 CONTAINS
    SUBROUTINE aer_opt_out(dz8w  &
+                   ,aod2d_out                                     &
                    ,ext_coeff,bscat_coeff,asym_par                &
                    ,tauaer300,tauaer400,tauaer600,tauaer999       & ! jcb
                    ,gaer300,gaer400,gaer600,gaer999               & ! jcb
@@ -22,6 +23,7 @@ USE module_configure, only:p_extcof3,p_extcof55,p_extcof106,p_extcof3_5,p_extcof
                                        ims,ime, jms,jme, kms,kme, &
                                        its,ite, jts,jte, kts,kte, &
                                        num_ext_coef,num_bscat_coef,num_asym_par
+   REAL, DIMENSION( ims:ime, jms:jme), INTENT (OUT) :: aod2d_out
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, 1:num_ext_coef ), INTENT (OUT) :: ext_coeff
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, 1:num_bscat_coef ), INTENT (OUT) :: bscat_coeff
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, 1:num_asym_par ), INTENT (OUT) :: asym_par
@@ -41,6 +43,7 @@ USE module_configure, only:p_extcof3,p_extcof55,p_extcof106,p_extcof3_5,p_extcof
 ! 8. - 12. micron band averaged extinction coefficient (1/km)
 ! As in PNNL MOSAIC, extrapolate or interpolate based on 300-999 nm Angstrom coefficient,
 ! or linear interpolation/extrapolation between 300 and 999 nm for assymetry coefficient
+      aod2d_out(its:ite, jts:jte) = 0.0
       do j = jts,jte
       do k = kts,kte
       do i = its,ite
@@ -59,6 +62,8 @@ USE module_configure, only:p_extcof3,p_extcof55,p_extcof106,p_extcof3_5,p_extcof
       slope=AMIN1(1.0,AMAX1(0.4,slope))   ! SSA has same limits as in PNNL
       bscat_coeff(i,k,j,p_bscof55)=ext_coeff(i,k,j,p_extcof55)*slope  ! 550nm scat. coeff. (1/km)
       asym_par(i,k,j,p_asympar55)=AMIN1(1.,AMAX1(0.5,slopeg*(.55-.6)+gaer600(i,k,j)))  ! 550nm assym. parameter (no units)
+      ! Total 2D AOD at 550 nm
+      aod2d_out(i,j) = aod2d_out(i, j) + tauaer400(i,k,j)*((0.4/0.55)**ang)
 ! 1060 nm done like PNNL
            slopessa=(waer999(i,k,j)-waer600(i,k,j))/.399
            slopeg=(gaer999(i,k,j)-gaer600(i,k,j))/.399

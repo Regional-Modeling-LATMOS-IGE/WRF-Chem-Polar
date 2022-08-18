@@ -55,11 +55,11 @@ CONTAINS
 		z, dz8w, p_at_w, t_at_w, exch_h
 
 	real, intent(inout),   &
-		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra, cldfra_old
+		dimension( ims:ime, kms:kme, jms:jme ) :: cldfra_old
 
 	real, intent(in),   &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
-		qv, qc, qi
+		qv, qc, qi, cldfra
 
 	real, intent(inout), optional,  &
 		dimension( ims:ime, kms:kme, jms:jme ) :: &
@@ -257,7 +257,6 @@ subroutine mixactivate(  msectional,            &
 !     doesn't distinguish between warm, cold clouds
 
   USE module_model_constants, only: g, rhowater, xlv, cp, rvovrd, r_d, r_v, mwdry, ep_2
-  USE module_radiation_driver, only: cal_cldfra2
 
   implicit none
 
@@ -312,7 +311,7 @@ subroutine mixactivate(  msectional,            &
   real, intent(in) :: t_at_w(ims:ime, kms:kme, jms:jme) ! temperature at layer interface (K)
   real, intent(in) :: kvh(ims:ime, kms:kme, jms:jme)    ! vertical diffusivity (m2/s)
   real, intent(inout) :: cldfra_old(ims:ime, kms:kme, jms:jme)! cloud fraction on previous time step
-  real, intent(inout) :: cldfra(ims:ime, kms:kme, jms:jme)    ! cloud fraction
+  real, intent(in) :: cldfra(ims:ime, kms:kme, jms:jme)    ! cloud fraction
   real, intent(in) :: hygro( its:ite, kts:kte, jts:jte, maxd_asize, maxd_atype ) ! bulk hygroscopicity   &
 
   REAL, intent(out), DIMENSION( ims:ime, jms:jme, num_chem ) ::   qsrflx ! dry deposition rate for aerosol
@@ -490,13 +489,6 @@ subroutine mixactivate(  msectional,            &
         amcube(m,n)=3./(4.*pi*exp45logsig*npv(m,n))
      enddo
   enddo
-
-  IF( PRESENT(F_QC) .AND. PRESENT ( F_QI ) ) THEN
-     CALL cal_cldfra2(CLDFRA,qc,qi,f_qc,f_qi,     &
-          ids,ide, jds,jde, kds,kde,              &
-          ims,ime, jms,jme, kms,kme,              &
-          its,ite, jts,jte, kts,kte               )
-  END IF
 
   qsrflx(its:ite,jts:jte,:) = 0.
 

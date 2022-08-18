@@ -56,6 +56,7 @@ CONTAINS
               ,cubot,cutop,cldfra_cup                                     &
               ,shall                                                      &
               !BSINGH - ENDS
+              ,clt                                                        &
             ! indexes
               ,IDS,IDE, JDS,JDE, KDS,KDE                                  &
               ,IMS,IME, JMS,JME, KMS,KME                                  &
@@ -76,7 +77,7 @@ CONTAINS
               , RE_HAIL_GSFC                                              &
               , COD2D_OUT                                                 &
               , CTOP2D_OUT                                                &
-              , CLDFRA,CLDFRA_MP_ALL,CLDT,ZNU                             &
+              , CLDFRA,CLDFRA_MP_ALL,CLDFRA_LS,CLDT,ZNU                   &
               , CCLDFRA, QCCONV, QICONV                                   &
               , bmj_rad_feedback                                          &
 #if (EM_CORE == 1)
@@ -376,6 +377,7 @@ CONTAINS
 !-- CLDFRA_DP     cloud fraction from deep cloud in a cumulus scheme
 !-- CLDFRA_SH     cloud fraction from shallow cloud in a cumulus scheme
 !-- CLDFRA_MP_ALL cloud fraction from CAMMGMP microphysics scheme
+!-- CLDFRA_LS     cloud fraction from large scale microphysics scheme
 !-- CCLDFRA       convective cloud fraction (between 0 and 1)
 !-- EMISS         surface emissivity (between 0 and 1)
 !-- rho_phy       density (kg/m^3)
@@ -503,6 +505,7 @@ CONTAINS
                                                            shall    !CuP, wig 4-Feb-2008
    !BSINGH -ENDS
 
+   REAL, DIMENSION(ims:ime,jms:jme), INTENT(INOUT) :: clt
 
    INTEGER, INTENT(IN   )  ::   julyr
 !
@@ -787,6 +790,11 @@ CONTAINS
                                                          F_RAIN_PHY, &
                                                       CLDFRA_MP_ALL
 
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                     &
+         OPTIONAL,                                                   &
+         INTENT(INOUT) ::                                            &
+                                                          CLDFRA_LS
+
 #if (EM_CORE == 1)
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                     &
          OPTIONAL,                                                   &
@@ -876,6 +884,8 @@ CONTAINS
    REAL    ::    cldji,cldlji
 !ckay
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) ::    cldfra_cu
+! Vertical dimension for total cloud fraction calculation
+   INTEGER :: dimz
 !------------------------------------------------------------------
 ! solar related variables are added to declaration
 !-------------------------------------------------
@@ -1196,6 +1206,7 @@ CONTAINS
      DO k=kts,kte
      DO i=its,ite
         CLDFRA(i,k,j) = 0.
+        IF(PRESENT(CLDFRA_LS)) CLDFRA_LS(i,k,j) = 0.
      END DO
      END DO
      END DO
@@ -1215,6 +1226,15 @@ CONTAINS
                    ids,ide, jds,jde, kds,kde,              &
                    ims,ime, jms,jme, kms,kme,              &
                    its,ite, jts,jte, kts,kte               )
+        IF(PRESENT(CLDFRA_LS)) THEN
+          CALL cal_cldfra1(CLDFRA_LS,qv,qc_save,qi_save,qs_save,  &
+                     F_QV,F_QC,F_QI,F_QS,t,p,                &
+                     F_ICE_PHY,F_RAIN_PHY,                   &
+                     mp_physics,cldfra1_flag,                &
+                     ids,ide, jds,jde, kds,kde,              &
+                     ims,ime, jms,jme, kms,kme,              &
+                     its,ite, jts,jte, kts,kte               )
+        ENDIF
         IF ( PRESENT ( CLDFRA_DP ) ) THEN
 ! this is for Kain-Fritsch schemes
           IF ( icloud_cu .EQ. 2 .OR. aercu_opt .GT. 0 ) THEN
@@ -1338,6 +1358,12 @@ CONTAINS
                        ids,ide, jds,jde, kds,kde,            &
                        ims,ime, jms,jme, kms,kme,            &
                        its,ite, jts,jte, kts,kte             )
+       IF(PRESENT(CLDFRA_LS)) THEN
+         CALL cal_cldfra2(CLDFRA_LS,qc_save,qi_save,F_QC,F_QI, &
+                         ids,ide, jds,jde, kds,kde,            &
+                         ims,ime, jms,jme, kms,kme,            &
+                         its,ite, jts,jte, kts,kte             )
+       END IF
      ENDIF
 
 !+---+-----------------------------------------------------------------+
@@ -1375,6 +1401,9 @@ CONTAINS
                 qi(i,k,j) = qi_1d(k)
                 qs(i,k,j) = qs_1d(k)
                 cldfra(i,k,j) = cf_1d(k)
+                IF(PRESENT(CLDFRA_LS)) THEN
+                  cldfra_ls(i,k,j) = cf_1d(k)
+                END IF
              ENDDO
 
            ENDDO
@@ -1382,6 +1411,24 @@ CONTAINS
 
         ELSE
            CALL wrf_error_fatal('Can not use icloud = 3 option, missing QC or QI field.')
+        ENDIF
+
+     ELSEIF (ICLOUD == 4) THEN
+        IF ( F_QC .AND. F_QI ) THEN
+           CALL wrf_debug (150, 'DEBUG: using Siebesma cloud fraction scheme')
+           CALL cal_cldfra4(cldfra, qv, qc, qi, qc_cu, qi_cu, p, t, rho, icloud_cu,  &
+                            ids,ide, jds,jde, kds,kde,                               &
+                            ims,ime, jms,jme, kms,kme,                               &
+                            its,ite, jts,jte, kts,kte)
+           IF(PRESENT(CLDFRA_LS)) THEN
+             CALL cal_cldfra4(cldfra_ls, qv, qc_save, qi_save,             &
+                              qc_cu, qi_cu, p, t, rho, icloud_cu,          &
+                              ids,ide, jds,jde, kds,kde,                   &
+                              ims,ime, jms,jme, kms,kme,                   &
+                              its,ite, jts,jte, kts,kte)
+           END IF
+        ELSE
+           CALL wrf_error_fatal('Can not use icloud = 4 option, missing QC or QI field.')
         ENDIF
 
      END IF
@@ -3044,6 +3091,16 @@ CONTAINS
     END DO
  END IF
 
+   IF ( PRESENT(CLDFRA) ) THEN
+     ! Calculate total cloud fraction clt by max-random overlap
+     dimz = kme - kms + 1
+     DO j = jts,jte
+       DO i = its,ite
+         CALL var_clt(cldfra(i,:,j), dimz, clt(i,j))
+       ENDDO
+     ENDDO
+   ENDIF
+
    END SUBROUTINE radiation_driver
 
    SUBROUTINE pre_radiation_driver ( grid, config_flags                   &
@@ -3927,6 +3984,63 @@ CONTAINS
 
 
       END SUBROUTINE cal_cldfra3
+
+!+---+-----------------------------------------------------------------+
+
+      SUBROUTINE cal_cldfra4(cldfra, qv, qc, qi, qc_cu, qi_cu, p, t, rho, icloud_cu,  &
+                             ids,ide, jds,jde, kds,kde,           &
+                             ims,ime, jms,jme, kms,kme,           &
+                             its,ite, jts,jte, kts,kte)
+
+      ! LMarelle - from module_convtrans_prep.F
+      !
+      ! Siebesma et al., JAS, Vol. 60, no. 10, 1201-1219, 2003 (based on LES
+      ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of liquid
+      ! water and saturation vapor pressure must be in g/kg within the Siebesma et
+      ! al. cloud fraction scheme
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN):: ids,ide, jds,jde, kds,kde,                  &
+                            ims,ime, jms,jme, kms,kme,                  &
+                            its,ite, jts,jte, kts,kte
+      INTEGER, INTENT(IN)  :: icloud_cu
+      REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qv,p,t,rho
+      REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qc,qi,qc_cu,qi_cu
+
+      REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: cldfra
+
+      INTEGER :: i,j,k
+      REAL :: satvp,rhgrid,h2oliq
+      REAL, PARAMETER  ::  coef_p = 0.25, coef_gamm = 0.49, coef_alph = 100.
+
+      DO j = jts,jte
+         DO k = kts,kte
+            DO i = its,ite
+              cldfra(i,k,j) = 0.
+              satvp = 3.80*EXP(17.27*(t(i,k,j)-273.)/ &
+                      (t(i,k,j)-36.))/(.01*p(i,k,j))
+              rhgrid = MAX(.1, MIN( .95, qv(i,k,j) / satvp))
+              h2oliq = 1000. * (qc(i,k,j) + qi(i,k,j))
+              satvp = 1000. * satvp
+              cldfra(i,k,j) = (1. - EXP(-coef_alph*h2oliq/((1.-rhgrid)*satvp)**coef_gamm))*(rhgrid**coef_p)
+              cldfra(i,k,j) = MAX(0., MIN(1., cldfra(i,k,j)))
+              IF( icloud_cu == 1) THEN
+                ! If cu_rad_feedback is on
+                ! If the grid cell contains only cumuli, the cloud fraction should be
+                ! scaled down. Original scheme suggests 20%, but to be conservative
+                ! we use a higher value of 36% from KF-CuP
+                IF(qc(i,k,j) <= qc_cu(i,k,j) .AND. qi(i,k,j) <= qi_cu(i,k,j)) THEN
+                   cldfra(i,k,j) = 0.36 * cldfra(i,k,j)
+                ENDIF
+              ENDIF
+              IF(cldfra(i,k,j) > 0.) cldfra(i,k,j) = MAX(0.01, cldfra(i,k,j))
+            ENDDO
+         ENDDO
+      ENDDO
+
+      END SUBROUTINE cal_cldfra4
+
 
 !+---+-----------------------------------------------------------------+
 !..From cloud fraction array, find clouds of multi-level depth and compute
@@ -5344,6 +5458,35 @@ END SUBROUTINE aer_p_int
       END DO
 
       END SUBROUTINE gt_aod
+
+!+---+-----------------------------------------------------------------+
+
+      SUBROUTINE var_clt(clfra, dz, clt)
+        ! Compute the total cloud following 'newmicro' from LMDZ using 1D
+        ! vertical column values
+        ! Adapted from Lluís Fita, https://doi.org/10.5194/gmd-12-1029-2019
+
+        IMPLICIT NONE
+
+        INTEGER, INTENT(IN)                                  :: dz
+        REAL, DIMENSION(dz), INTENT(IN)                      :: clfra
+        REAL, INTENT(OUT)                                    :: clt
+        ! Local
+        REAL                                                 :: zclear, zcloud, dclt
+        INTEGER                                              :: iz
+        REAL, PARAMETER                                      :: ZEPSEC = 1.0E-12
+
+        ! Calculate 1-column cloud fraction value
+        zclear = 1.0
+        zcloud = 0.0
+        DO iz=1,dz
+          zclear = zclear * (1.0-MAX(clfra(iz),zcloud)) / (1.0-MIN(zcloud,1.0-ZEPSEC))
+          dclt = 1.0 - zclear
+          zcloud = clfra(iz)
+        END DO
+        clt = dclt
+
+      END SUBROUTINE var_clt
 
 !+---+-----------------------------------------------------------------+
 
