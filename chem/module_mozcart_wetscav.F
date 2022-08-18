@@ -126,6 +126,17 @@ is_allocated : &
            wet_scav_tab(m2)%heff(1:6) = HLC(m)%hcnst(1:6)
            exit
          endif
+         ! If GOCART is active, treat sulfuric acid as sulfate for wet
+         ! scavenging, and deposit sulf in module_gocart_wetscav. sulf wet
+         ! scavenging is disabled here by setting the Henry's law coefficients
+         ! to zero
+         if(config_flags%chem_opt == MOZCART_KPP &
+            .or. config_flags%chem_opt == GOCARTRADM2) then
+           if( trim(HL_tbl_name) == 'SULF') then
+             wet_scav_tab(m2)%heff(1:6) = (/0., 0., 0., 0., 0., 0./)
+             call wrf_message('wetscav_mozcart_init: sulf scavenging disabled in module_mozcart_wetscav')
+           endif
+         endif
        end do
      end do
 

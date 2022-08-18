@@ -344,8 +344,8 @@ call wrf_message("**************************************************************
        endif
      elseif( id == 1 ) then
        if ( config_flags%mp_physics /= 6 .and. config_flags%mp_physics /= 8 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 17  &
-            .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22) then
-         call wrf_error_fatal("ERROR: wet scavenging option for MOZART,MOZCART requires mp_phys = 6 (WSM6) or 8 (Thompson) or 10 (Morrison) .or 17/18/22 (NSSL 2-moment) to function.")
+            .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 .and. config_flags%mp_physics /= 28) then
+         call wrf_error_fatal("ERROR: wet scavenging option for MOZART,MOZCART requires mp_phys = 6 (WSM6) or 8,28 (Thompson) or 10 (Morrison) .or 17/18/22 (NSSL 2-moment) to function.")
        else
          write(message_txt,*) 'chem_init: calling wetscav_mozcart_init for domain ',id
          call wrf_message( trim(message_txt) )
@@ -363,15 +363,18 @@ call wrf_message("**************************************************************
            ( config_flags%chem_opt == 203).OR.                                    &
            ( config_flags%chem_opt == 131 ) .OR. ( config_flags%chem_opt == 132 ) .OR. &
            ( config_flags%chem_opt >= 601 .AND. config_flags%chem_opt <= 611)  .OR. &
-             config_flags%chem_opt == 109 .OR. config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP ) then
+             config_flags%chem_opt == 109 .OR. config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP &
+             .OR. config_flags%chem_opt == MOZCART_KPP) then
            call wrf_debug( 15, 'Chemics_init: Cloud chemistry turned on' )
       else
         call wrf_error_fatal("ERROR: cloud chemistry option requires chem_opt = 8 through 13 or 31 to 36 or 41 to 43 or 109 to function.")
       endif
-       if ( config_flags%mp_physics /= 2 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 11  &
+      if(config_flags%chem_opt /= MOZCART_KPP) then
+        if ( config_flags%mp_physics /= 2 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 11  &
             .and. config_flags%mp_physics /= 17 .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 ) then
-         call wrf_error_fatal("ERROR: cloud chemistry option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or 17/18/22 NSSL_2mom to function.")
-       endif
+          call wrf_error_fatal("ERROR: cloud chemistry option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or 17/18/22 NSSL_2mom to function.")
+        endif
+     endif
    endif
 
    !BSINGH - kfcup schme only works with Mosaic aqueoue packages:

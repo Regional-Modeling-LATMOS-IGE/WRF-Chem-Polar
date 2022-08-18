@@ -39,6 +39,7 @@
    USE module_cam_mam_cloudchem, only: cam_mam_cloudchem_driver
    USE module_sorgam_aqchem, only: sorgam_aqchem_driver
    USE module_sorgam_vbs_aqchem, only: sorgam_vbs_aqchem_driver
+   USE module_gocart_aqchem, only: gocart_aqchem_driver
 
    !  This driver calls subroutines for wet scavenging.
    !
@@ -258,6 +259,20 @@
             p_phy, t_phy, rho_phy, alt, dz8w,         &
             moist, chem,                              &
             gas_aqfrac, numgas_aqfrac,                &
+            ids,ide, jds,jde, kds,kde,                &
+            ims,ime, jms,jme, kms,kme,                &
+            its,ite, jts,jte, kts,kte )
+
+   CASE ( MOZCART_KPP )
+
+       !LMarelle - only for MOZCART, other GOCART schemes do this already in
+       !module_gocart_chem
+       call wrf_debug(15, &
+       'cloudchem_driver calling gocart_aqchem_driver')
+       call gocart_aqchem_driver(                     &
+            id, dtstepc, config_flags,                &
+            p_phy, t_phy, rho_phy,                    &
+            moist, chem, cldfra,                      &
             ids,ide, jds,jde, kds,kde,                &
             ims,ime, jms,jme, kms,kme,                &
             its,ite, jts,jte, kts,kte )

@@ -62,6 +62,8 @@ CONTAINS
    USE module_model_constants
    USE modal_aero_data,        only:  ntot_amode               ! For cam_mam_wetscav variables
    USE module_mozcart_wetscav, only:  wetscav_mozcart
+   !LMarelle
+   USE module_gocart_wetscav, only:  wetscav_gocart
    USE module_mosaic_wetscav, only:  wetscav_cbmz_mosaic, wetscav_mozart_mosaic
 !!! TUCCELLA (BUG, the line below is commented now)
    !USE module_aerosols_sorgam, only:  wetscav_sorgam_driver
@@ -373,7 +375,8 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
                its,ite, jts,jte, kts,kte                                   )
    CASE (MOZART_KPP,MOZCART_KPP,T1_MOZCART_KPP,MOZART_MOSAIC_4BIN_KPP)
        CALL wrf_debug(15,'wetscav_driver calling wetscav_mozcart')
-       if( config_flags%mp_physics == THOMPSON ) then
+       if( config_flags%mp_physics == THOMPSON &
+           .OR. config_flags%mp_physics == THOMPSONAERO) then
          rainrate(:,:,:) = rainprod(:,:,:)
          evaprate(:,:,:) = evapprod(:,:,:)
        elseif( config_flags%mp_physics == WSM6SCHEME ) then
@@ -401,13 +404,28 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
                              ids,ide, jds,jde, kds,kde,                         &
                              ims,ime, jms,jme, kms,kme,                         &
                              its,ite, jts,jte, kts,kte                          )
+       !LMarelle - additional scavenging routine for GOCART aerosols
+       IF(config_flags%chem_opt == MOZCART_KPP) THEN
+         CALL wrf_debug(15,'wetscav_driver calling wetscav_gocart')
+         call wetscav_gocart( id, dtstep, config_flags,             &
+                              t_phy, p_phy,                   &
+                              chem, rho_phy, cldfra, rainrate, evaprate,      &
+                              precr, preci, precs, precg, dx, dy,           &
+                              moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc),&
+                              moist(ims,kms,jms,p_qi), moist(ims,kms,jms,p_qs),&
+                              moist(ims,kms,jms,p_qr),&
+                              ids,ide, jds,jde, kds,kde,                       &
+                              ims,ime, jms,jme, kms,kme,                       &
+                              its,ite, jts,jte, kts,kte                        )
+       ENDIF
 
         hno3_col_mdel = delta_mass_col(:,:,p_hno3)
    ! STUPID - cases have to be unique. We repeat both calls done above
    ! (mosaic_wetscav for aerosols, mozcart for gases)
    CASE (MOZART_MOSAIC_4BIN_AQ_KPP)
        CALL wrf_debug(15,'wetscav_driver calling mosaic_wetscav_driver')
-       if( config_flags%mp_physics == THOMPSON ) then
+       if( config_flags%mp_physics == THOMPSON &
+           .OR. config_flags%mp_physics == THOMPSONAERO) then
          rainrate(:,:,:) = rainprod(:,:,:)
          evaprate(:,:,:) = evapprod(:,:,:)
        elseif( config_flags%mp_physics == WSM6SCHEME ) then
