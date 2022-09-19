@@ -56,7 +56,7 @@
     USE module_data_mosaic_asect, ONLY:  &
         dens_water_aer, mw_water_aer, dens_aer, & 
         dlo_sect, dcen_sect, dhi_sect, volumlo_sect, &
-        volumhi_sect, ai_phase, ncomp_aer, nsize_aer, ntype_aer, &
+        volumhi_sect, ncomp_aer, nsize_aer, ntype_aer, &
         numptr_aer, waterptr_aer, massptr_aer, lptr_so4_aer
     USE module_configure, ONLY:  num_chem
     USE module_data_mosaic_other, ONLY: pi 
@@ -157,8 +157,8 @@
 
 !   Get aerosol wet density and wet diameter
 
-!   *** for now, just calc vdep_aer for iphase = ai_phase
-    iphase = ai_phase
+!   *** for now, just calc vdep_aer for iphase = 1
+    iphase = 1
 
     do itype = 1, ntype_aer
     do n = 1, nsize_aer(itype)
