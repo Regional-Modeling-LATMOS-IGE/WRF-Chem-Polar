@@ -142,6 +142,8 @@ CONTAINS
   REAL, PARAMETER :: rho_ice = 914.0, rho_nacl = 2160.
   ! Molar weight of bromine (g/mole)
   REAL, PARAMETER :: mw_br = 79.904
+  ! Na and Cl molar weights in g/mol
+  REAL, PARAMETER :: MW_NA=22.990, MW_CL=35.453
 
 
   !-------- Local variables --------
@@ -375,12 +377,12 @@ CONTAINS
         !---- Na emissions
         l_na = lptr_na_aer(isize,itype,iphase)
         IF (l_na >= param_first_scalar) THEN
-          chem(i,kts,j,l_na) = chem(i,kts,j,l_na) + nacl_emi / 2.0 * mosaic_massfrac_nacl(isize) * conv2
+          chem(i,kts,j,l_na) = chem(i,kts,j,l_na) + nacl_emi * MW_NA/(MW_NA+MW_CL) * mosaic_massfrac_nacl(isize) * conv2
         END IF
         !---- Cl emissions
         l_cl = lptr_cl_aer(isize,itype,iphase)
         IF (l_cl >= param_first_scalar) THEN
-          chem(i,kts,j,l_cl) = chem(i,kts,j,l_cl) + nacl_emi / 2.0 * mosaic_massfrac_nacl(isize) * conv2
+          chem(i,kts,j,l_cl) = chem(i,kts,j,l_cl) + nacl_emi * MW_CL/(MW_NA+MW_CL) * mosaic_massfrac_nacl(isize) * conv2
         END IF
         !---- Aerosol number "emissions" from the mass change
         l_num = numptr_aer(isize,itype,iphase)
