@@ -39,7 +39,7 @@ CONTAINS
 !------------------------------------------------------------------------------
 
    SUBROUTINE wetscav_gocart( id, dtstep, config_flags,                    &
-                              t_phy, p_phy,                                &
+                              t_phy, p_phy, dz8w,                          &
                               chem, rho_phy, cldfra, rainprod, evapprod,   &
                               precr, preci, precs, precg, dx, dy,          &
                               qv, qc, qi, qs, qr,                          &
@@ -57,6 +57,7 @@ CONTAINS
    !   config_flags = namelist configuration flags
    !   t_phy = 3D physical temperature (K)
    !   p_phy = 3D pressure (Pa)
+   !   dz8w = 3D vertical level depth (m)
    !   rho_phy = 3D air density (kg/m3)
    !   cldfra = 3D cloud fraction (unitless, 0-1)
    !   rainprod = 3D rain production rate (kg/kg dry air/s)
@@ -73,7 +74,7 @@ CONTAINS
    !   qr = rain water mixing ratio (kg/kg dry air)
    !   ids,ims,its etc. = domain, memory, and tile start and end indices
    ! Input/output:
-   !   chem = advected chemical species (gases in ppm, aerosols in µg/kg)
+   !   chem = advected chemical species (gases in ppm, aerosols in ug/kg)
 
    ! USE associations:
    !TODO Use ONLY:
@@ -93,7 +94,7 @@ CONTAINS
    REAL, INTENT(IN) :: dx, dy
    REAL, INTENT(IN) :: dtstep
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme)         ,        &
-       INTENT(IN) :: t_phy, p_phy, rho_phy
+       INTENT(IN) :: t_phy, p_phy, rho_phy, dz8w
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
        INTENT(IN) :: QV, QI, QC, QS, QR
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
@@ -112,27 +113,32 @@ CONTAINS
    REAL :: f, fr
    ! Vertical dimension of cldfra for cloud fraction calculation
    INTEGER :: dimz
-   ! Aerosol conc. in cloud phase, aerosols conc. lost to rainout(µg/kg)
-   REAL :: cloudborne_aer, rainout_aer
-   ! Condensed water mixing ratio (kg/kg dry air), liquid fraction of condensed
-   ! water (0-1)
-   REAL :: condensed_water, liquid_fraction
+   ! Aerosol conc. in cloud phase, aerosol conc. lost to rainout, aerosols
+   ! conc. resuspended from precip (ug/kg)
+   REAL :: cloudborne_aer, rainout_aer, resusp_aer
+   ! Condensed water mixing ratio (kg/kg dry air), precipitation mixing ratio
+   ! (kg/kg dry air), liquid fraction of condensed water (0-1)
+   REAL :: condensed_water, precip_water, liquid_fraction
    ! Rainout activation efficiency of species (0-1)
    REAL :: aq_aer_ratio_nv, ice_aer_ratio_nv
    ! Total 3D precipitation trough cell for rain/snow/ice (kg/m2/hr), rainprod at i,k,j (kg/kg/s)
    REAL :: ppr, pps, ppi, rainrate
    ! Temperature (K)
    REAL :: tk
-   ! Fraction of aerosol species washed out/rained out (0-1)
-   REAL :: washfrac, rainfrac
+   ! Fraction of aerosol species washed out/rained out/resuspended (0-1)
+   REAL :: washfrac, rainfrac, resusp_frac
    ! First-order rainout rate (s-1)
    REAL :: k_rain
+   ! Value of chem(i,k,j,p) before deposition step (ug/kg)
+   REAL :: chem_spec_before
    ! Number of wet-scavenged aerosol species in gocart_pointers
    INTEGER, PARAMETER :: NAERSPECIES = 12
    ! List of gocart species experiencing rainout/washout
    INTEGER :: gocart_pointers(NAERSPECIES)
    ! Rainout activation efficiency of species (0-1)
    REAL :: aq_aer_ratio(NAERSPECIES), ice_aer_ratio(NAERSPECIES)
+   ! Deposition flux of species during timestep (ug/m2)
+   REAL :: deposition_flux(NAERSPECIES)
 
    !---- Data declaration
    ! GOCART species that experience wet scavenging (sulfate deposition needs to be
@@ -151,15 +157,17 @@ CONTAINS
        fr = 0.0
 
        DO k=kte-1,kts,-1 ! Do not change, needs to loop in descending order
+         deposition_flux(1:NAERSPECIES) = 0.0
          !---- Calculate parameters for rainout and washout schemes
          tk = t_phy(i, k, j)
-         condensed_water = QC(i, k, j) + QI(i, k, j) + QR(i, k, j) + QS(i, k, j)
+         condensed_water = qc(i, k, j) + qi(i, k, j) + qr(i, k, j) + qs(i, k, j)
+         precip_water = qr(i,k,j) + qs(i,k,j)
          IF(condensed_water .GT. 1.0E-12) THEN
-           liquid_fraction = MIN(1.0, MAX(0.0, (QC(i, k, j)+QR(i, k, j)) / condensed_water))
+           liquid_fraction = MIN(1.0, MAX(0.0, (qc(i, k, j)+qr(i, k, j)) / condensed_water))
          ELSE
            liquid_fraction = 1.0
          ENDIF
-         rainrate = MAX(rainprod(i, k, j) - evapprod(i, k, j), 0.0)
+         rainrate = MAX(rainprod(i,k,j), 0.0)
          ! Total precipitation through grid cell in kg/m2/hr
          ppr = precr(i, k, j) * 3600.
          pps = precs(i, k, j) * 3600.
@@ -222,7 +230,10 @@ CONTAINS
              !-- Appply rainout to chem
              IF(cloudborne_aer .GT. 0.0) THEN
                rainout_aer = rainfrac * cloudborne_aer
+               chem_spec_before = chem(i,k,j,p_chem)
                chem(i ,k, j, p_chem) = MAX(0.0, chem(i ,k, j, p_chem) - rainout_aer)
+               deposition_flux(nv) = deposition_flux(nv) + (chem_spec_before - chem(i,k,j,p_chem)) &
+                                     * rho_phy(i,k,j) * dz8w(i,k,j)
              ENDIF
            ENDIF ! f .GT. 0 .AND. cldfra(i, k, j) .GT. 0.001
 
@@ -246,9 +257,25 @@ CONTAINS
              END IF
              !-- Apply washout to chem
              IF(washfrac .GT. 0.0) THEN
+               chem_spec_before = chem(i,k,j,p_chem)
                chem(i ,k, j, p_chem) = MAX(0.0, (1.0 - washfrac)*chem(i ,k, j, p_chem))
+               deposition_flux(nv) = deposition_flux(nv) + (chem_spec_before - chem(i,k,j,p_chem)) &
+                                     * rho_phy(i,k,j) * dz8w(i,k,j)
              ENDIF
            END IF ! ppr+pps+ppi .GT. 0 .AND. fr .GT. 0.01
+
+
+           !---- Perform resuspension of aerosols from evaporating precip. water
+           ! We apply resuspension to the total deposition flux from the column
+           ! above, so this assumes that the timescale of precipitation to level
+           ! k is smaller than dtstep
+           IF(precip_water .GT. 0. .AND. evapprod(i,k,j) .GT. 0.) THEN
+             resusp_frac = precip_water / (evapprod(i,k,j) * dtstep)
+             resusp_frac = MAX(0.0, MIN(1.0, resusp_frac))
+             resusp_aer = (resusp_frac * deposition_flux(nv) / (rho_phy(i,k,j) * dz8w(i,k,j)))
+             chem(i,k,j,p_chem) = MAX(0.0, chem(i,k,j,p_chem) + resusp_aer)
+             deposition_flux(nv) = deposition_flux(nv) * (1.0 - resusp_frac)
+           END IF
 
          END DO ! nv
        END DO ! k

@@ -409,7 +409,7 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
        IF(config_flags%chem_opt == MOZCART_KPP) THEN
          CALL wrf_debug(15,'wetscav_driver calling wetscav_gocart')
          call wetscav_gocart( id, dtstep, config_flags,             &
-                              t_phy, p_phy,                   &
+                              t_phy, p_phy, dz8w,             &
                               chem, rho_phy, cldfra_ls, rainrate, evaprate,    &
                               precr, preci, precs, precg, dx, dy,           &
                               moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc),&
