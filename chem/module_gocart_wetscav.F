@@ -23,6 +23,7 @@
 !TODO use reasonable thresholds instead of 0.0 in all the module
 !TODO remove unused arguments, e.g. dx, dy, config_flags, rho_phy, p_phy
 !TODO maybe use double precision
+!TODO qc,qi,qr,qs,qg should use b4mp arrays
 !
 
 MODULE module_gocart_wetscav
@@ -85,6 +86,8 @@ CONTAINS
    ! USE module_data_gocart_seas, only: reff_seas
    ! USE module_data_gocart_dust, only: reff_dust
 
+   IMPLICIT NONE
+
    !---- Dummy arguments
    TYPE(grid_config_rec_type), INTENT(IN) :: config_flags
    INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
@@ -121,7 +124,8 @@ CONTAINS
    REAL :: condensed_water, precip_water, liquid_fraction
    ! Rainout activation efficiency of species (0-1)
    REAL :: aq_aer_ratio_nv, ice_aer_ratio_nv
-   ! Total 3D precipitation trough cell for rain/snow/ice (kg/m2/hr), rainprod at i,k,j (kg/kg/s)
+   ! Total 3D precipitation trough cell for rain/snow/ice (kg/m2/hr), rain
+   ! production rate at i,k,j (kg/kg/s)
    REAL :: ppr, pps, ppi, rainrate
    ! Temperature (K)
    REAL :: tk
@@ -155,19 +159,20 @@ CONTAINS
    DO j=jts,jte
      DO i=its,ite
        fr = 0.0
+       deposition_flux(:) = 0.0
 
        DO k=kte-1,kts,-1 ! Do not change, needs to loop in descending order
-         deposition_flux(1:NAERSPECIES) = 0.0
          !---- Calculate parameters for rainout and washout schemes
          tk = t_phy(i, k, j)
          condensed_water = qc(i, k, j) + qi(i, k, j) + qr(i, k, j) + qs(i, k, j)
-         precip_water = qr(i,k,j) + qs(i,k,j)
+         ! Add evapprod to precip_water because evapprod was already applied to precip in mp
+         precip_water = qr(i,k,j) + qs(i,k,j) + evapprod(i,k,j)*dtstep
          IF(condensed_water .GT. 1.0E-12) THEN
            liquid_fraction = MIN(1.0, MAX(0.0, (qc(i, k, j)+qr(i, k, j)) / condensed_water))
          ELSE
            liquid_fraction = 1.0
          ENDIF
-         rainrate = MAX(rainprod(i,k,j), 0.0)
+         rainrate = rainprod(i,k,j)
          ! Total precipitation through grid cell in kg/m2/hr
          ppr = precr(i, k, j) * 3600.
          pps = precs(i, k, j) * 3600.
@@ -270,7 +275,7 @@ CONTAINS
            ! above, so this assumes that the timescale of precipitation to level
            ! k is smaller than dtstep
            IF(precip_water .GT. 0. .AND. evapprod(i,k,j) .GT. 0.) THEN
-             resusp_frac = precip_water / (evapprod(i,k,j) * dtstep)
+             resusp_frac = evapprod(i,k,j) * dtstep / precip_water
              resusp_frac = MAX(0.0, MIN(1.0, resusp_frac))
              resusp_aer = (resusp_frac * deposition_flux(nv) / (rho_phy(i,k,j) * dz8w(i,k,j)))
              chem(i,k,j,p_chem) = MAX(0.0, chem(i,k,j,p_chem) + resusp_aer)
@@ -293,7 +298,7 @@ CONTAINS
      !
      ! Dummy arguments:
      ! Input:
-     !   rainrate - preciptation formation rate (kg/kg/s)
+     !   rainrate - precipitation formation rate (kg/kg/s)
      !   dtstep - time step (s)
      !   condensed_water - condensed water mixing ratio (kg/kg)
      ! Output:
