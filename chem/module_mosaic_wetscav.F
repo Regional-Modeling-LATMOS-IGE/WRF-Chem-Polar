@@ -308,7 +308,7 @@ CONTAINS
 
       do 100 k=kts,kte
       do 100 i=its,ite
-         scale=1.0-dtstepc*qlsink(i,k,j)
+         scale=1.0-dtstepc*qlsink(i,k,j)*cldfra(i,k,j)
          scale=max(0.0,min(1.0,scale)) ! make sure 0 <= scale <= 1
          if (qlsink(i,k,j) >  0.0) then
             pdel_fac = pdel(i,k,j)/g
@@ -338,7 +338,7 @@ CONTAINS
       do 270 j = jts,jte
       do 270 k = kts,kte
       do 270 i = its,ite
-         fracscav = dtstepc*qlsink(i,k,j)*gas_aqfrac(i,k,j,l)
+         fracscav = dtstepc*qlsink(i,k,j)*gas_aqfrac(i,k,j,l)*cldfra(i,k,j)
          if (fracscav > 0.0) then ! make sure fracscav > 0
             fracscav = min(1.0,fracscav) ! make sure fracscav <= 1
             scale = 1.0 - fracscav

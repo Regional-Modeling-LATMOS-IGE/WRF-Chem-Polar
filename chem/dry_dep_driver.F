@@ -134,8 +134,10 @@ CONTAINS
                                                      xice,      &
                                           xland,znt,raincv,ash_fall
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
+          INTENT(IN ) ::                                     &
+                    cldfra        ! cloud fraction current timestep
+   REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
           INTENT(INOUT ) ::                                     &
-                    cldfra,     & ! cloud fraction current timestep
                     cldfra_old    ! cloud fraction previous timestep
    REAL,  DIMENSION( ims:ime , jms:jme, 5 )                   ,    &
           INTENT(IN) ::            seasin,dustin 
