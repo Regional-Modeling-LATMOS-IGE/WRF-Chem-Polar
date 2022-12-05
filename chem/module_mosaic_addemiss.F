@@ -36,7 +36,7 @@ CONTAINS
                dust_emiss_active, seasalt_emiss_active,                    &
                dust_flux, seas_flux,                                       &
                !LMarelle++
-               xice,                                                       &
+               xice, emiss_br2,                                            &
                !LMarelle--
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
@@ -73,8 +73,10 @@ CONTAINS
    REAL, INTENT(IN   ) ::  dx, g
    REAL, DIMENSION( ims:ime, jms:jme,3),&
          INTENT(IN ) ::     erod
-   !LMarelle -  ice fraction for sea salt and Br2 emissions
+   !LMarelle -  ice fraction for sea salt and Br2 emissions, Accumulated Br2
+   ! emission flux diagnosis (mole/m2)
    REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: xice
+   REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT) :: emiss_br2
 
 
    REAL, INTENT(IN   ) ::    dtstep
@@ -461,7 +463,7 @@ real, save :: fr8b_bburn_mosaic(8) = &
 
          chem_select_1 : SELECT CASE( config_flags%chem_opt )
          CASE(SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-              SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(12/04/2013): Added SAPRC 8 bin and non-aq on 04/03/2014! Set the oc to zero for VBS
+              SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(12/04/2013): Added SAPRC 8 bin and non-aq on 04/03/2014! Set the oc to zero for VBS
              aem_oc = 0.0
          END SELECT  chem_select_1 
 
@@ -616,7 +618,7 @@ size_loop: &
 
          chem_select_3 : SELECT CASE( config_flags%chem_opt )
             CASE(SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-              SAPRC99_MOSAIC_8BIN_VBS2_KPP) ! Set the fire oc to zero for VBS
+              SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP) ! Set the fire oc to zero for VBS
               aem_oc = 0.0
             END SELECT  chem_select_3 
  
@@ -718,7 +720,7 @@ size_loop: &
                id, dtstep, u10, v10, alt, dz8w, xland, config_flags, chem, &
                seas_flux,                                                  &
                !LMarelle++
-               xice,                                                       &
+               xice, emiss_br2,                                            &
                !LMarelle--
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
@@ -768,7 +770,7 @@ size_loop: &
                id, dtstep, u10, v10, alt, dz8w, xland, config_flags, chem, &
                seas_flux,                                                  &
                !LMarelle++
-               xice,                                                       &
+               xice, emiss_br2,                                            &
                !LMarelle--
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
@@ -798,8 +800,10 @@ size_loop: &
 ! 10-m wind speed components (m/s)
    REAL,  DIMENSION( ims:ime , jms:jme ),                                  &
           INTENT(IN   ) ::   u10, v10, xland
-!LMarelle -  ice fraction for sea salt and Br2 emissions
+   !LMarelle -  ice fraction for sea salt and Br2 emissions, Accumulated Br2
+   ! emission flux diagnosis (mole/m2)
    REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: xice
+   REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT) :: emiss_br2
 
 ! trace species mixing ratios (aerosol mass = ug/kg; number = #/kg)
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, num_chem ),                 &
@@ -927,8 +931,8 @@ size_loop: &
                 !++LMarelle
                 ! Factor for ug/m2/s to ppmv(Br2) conversion. factaa converts to
                 ! ug/kg, and 28.97 / 159.81 is the ratio of molar weights for
-                ! ug/kg to ppmv conversion
-                fact_ppm_br2 = factaa * 28.97 / 159.81
+                ! mg/kg to ppmv conversion
+                fact_ppm_br2 = factaa * 1.E-3 * 28.97 / 159.81
                 !--LMarelle
 	
 		if(seasalt_emiss_active == 1)then
@@ -960,6 +964,9 @@ size_loop: &
                                         if (P_br2 >= p1st) then
                                            chem(i,k,j,P_br2) = chem(i,k,j,P_br2) +   &
                                                    ssemfact_mass(n,itype) * br2_nacl_massratio * fact_ppm_br2 * xocean
+                                           emiss_br2(i,j) = emiss_br2(i,j) + &
+                                                   ssemfact_mass(n,itype) * br2_nacl_massratio * xocean &
+                                                   * 1.0E-6 * dtstep / 159.808
 
                                         end if
                                         !--LMarelle

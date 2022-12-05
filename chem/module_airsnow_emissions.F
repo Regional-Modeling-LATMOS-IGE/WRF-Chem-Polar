@@ -51,7 +51,7 @@ CONTAINS
 !----------------------------------------------------------------------
   SUBROUTINE airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
          v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
-         xice, meltedsnow, coszen,                                     &
+         xice, lakemask, meltedsnow, coszen,                           &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
          ids,ide, jds,jde, kds,kde,                                    &
@@ -90,9 +90,9 @@ CONTAINS
         INTENT(IN ) :: moist
   ! 10m-x-direction-windspeed (m/s), 10m-y-direction-windspeed (m/s), friction
   ! velocity (m/s), 2m-temperature (K), Snow height (m), skin temperature (K),
-  ! ice fraction (0-1), cosine of solar zenith angle (dimensionless)
+  ! ice fraction (0-1), lake mask (0-1), cosine of solar zenith angle (dimensionless)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
-        INTENT(IN) :: u10, v10, ust, t2, snowh, tsk, xice, coszen
+        INTENT(IN) :: u10, v10, ust, t2, snowh, tsk, xice, lakemask, coszen
   ! Past snow melt flag (dimensionless flag)
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: meltedsnow
@@ -243,7 +243,7 @@ CONTAINS
         !october and later or with new snow fall !TODO this should ideally drift
         !with sea ice !TODO this should ideally read in observed sea ice state
         !(snow state, snow salinity etc.)
-        IF(tsk(i, j) .GT. 273.15) THEN
+        IF(tsk(i, j) .GT. tskcrit) THEN
           meltedsnow(i,j) = 1.
         ENDIF
 
@@ -255,9 +255,11 @@ CONTAINS
           IF (do_snow_emissions) THEN
             ! O3 deposition over first-year sea ice is converted to Br2 with a
             ! molar yield of 0.075 for SZA <= 85°
-            IF (coszen(i,j) .GE. 0.087 .AND. xice(i,j) .GT. seaice_crit) THEN
+            IF (coszen(i,j) .GE. 0.087 .AND. xice(i,j) .GT. seaice_crit &
+                .AND. lakemask(i,j) .LT. 0.5) THEN
               br2_emi = br2_emi + drydepflx_o3(i,j) * 0.075 * xice(i,j)
-            ELSEIF (coszen(i,j) .LT. 0.087 .AND. xice(i,j) .GT. seaice_crit) THEN
+            ELSEIF (coszen(i,j) .LT. 0.087 .AND. xice(i,j) .GT. seaice_crit &
+                    .AND. lakemask(i,j) .LT. 0.5) THEN
               br2_emi = br2_emi + drydepflx_o3(i,j) * 0.001 * xice(i,j)
 
             END IF ! coszen >= 0.087 <=> SZA <= 85°, and over ice
@@ -266,7 +268,7 @@ CONTAINS
           !---- Br2 "recycling" release
 
           ! Over sea ice
-          IF (xice(i,j) .GT. seaice_crit) THEN
+          IF (xice(i,j) .GT. seaice_crit .AND. lakemask(i,j) .LT. 0.5) THEN
             ! Over FY ice, HOBr and BrONO2 deposition gets converted to Br2
             br2_emi = br2_emi + (drydepflx_hobr(i,j) + drydepflx_brno3(i,j)) * xice(i,j)
 
@@ -306,8 +308,9 @@ CONTAINS
       !-------- Halogen emissions from blowing snow
 
       IF (do_blowing_snow) THEN
-        ! Only over sea-ice, and below TSKcrit (freezing)
-        IF (xice(i, j) .GT. seaice_crit .AND. tsk(i,j) .LT. tskcrit) THEN
+        ! Only valid over sea-ice and for snow that has not experienced recent melt
+        IF (xice(i, j) .GT. seaice_crit .AND. meltedsnow(i,j) .LT. 0.5 &
+          .AND. lakemask(i,j) .LT. 0.5) THEN
           ! Calculate the critical 10m wind speed for blowing snow, from Yang et
           ! al. (2008)
           w10_crit = w10_0 + 0.0033 * (t2(i,j) - 273.15 + 27.27) ** 2.0

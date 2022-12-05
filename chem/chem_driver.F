@@ -898,7 +898,7 @@
          ! stuff for LNOx emissions
              grid%ht, grid%refl_10cm, grid%ic_flashrate, grid%cg_flashrate,                 &
          ! stuff for Br2 emissions from snow
-              grid%snowc, grid%xice, grid%meltedsnow, grid%coszen,                         &
+              grid%snowc, grid%xice, grid%lakemask, grid%meltedsnow, grid%coszen,          &
               grid%drydepflx_o3, grid%drydepflx_hobr,                                      &
               grid%drydepflx_brno3, grid%drydepflx_hbr, grid%drydepflx_br2,                &
               grid%emiss_br2,                                                              &

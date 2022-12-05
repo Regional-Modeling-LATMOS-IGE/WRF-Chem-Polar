@@ -101,7 +101,6 @@
  BrCl = IGNORE;      
  HCl = IGNORE;       
  ClONO = IGNORE;     
- CH3 = IGNORE;       
  HCO = IGNORE;       
  ClOO = IGNORE;      
  CHCl3 = IGNORE;     
@@ -124,7 +123,6 @@
  CHBr3 = IGNORE;     
  CH2BrCl = IGNORE;   
  CHBrCl = IGNORE;    
- H = IGNORE;         
  HBr = IGNORE;       
  CBr3 = IGNORE;      
  NOCl = IGNORE;      

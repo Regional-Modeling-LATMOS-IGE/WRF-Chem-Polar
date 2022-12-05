@@ -68,7 +68,7 @@ CONTAINS
          ic_flashrate, cg_flashrate,                                       &
          ! end stuff for LNOx emissions
          ! stuff for Br2 emissions from snow
-         snowc, xice, meltedsnow, coszen,                                  &
+         snowc, xice, lakemask, meltedsnow, coszen,                        &
          drydepflx_o3, drydepflx_hobr,                                     &
          drydepflx_brno3, drydepflx_hbr, drydepflx_br2, emiss_br2,         &
          ! stuff for aircraft emissions
@@ -344,7 +344,8 @@ CONTAINS
 ! end stuff for lightning NOx
 ! stuff for Br2 emissions from snow
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: snowc, xice, coszen, drydepflx_o3, &
-                            drydepflx_hobr, drydepflx_brno3, drydepflx_hbr, drydepflx_br2
+                            drydepflx_hobr, drydepflx_brno3, drydepflx_hbr, drydepflx_br2, &
+                            lakemask
   REAL, DIMENSION(ims:ime, jms:jme)               ,               &
         INTENT(INOUT) :: emiss_br2, meltedsnow
 
@@ -808,7 +809,7 @@ CONTAINS
         CALL wrf_debug(15, 'Br2 emissions from snow')
         CALL airsnow_emissions( id, dtstep, dz8w, moist, t_phy, p_phy, u_phy, &
          v_phy, rho_phy, chem, u10, v10, ust, T2, snowh, tsk,          &
-         xice, meltedsnow, coszen,                                     &
+         xice, lakemask, meltedsnow, coszen,                           &
          drydepflx_o3, drydepflx_hobr, drydepflx_brno3,                &
          drydepflx_hbr, drydepflx_br2, emiss_br2,                      &
          ids,ide, jds,jde, kds,kde,                                    &
@@ -1678,7 +1679,7 @@ CONTAINS
             dust_emiss_active, seasalt_emiss_active,                     &
             dust_flux, seas_flux,                                        &
             !LMarelle++
-            xice,                                                        &
+            xice, emiss_br2,                                             &
             !LMarelle--
             ids,ide, jds,jde, kds,kde,                                   &
             ims,ime, jms,jme, kms,kme,                                   &

@@ -103,11 +103,11 @@ REAL(KIND=dp) FUNCTION khet_halogens_aer(k_uptake_gas, C_halogen_aer, &
                                          C_uptake_gas)
   REAL(KIND=dp),INTENT(IN) :: k_uptake_gas, C_halogen_aer, C_uptake_gas
   ! - k_uptake_gas, uptake rate of species "uptake_gas" on aerosols, 
-  !   from WRF-Chem (KPP units)
+  !   from WRF-Chem (s-1)
   ! - C_halogen_aer, air concentration of aerosol-borne halogen (e.g. 
-  !   Br_aer) (KPP units)
-  ! - C_uptake_gas, air concentration of uptaken gas (e.g. N2O5) (KPP units)
-  ! - This routine returns the reaction rate khet_halogens_aer (KPP units)
+  !   Br_aer) (molecules cm-3)
+  ! - C_uptake_gas, air concentration of uptaken gas (e.g. N2O5) (molecules cm-3)
+  ! - This routine returns the reaction rate khet_halogens_aer (s-1 molecules-1 cm3)
   !   for the reaction uptake_gas + halogen_aer, independent on the 
   ! concentration of halogen_aer.
 
