@@ -236,13 +236,13 @@
 ! Sedimentation
 
 !   vertical level depths in cm at i,j
-    dz_ij(kts:kte) = dz8w(it,:,jt)*1.0E2_r8 !m -> cm 
+    dz_ij(kts:kte) = dz8w(it,kts:kte,jt)*1.0E2_r8 !m -> cm
 !   Compute the mass column for mass checks, only for one species for now
     l1 = lptr_so4_aer(n,itype,iphase)
     !µg/kg -> µg/m3 -> µg/m2
     check_mass_before(kts:kte)=(dz8w(it,kts:kte,jt)*chem(it,kts:kte,jt,l1)*rho_phy(it,kts:kte,jt))
 
-    do kt = kts, kte 
+    do kt = kts, kte-1
 
       ! Determine the maximum time-step satisying the CFL condition:
       ! dt <= (dz)_min / v_settl
