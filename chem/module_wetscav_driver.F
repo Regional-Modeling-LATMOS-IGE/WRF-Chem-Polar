@@ -62,8 +62,7 @@ CONTAINS
    USE module_model_constants
    USE modal_aero_data,        only:  ntot_amode               ! For cam_mam_wetscav variables
    USE module_mozcart_wetscav, only:  wetscav_mozcart
-   !LMarelle
-   USE module_gocart_wetscav, only:  wetscav_gocart
+   USE module_aer_wetscav_simple, only:  aer_wetscav_simple
    USE module_mosaic_wetscav, only:  wetscav_cbmz_mosaic, wetscav_mozart_mosaic
 !!! TUCCELLA (BUG, the line below is commented now)
    !USE module_aerosols_sorgam, only:  wetscav_sorgam_driver
@@ -405,19 +404,20 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
                              ids,ide, jds,jde, kds,kde,                         &
                              ims,ime, jms,jme, kms,kme,                         &
                              its,ite, jts,jte, kts,kte                          )
-       !LMarelle - additional scavenging routine for GOCART aerosols
+       ! Additional simple scavenging for aerosols, wetscav_mozcart only treats
+       ! gases
        IF(config_flags%chem_opt == MOZCART_KPP) THEN
-         CALL wrf_debug(15,'wetscav_driver calling wetscav_gocart')
-         call wetscav_gocart( id, dtstep, config_flags,             &
-                              t_phy, p_phy, dz8w,             &
-                              chem, rho_phy, cldfra_ls, rainrate, evaprate,    &
-                              precr, preci, precs, precg, dx, dy,           &
-                              moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc),&
-                              moist(ims,kms,jms,p_qi), moist(ims,kms,jms,p_qs),&
-                              moist(ims,kms,jms,p_qr),&
-                              ids,ide, jds,jde, kds,kde,                       &
-                              ims,ime, jms,jme, kms,kme,                       &
-                              its,ite, jts,jte, kts,kte                        )
+         CALL wrf_debug(15,'wetscav_driver calling aer_wetscav_simple')
+         call aer_wetscav_simple( id, dtstep, config_flags,                         &
+                                  t_phy, p_phy, dz8w,                               &
+                                  chem, rho_phy, cldfra_ls, rainrate, evaprate,     &
+                                  precr, preci, precs, precg, dx, dy,               &
+                                  moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc), &
+                                  moist(ims,kms,jms,p_qi), moist(ims,kms,jms,p_qs), &
+                                  moist(ims,kms,jms,p_qr),                          &
+                                  ids,ide, jds,jde, kds,kde,                        &
+                                  ims,ime, jms,jme, kms,kme,                        &
+                                  its,ite, jts,jte, kts,kte                         )
        ENDIF
 
         hno3_col_mdel = delta_mass_col(:,:,p_hno3)

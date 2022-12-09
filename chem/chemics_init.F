@@ -65,6 +65,8 @@
    USE module_cam_support, only: numgas_mam, gas_pcnst_modal_aero,gas_pcnst_modal_aero_pos !BSINGH - Fix for non-MAM simulations
    USE module_HLawConst, only: init_HLawConst
    USE module_ctrans_grell, only: conv_tr_wetscav_init
+   USE module_aer_aqchem_simple, only: aer_aqchem_simple_init
+   USE module_aer_wetscav_simple, only: aer_wetscav_simple_init
 
 !!! TUCCELLA (BUG)
    USE module_prep_wetscav_sorgam, only: aerosols_sorgam_init_aercld_ptrs, aerosols_soa_vbs_init_aercld_ptrs 
@@ -325,6 +327,7 @@ call wrf_message("**************************************************************
 
 !!! TUCCELLA
    if ( config_flags%wetscav_onoff == 1 ) then
+     ! Non MOZART options
      if( .not. is_moz_chm ) then
        if(  ( config_flags%chem_opt >= 8 .AND. config_flags%chem_opt <= 13) .OR.  &
             ( config_flags%chem_opt >= 31 .AND. config_flags%chem_opt <= 36) .OR. &
@@ -342,14 +345,26 @@ call wrf_message("**************************************************************
             .and. config_flags%mp_physics /= 17 .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22) then
          call wrf_error_fatal("ERROR: wet scavenging option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or 17/18/22 NSSL_2mom to function.")
        endif
+     ! MOZART options and domain id = 1
      elseif( id == 1 ) then
        if ( config_flags%mp_physics /= 6 .and. config_flags%mp_physics /= 8 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 17  &
             .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 .and. config_flags%mp_physics /= 28) then
          call wrf_error_fatal("ERROR: wet scavenging option for MOZART,MOZCART requires mp_phys = 6 (WSM6) or 8,28 (Thompson) or 10 (Morrison) .or 17/18/22 (NSSL 2-moment) to function.")
        else
+         ! MOZART (trace gas) wet scavenging
          write(message_txt,*) 'chem_init: calling wetscav_mozcart_init for domain ',id
          call wrf_message( trim(message_txt) )
          call wetscav_mozcart_init( id, numgas, config_flags )
+         ! Simple aerosol wet scavenging for MOZCART_KPP
+         ! - Can be enabled for any GOCART chem_opt as long as sulf scavenging is
+         !   removed from wetscav_mozcart_init to avoid double counting
+         ! - Can be enabled for other aerosol mechanisms if the proper mapping
+         !   for chem_opt is provided in aer_wetscav_simple_init and if
+         !   aerosol wetscav is not already done elsewhere for this chem_opt
+         if (config_flags%chem_opt == MOZCART_KPP) then
+           call wrf_debug( 15, 'Chemics_init: Calling aer_wetscav_simple_init' )
+           call aer_wetscav_simple_init(config_flags%chem_opt)
+         endif
        endif
      endif
    endif
@@ -374,7 +389,13 @@ call wrf_message("**************************************************************
             .and. config_flags%mp_physics /= 17 .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 ) then
           call wrf_error_fatal("ERROR: cloud chemistry option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or 17/18/22 NSSL_2mom to function.")
         endif
-     endif
+      ! Simple aqueous cloud chemistry for MOZCART_KPP
+      ! - Can be enabled for any GOCART chem_opt if aqueous chemistry is not
+      !   already done elsewhere for this chem_opt
+      elseif(config_flags%chem_opt == MOZCART_KPP .AND. id == 1 ) then
+         call wrf_debug( 15, 'Chemics_init: Calling aer_aqchem_simple_init' )
+         call aer_aqchem_simple_init(config_flags%chem_opt)
+      endif
    endif
 
    !BSINGH - kfcup schme only works with Mosaic aqueoue packages:

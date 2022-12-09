@@ -1,10 +1,13 @@
-! 2021/10/12 Louis Marelle for CICERO
+! 2022/12/09 Louis Marelle for LATMOS and CICERO
 !
 ! Purpose:
-! Perform cloud-phase aqueous chemistry for GOCART (MOZCART)
+! Perform cloud-phase aqueous chemistry
 !
-! Cloud chemistry can also be performed in gocart_chem but the approach there is
-! too simple and strongly overestimates the speed of so2 oxidation
+! Remarks:
+!  - Only enabled for MOZCART for now
+!  - For GOCART, cloud chemistry can also be performed in gocart_chem but the
+!    approach there is too simple and strongly overestimates the speed of so2
+!    oxidation
 !
 ! References:
 ! ==============================================================================
@@ -16,7 +19,7 @@
 ! (2) Andre K. Pattantyus, Steven Businger, Steven G. Howell, Review of sulfur
 !     dioxide to sulfate aerosol chemistry at Kīlauea Volcano, Hawaii,
 !     Atmospheric Environment, Volume 185, 2018, Pages 262-271, ISSN
-!     1352-2310, https://doi.org/10.1016/j.atmosenv.2018.04.055.  
+!     1352-2310, https://doi.org/10.1016/j.atmosenv.2018.04.055.
 ! (3) Luo, G., Yu, F., and Moch, J. M.: Further improvement of wet process
 !     treatments in GEOS-Chem v12.6.0: impact on global distributions of
 !     aerosols and aerosol precursors, Geosci. Model Dev., 13, 2879–2903,
@@ -24,7 +27,7 @@
 !
 !TODO use double precision everywhere?
 
-MODULE module_gocart_aqchem
+MODULE module_aer_aqchem_simple
 
    ! USE module_wrf_error, ONLY : wrf_debug
 
@@ -32,31 +35,43 @@ MODULE module_gocart_aqchem
 
    PRIVATE
 
-   PUBLIC :: gocart_aqchem_driver
+   PUBLIC :: aer_aqchem_simple, aer_aqchem_simple_init
 
-   ! Global parameters in module:
-   ! H+ concentration in aqueous phase (mol L-1) 
+   !---- Global module-wide variables
+   !-- Allocatable size-resolved aerosol arrays
+   ! Dim is size bin number and depends on aerosol mechanism.
+   ! These are initialized in aer_aqchem_simple_init
+   REAL, DIMENSION(:), ALLOCATABLE :: bin_diameters_cen
+   ! Number of sulfate aerosol bins/modes for chem_opt in use
+   INTEGER :: naersizes
+   ! chem_opt aerosol model family
+   LOGICAL :: aer_is_gocart
+   LOGICAL :: aer_is_mosaic4bin
+   LOGICAL :: aer_is_mosaic8bin
+   !-- Parameters
+   ! H+ concentration in aqueous phase (mol L-1)
    !TODO should solve for pH to calculate cloudborne_h, here I use pH =
    ! 4.5 which probably overestimates reaction rates
    REAL, PARAMETER :: cloudborne_h = 3.16E-5
 
 
+
 CONTAINS
 
-!------------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 
-   SUBROUTINE gocart_aqchem_driver(                     &
-              id, dtstep, config_flags,                 &
-              p_phy, t_phy, rho_phy,                    &
-              moist, chem, cldfra,                      &
-              ids,ide, jds,jde, kds,kde,                &
-              ims,ime, jms,jme, kms,kme,                &
+   SUBROUTINE aer_aqchem_simple(                     &
+              id, dtstep, config_flags,              &
+              p_phy, t_phy, rho_phy,                 &
+              moist, chem, cldfra,                   &
+              ids,ide, jds,jde, kds,kde,             &
+              ims,ime, jms,jme, kms,kme,             &
               its,ite, jts,jte, kts,kte )
 
    ! Purpose:
-   ! Calculates and updates cloud chemistry tendencies for GOCART (MOZCART)
+   ! Calculates and updates cloud chemistry tendencies for aerosols
    !
-   ! Dummy arguments:
+   ! Arguments:
    ! Input:
    !   id = domain ID
    !   dtstep = model time step (s)
@@ -71,9 +86,10 @@ CONTAINS
    !   chem = advected chemical species (gases in ppm, aerosols in µg/kg)
    !
    ! Remarks:
-   ! I assume here that all aqueous species are released to the gas phase at
-   ! the end of the call, but in reality it only happens by desorption or 
-   ! evaporation of cloud droplets
+   !  - Only done for MOZCART for now
+   !  - I assume here that all aqueous species are released to the gas phase
+   !    at the end of the call, but in reality it only happens by desorption
+   !    or evaporation of cloud droplets
 
    ! USE associations:
    !TODO Use ONLY:
@@ -82,7 +98,7 @@ CONTAINS
    ! molar weight of dry air in g/mol, water density in kg/m3 = g/L
    USE module_model_constants, ONLY: mwdry,rhowater
 
-   !---- Dummy arguments
+   !---- Arguments
    INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
                           ims,ime, jms,jme, kms,kme,    &
                           its,ite, jts,jte, kts,kte,    &
@@ -175,9 +191,9 @@ CONTAINS
      END DO ! k
    END DO ! j
 
-   END SUBROUTINE gocart_aqchem_driver
+   END SUBROUTINE aer_aqchem_simple
 
-!------------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 
    SUBROUTINE dissolved_gas_frac(tk, lwc, fw_so2, fw_h2o2)
 
@@ -185,7 +201,7 @@ CONTAINS
      ! Calculates fw, the fraction of dissolved so2 and h2o2 gas in aqueous
      ! phase (unitless), following Luo et al. (2020)
      !
-     ! Dummy arguments:
+     ! Arguments:
      ! Input:
      !   tk = air temperature (K)
      !   lwc = in-cloud liquid water content (m3 water / m3 air)
@@ -195,7 +211,7 @@ CONTAINS
 
      IMPLICIT NONE
 
-     ! Dummy arguments
+     ! Arguments
      REAL, INTENT(IN) :: tk
      REAL, INTENT(IN) :: lwc
      REAL, INTENT(OUT) :: fw_so2
@@ -232,7 +248,71 @@ CONTAINS
 
    END SUBROUTINE dissolved_gas_frac
 
-!------------------------------------------------------------------------------
+!----------------------------------------------------------------------------
 
-END MODULE module_gocart_aqchem
+   SUBROUTINE aer_aqchem_simple_init(chem_opt)
+
+     ! Purpose
+     !  Initialize aer_wetscav_simple parameters, which depend on chem_opt
+     !
+     ! Arguments
+     !  chem_opt TODO
+     !
+     ! Remarks
+     !  TODO
+     !  TODO check that species exist, define naerbins (1 for GOCART)
+
+     USE module_state_description ! For chem_opt option values
+
+     IMPLICIT NONE
+
+     ! Arguments
+     !  Input
+     INTEGER, INTENT(IN) :: chem_opt
+
+    !---- Initialize chem mechanism families IDs
+    aer_is_gocart = chem_opt == MOZCART_KPP .OR. &
+                    chem_opt == T1_MOZCART_KPP .OR. &
+                    chem_opt == GOCART_SIMPLE .OR. &
+                    chem_opt == GOCARTRADM2 .OR. &
+                    chem_opt == GOCARTRACM_KPP
+
+    aer_is_mosaic4bin = chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                        chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                        chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                        chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                        chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                        chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                        chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                        chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
+
+    aer_is_mosaic8bin = chem_opt == CBMZ_MOSAIC_8BIN .OR. &
+                        chem_opt == CBMZ_MOSAIC_DMS_8BIN .OR. &
+                        chem_opt == CBMZ_MOSAIC_8BIN_AQ .OR. &
+                        chem_opt == CBMZ_MOSAIC_DMS_8BIN_AQ .OR. &
+                        chem_opt == CRI_MOSAIC_8BIN_AQ_KPP .OR. &
+                        chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .OR. &
+                        chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP
+
+
+    !-------- Initialize aerosol bin/mode number for chem_opt --------
+    ! This could be recovered from the aerosol scheme data directly
+    IF(aer_is_gocart) THEN
+      ! GOCART cases with 1 bulk sulfate value
+      naersizes = 1
+    ELSEIF(aer_is_mosaic8bin) THEN
+      ! MOSAIC-8bin cases
+      naersizes = 8
+    ELSEIF(aer_is_mosaic4bin) THEN
+      ! MOSAIC-4bin cases
+      naersizes = 4
+    ELSE
+      CALL wrf_error_fatal ('aer_aqchem_simple_init: chem_opt not supported')
+    ENDIF
+
+   END SUBROUTINE aer_aqchem_simple_init
+
+!----------------------------------------------------------------------------
+
+END MODULE module_aer_aqchem_simple
 

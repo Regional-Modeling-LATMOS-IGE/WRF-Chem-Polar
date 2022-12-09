@@ -64,8 +64,8 @@ MODULES =                                 \
         module_interpolate.o              \
         module_mosaic_csuesat.o           \
         module_mozcart_wetscav.o          \
-        module_gocart_wetscav.o           \
-        module_gocart_aqchem.o            \
+        module_aer_wetscav_simple.o       \
+        module_aer_aqchem_simple.o        \
         module_peg_util.o                 \
         module_tropopause.o               \
         module_upper_bc_driver.o          \
