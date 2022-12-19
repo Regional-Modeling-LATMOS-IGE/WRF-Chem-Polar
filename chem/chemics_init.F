@@ -355,13 +355,16 @@ call wrf_message("**************************************************************
          write(message_txt,*) 'chem_init: calling wetscav_mozcart_init for domain ',id
          call wrf_message( trim(message_txt) )
          call wetscav_mozcart_init( id, numgas, config_flags )
-         ! Simple aerosol wet scavenging for MOZCART_KPP
+         ! Simple aerosol wet scavenging
          ! - Can be enabled for any GOCART chem_opt as long as sulf scavenging is
-         !   removed from wetscav_mozcart_init to avoid double counting
+         !   removed from wetscav_mozcart_init to avoid double counting and
+         !   flags are also added in aer_wetscav_simple_init and wetscav_driver
          ! - Can be enabled for other aerosol mechanisms if the proper mapping
          !   for chem_opt is provided in aer_wetscav_simple_init and if
          !   aerosol wetscav is not already done elsewhere for this chem_opt
-         if (config_flags%chem_opt == MOZCART_KPP) then
+         !   (also edit flags in wetscav_driver)
+         if (config_flags%chem_opt == MOZCART_KPP &
+             .OR. config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP) then
            call wrf_debug( 15, 'Chemics_init: Calling aer_wetscav_simple_init' )
            call aer_wetscav_simple_init(config_flags%chem_opt)
          endif
