@@ -396,6 +396,17 @@ call wrf_message("**************************************************************
      endif
    endif
 
+   ! Coupling THOMPSONAERO microphysics to WRF-Chem aerosols is only allowed with GOCART
+   IF (config_flags%mp_physics == THOMPSONAERO .AND. config_flags%thompson_aer_from_chem == 1) THEN
+     IF (.not. (config_flags%chem_opt == MOZCART_KPP .OR. &
+                config_flags%chem_opt == T1_MOZCART_KPP .OR. &
+                config_flags%chem_opt == GOCART_SIMPLE .OR. &
+                config_flags%chem_opt == GOCARTRADM2 .OR. &
+                config_flags%chem_opt == GOCARTRACM_KPP)) THEN
+       CALL wrf_error_fatal('chemics_init: thompson_aer_from_chem in THOMPSONAERO microphysics requires GOCART aerosols')
+     ENDIF
+   ENDIF
+
    if ( config_flags%cu_physics == 5 .OR. config_flags%cu_physics == 3) then
    if ( config_flags%cu_diag == 0) then
          call wrf_message(" No time averaged variables. Time averaged chem variables requires cu_diag = 1")

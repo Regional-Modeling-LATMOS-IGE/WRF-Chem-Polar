@@ -983,6 +983,7 @@
 #if ( WRF_CHEM == 1 )
                               wetscav_on, rainprod, evapprod, &
 #endif
+                              wfa_ifa_from_chem, &
                               refl_10cm, diagflag, ke_diag, do_radar_ref,      &
                               re_cloud, re_ice, re_snow,              &
                               has_reqc, has_reqi, has_reqs,           &
@@ -1021,6 +1022,7 @@
 #if ( WRF_CHEM == 1 )
       LOGICAL, INTENT(in) :: wetscav_on
 #endif
+      LOGICAL, INTENT(IN) :: wfa_ifa_from_chem
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: &
@@ -1156,6 +1158,7 @@
 #if ( WRF_CHEM == 1 )
                       wetscav_on, rainprod1d, evapprod1d, &
 #endif
+                      wfa_ifa_from_chem, &
                       kts, kte, dt, i, j)
 
          pcp_ra(i,j) = pptrain
@@ -1181,8 +1184,12 @@
 !.. number tendency (number per kg per second).
          if (is_aerosol_aware) then
 !-GT        nwfa1d(kts) = nwfa1
-            nwfa1d(kts) = nwfa1d(kts) + nwfa2d(i,j)*dt_in
-            nifa1d(kts) = nifa1d(kts) + nifa2d(i,j)*dt_in
+            ! Do not use for WRF-Chem since emissions are already performed
+            ! there
+            IF (.NOT. wfa_ifa_from_chem) THEN
+              nwfa1d(kts) = nwfa1d(kts) + nwfa2d(i,j)*dt_in
+              nifa1d(kts) = nifa1d(kts) + nifa2d(i,j)*dt_in
+            ENDIF
 
             do k = kts, kte
                nc(i,k,j) = nc1d(k)
@@ -1361,6 +1368,7 @@
 #if ( WRF_CHEM == 1 )
                           wetscav_on, rainprod, evapprod, &
 #endif
+                          wfa_ifa_from_chem, &
                           kts, kte, dt, ii, jj)
 
       implicit none
@@ -1378,6 +1386,7 @@
                           rainprod, evapprod
       LOGICAL, INTENT(IN) :: wetscav_on
 #endif
+      LOGICAL, INTENT(IN) :: wfa_ifa_from_chem
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: tten, qvten, qcten, qiten, &
@@ -1608,8 +1617,14 @@
          qv(k) = MAX(1.E-10, qv1d(k))
          pres(k) = p1d(k)
          rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
-         nwfa(k) = MAX(11.1E6, MIN(9999.E6, nwfa1d(k)*rho(k)))
-         nifa(k) = MAX(naIN1*0.01, MIN(9999.E6, nifa1d(k)*rho(k)))
+         IF(wfa_ifa_from_chem) THEN
+           !TODO LMarelle check again, why not apply min/max val here?
+           nwfa(k) = nwfa1d(k)*rho(k)
+           nifa(k) = nifa1d(k)*rho(k)
+         ELSE
+           nwfa(k) = MAX(11.1E6, MIN(9999.E6, nwfa1d(k)*rho(k)))
+           nifa(k) = MAX(naIN1*0.01, MIN(9999.E6, nifa1d(k)*rho(k)))
+         ENDIF
 
          if (qc1d(k) .gt. R1) then
             no_micro = .false.
@@ -2789,7 +2804,14 @@
          ocp(k) = 1./(Cp*(1.+0.887*qv(k)))
          lvt2(k)=lvap(k)*lvap(k)*ocp(k)*oRv*otemp*otemp
 
-         nwfa(k) = MAX(11.1E6, (nwfa1d(k) + nwfaten(k)*DT)*rho(k))
+         IF(wfa_ifa_from_chem) THEN
+           ! Do not use for WRF-Chem because tendencies are already applied
+           ! there
+           !TODO check if the min value should be reapplied
+           nwfa(k) = nwfa1d(k)*rho(k)
+         ELSE
+           nwfa(k) = MAX(11.1E6, (nwfa1d(k) + nwfaten(k)*DT)*rho(k))
+         ENDIF
       enddo
 
       do k = kts, kte
@@ -3499,10 +3521,18 @@
          qv1d(k) = MAX(1.E-10, qv1d(k) + qvten(k)*DT)
          qc1d(k) = qc1d(k) + qcten(k)*DT
          nc1d(k) = MAX(2./rho(k), MIN(nc1d(k) + ncten(k)*DT, Nt_c_max))
-         nwfa1d(k) = MAX(11.1E6, MIN(9999.E6,                           &
+         IF(.NOT. wfa_ifa_from_chem) THEN
+           ! Do not use for WRF-Chem because tendencies are already applied
+           ! there
+           !TODO LMarelle I am 99% sure these values should be divided by
+           !     rho, check again
+           !TODO check why I do not reapply min/max values, probably because
+           ! this is already done in wfa/ifa calc?
+           nwfa1d(k) = MAX(11.1E6/rho(k), MIN(9999.E6/rho(k),             &
                        (nwfa1d(k)+nwfaten(k)*DT)))
-         nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6,                       &
+           nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6/rho(k),                &
                        (nifa1d(k)+nifaten(k)*DT)))
+         ENDIF
 
          if (qc1d(k) .le. R1) then
            qc1d(k) = 0.0

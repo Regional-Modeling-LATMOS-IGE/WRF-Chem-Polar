@@ -11,7 +11,7 @@ SUBROUTINE microphysics_driver(                                          &
                       ,specified, channel_switch                         &
                       ,warm_rain                                         &
                       ,t8w                                               &
-                      ,chem_opt, progn                                   &
+                      ,chem_opt, progn, thompson_aer_from_chem           &
                       ,cldfra, cldfra_old, exch_h, nsource               &
                       ,qlsink, precr, preci, precs, precg                &
                       ,xland,snowh,itimestep                             &
@@ -412,7 +412,7 @@ SUBROUTINE microphysics_driver(                                          &
    TYPE(grid_config_rec_type),  INTENT(IN   ) , OPTIONAL   :: config_flags
    INTEGER,    INTENT(IN   )    :: mp_physics
    LOGICAL,    INTENT(IN   )    :: specified
-   INTEGER, OPTIONAL, INTENT(IN   )    :: chem_opt, progn
+   INTEGER, OPTIONAL, INTENT(IN   )    :: chem_opt, progn, thompson_aer_from_chem
    INTEGER, OPTIONAL, INTENT(IN   )    :: hail, ice2 !, ccntype
 !
    INTEGER,      INTENT(IN   )    ::       ids,ide, jds,jde, kds,kde
@@ -1017,8 +1017,17 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  qc_b4mp(its:ite,kts:kte,jts:jte) = qc_curr(its:ite,kts:kte,jts:jte)
                  qi_b4mp(its:ite,kts:kte,jts:jte) = qi_curr(its:ite,kts:kte,jts:jte)
                  qs_b4mp(its:ite,kts:kte,jts:jte) = qs_curr(its:ite,kts:kte,jts:jte)
+                 IF(thompson_aer_from_chem == 1) THEN
+                   CALL calc_chem_nwfa_nifa(NWFA=qnwfa_curr, NIFA=qnifa_curr, &
+                          NWFA_2D=qnwfa2d, NIFA_2D=qnifa2d, &
+                          CHEM=chem,      &
+                          RHO=rho, CHEM_OPT=chem_opt, &
+                          IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde,  &
+                          IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme,  &
+                          ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+                 ENDIF
 #endif
-             CALL mp_gt_driver(                          &
+                 CALL mp_gt_driver(                      &
                      QV=qv_curr,                         &
                      QC=qc_curr,                         &
                      QR=qr_curr,                         &
@@ -1050,6 +1059,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      WETSCAV_ON=config_flags%wetscav_onoff == 1, &
                      RAINPROD=rainprod,                  &
                      EVAPPROD=evapprod,                  &
+                     WFA_IFA_FROM_CHEM = thompson_aer_from_chem == 1, &
+#else
+                     WFA_IFA_FROM_CHEM = .false., &
 #endif
                      REFL_10CM=refl_10cm,                &
                      diagflag=diagflag,                  &
@@ -1111,6 +1123,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      RAINPROD=rainprod,                  &
                      EVAPPROD=evapprod,                  &
 #endif
+                     WFA_IFA_FROM_CHEM = .false.,        &
                      REFL_10CM=refl_10cm,                &
                      diagflag=diagflag,                  &
                      ke_diag = ke_diag,                  &
@@ -2892,5 +2905,138 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    RETURN
 
    END SUBROUTINE microphysics_driver
+
+#if ( WRF_CHEM == 1 )
+
+   SUBROUTINE calc_chem_nwfa_nifa(nwfa, nifa, nwfa_2d, nifa_2d, &
+                            chem, rho, chem_opt, &
+                            ids, ide, jds, jde, kds, kde,  &
+                            ims, ime, jms, jme, kms, kme,  &
+                            its, ite, jts, jte, kts, kte)
+
+     ! 2022/12/19, Louis Marelle, LATMOS
+     !
+     ! Purpose:
+     !  Calculate NWFA and NIFA from WRF-Chem aerosols. NWFA and NIFA are the
+     !  numbers of water-friendly and ice-friendly aerosols used in the
+     !  THOMPSONAERO microphysics (Thompson and Eidhammer, 2014)
+     !
+     ! Arguments:
+     ! Input:
+     !  - chem: chem tracers (ppm for gases, ug/kg dry air for aerosols)
+     !  - rho: air density (kg/m3)
+     !  - chem_opt: chem mechanism option (values in module_state_description)
+     ! Input/Output:
+     !  - nwfa: number concentration of water-friendly aerosols (#/kg air)
+     !  - nifa: number concentration of ice-friendly aerosols (#/kg/air))
+     !  - nwfa_2d (unused for now) - equivalent wfa emission rate at surface
+     !  - nifa_2d (unused for now) - equivalent ifa emission rate at surface
+     !
+     ! Remarks:
+     !  - This is only used with GOCART aerosols for now, but could also
+     !    compute nwfa and nifa for any aerosol mechanism in WRF-Chem
+     !  - This is producing very high NIFA from dust with GOCART - but this
+     !    might be expected over desert regions
+     !  - Only dust larger than 500 nm should be used for NIFA, as in
+     !    Thompson and Eidhammer 2014. For GOCART all bins are included
+     !    because DUST1 center diameter is already > 500 nm.
+     !  - 4./3.*PICONST*r_dust1**3*den_dust1 could be initialized once for each
+     !    species to save time - i.e. calculating dust_1_nb_mass_ratio only
+     !    once
+
+     USE module_data_gocart_seas, only: den_seas
+     USE module_data_gocart_dust, only: den_dust
+     USE module_model_constants, only: PICONST
+     ! This is used for p_chem pointers and chem_opt values
+     USE module_state_description
+
+     IMPLICIT NONE
+
+     ! Arguments
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
+         INTENT(INOUT) :: nwfa, nifa
+     REAL, DIMENSION(ims:ime, jms:jme), &
+         INTENT(INOUT) :: nwfa_2d, nifa_2d
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), &
+         INTENT(IN) :: chem
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
+         INTENT(IN) :: rho
+     INTEGER, INTENT(IN) :: chem_opt
+     INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
+                            ims,ime, jms,jme, kms,kme,    &
+                            its,ite, jts,jte, kts,kte
+
+     ! Local variables
+     INTEGER :: i,j,k
+     REAL :: mass_sulf !kg/kg
+     ! Sulfate mass to sulfate number, calculated from parameters in Chin et
+     ! al., 2002 (#/kg)
+     REAL, PARAMETER :: SULF_NB_MASS_RATIO = 5.857D16
+     ! Ammonium sulfate / sulfate ratio, from module_data_gocartchem (kg/kg)
+     ! Not clear if this should be applied here or not - both approaches are reasonable
+     REAL, PARAMETER :: NH4_MFAC = 1.375
+     ! Constant INP concentration from module_mp_thompson (#/m3)
+     REAL, PARAMETER :: NAIN1 = 0.5E6
+     ! Seasalt and dust log-center diameters for GOCART bins (m)
+     REAL, PARAMETER :: rcen_seas(4) = (/ 0.2236E-6, 0.8660E-6, 2.739E-6, 7.071E-6 /)
+     REAL, PARAMETER :: rcen_dust(5) = (/ 0.3162E-6,  1.342E-6,  2.324E-6,  4.243E-6, 7.746E-6 /)
+     ! .true. if this is a GOCART chem_opt
+     LOGICAL :: aer_is_gocart
+
+     aer_is_gocart = chem_opt == MOZCART_KPP .OR. &
+                     chem_opt == T1_MOZCART_KPP .OR. &
+                     chem_opt == GOCART_SIMPLE .OR. &
+                     chem_opt == GOCARTRADM2 .OR. &
+                     chem_opt == GOCARTRACM_KPP
+
+     DO i = its,ite
+     DO k = kts,kte
+     DO j = jts,jte
+       IF (aer_is_gocart) THEN
+         ! Recalculate NWFA and NIFA using GOCART aerosol mixing ratios
+         nwfa(i,k,j) = 0.0
+         nifa(i,k,j) = 0.0
+         ! Ice-friendly aerosol from dust
+         nifa(i,k,j) = chem(i,k,j,p_dust_1) &
+                     / (1.0D9 * 4./3.*PICONST * den_dust(1) * rcen_dust(1)**3.0)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_2) &
+                      / (1.0D9 * 4./3.*PICONST * den_dust(2) * rcen_dust(2)**3.0)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_3) &
+                     / (1.0D9 * 4./3.*PICONST * den_dust(3) * rcen_dust(3)**3.0)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_4) &
+                     / (1.0D9 * 4./3.*PICONST * den_dust(4) * rcen_dust(4)**3.0)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_5) &
+                     / (1.0D9 * 4./3.*PICONST * den_dust(5) * rcen_dust(5)**3.0)
+         ! Water-friendly aerosol from sea salt
+         nwfa(i,k,j) = chem(i,k,j,p_seas_1) &
+                     / (1.0D9 * 4./3.*PICONST * den_seas(1) * rcen_seas(1)**3.0)
+         nwfa(i,k,j) = nwfa(i,k,j) + chem(i,k,j,p_seas_2) &
+                     / (1.0D9 * 4./3.*PICONST * den_seas(2) * rcen_seas(2)**3.0)
+         nwfa(i,k,j) = nwfa(i,k,j) + chem(i,k,j,p_seas_3) &
+                     / (1.0D9 * 4./3.*PICONST * den_seas(3) * rcen_seas(3)**3.0)
+         nwfa(i,k,j) = nwfa(i,k,j) + chem(i,k,j,p_seas_4) &
+                     / (1.0D9 * 4./3.*PICONST * den_seas(4) * rcen_seas(4)**3.0)
+         ! Water-friendly aerosol from ammonium sulfate - conversion from
+         ! sulfate ppm to ammonium sulfate #/kg assumes a lognormal size
+         ! distribution with parameters from Chin et al., 2002
+         mass_sulf = chem(i,k,j,p_sulf) * 1.0D-6 * 98.08/28.965
+         nwfa(i,k,j) = nwfa(i,k,j) + mass_sulf * SULF_NB_MASS_RATIO * NH4_MFAC
+         ! Prevent NWFA and NIFA from dropping too low
+         nwfa(i,k,j) = MAX(nwfa(i,k,j), 11.1E6/rho(i,k,j))
+         nifa(i,k,j) = MAX(nifa(i,k,j), NAIN1*0.001/rho(i,k,j))
+
+       ELSE
+         ! If chem_opt aerosol is not GOCART call fatal - but this should have
+         ! been caught in chemics_init
+         CALL wrf_error_fatal('microphysics_driver: calc_chem_nwfa_nifa is only compatible with GOCART mechanisms for now')
+
+       ENDIF ! aer_is_gocart
+     ENDDO ! j
+     ENDDO ! k
+     ENDDO ! i
+
+   END SUBROUTINE calc_chem_nwfa_nifa
+
+#endif
 
 END MODULE module_microphysics_driver

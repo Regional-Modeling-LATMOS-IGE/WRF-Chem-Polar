@@ -3823,6 +3823,7 @@ BENCH_START(micro_driver_tim)
       &        ,QLSINK=grid%qlsink,CLDFRA_OLD=grid%cldfra_old             &
       &        ,PRECR=grid%precr, PRECI=grid%preci, PRECS=grid%precs, PRECG=grid%precg &
       &        ,CHEM_OPT=config_flags%chem_opt, PROGN=config_flags%progn  &
+      &        ,THOMPSON_AER_FROM_CHEM=config_flags%thompson_aer_from_chem &
 !======================
       ! Variables required for CAMMGMP Scheme when run with WRF_CHEM
       &        ,CHEM=chem                                                 &
