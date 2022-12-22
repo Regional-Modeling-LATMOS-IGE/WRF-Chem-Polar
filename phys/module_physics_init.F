@@ -4524,7 +4524,12 @@ CALL lsm_mosaic_init(IVGTYP,config_flags%ISWATER,config_flags%ISURBAN,config_fla
                           ITS=its, ITE=ite, JTS=jts, JTE=jte, KTS=kts, KTE=kte)
 
      CASE (MORR_TWO_MOMENT)
-         CALL morr_two_moment_init( config_flags%morr_rimed_ice )
+         CALL morr_two_moment_init( config_flags%morr_rimed_ice &
+#if ( WRF_CHEM == 1 )
+         ! Add ice nucleation flag
+                      ,config_flags%mp_morr_icenuc_option &
+#endif
+                                  )
 #if (EM_CORE==1)
      CASE (MORR_TM_AERO)
          CALL morr_two_moment_init_aero( config_flags%morr_rimed_ice )

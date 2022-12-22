@@ -1393,6 +1393,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  ,ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte &
                  ,QLSINK=qlsink                                     & ! jdf for wrf-chem
 #if ( WRF_CHEM == 1 )
+                 ,CHEM=chem                                         &
                  ,WETSCAV_ON=config_flags%wetscav_onoff == 1 &
                  ,EVAPPROD=evapprod,RAINPROD=rainprod          &
 #endif

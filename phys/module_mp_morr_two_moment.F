@@ -172,6 +172,17 @@ MODULE MODULE_MP_MORR_TWO_MOMENT
 
      INTEGER, PRIVATE ::  IHAIL
 
+!LMarelle - Switch for using CNT immersion and deposition freezing instead
+!TODO replace by namelist option
+! ICENUC_OPTION = 0, use default options for immersion and deposition freezing of
+! droplets
+! ICENUC_OPTION = 1, use Thompson and Eidhammer (2014) simple dust-aware
+! immersion freezing with fully aerosol-coupled CNT deposition freezing (Keita
+! et al., 2020) of droplets
+! ICENUC_OPTION = 2, CNT immersion freezing with CNT deposition freezing (Keita
+! et al., 2020 + Hoose et al., 2010) of droplets
+     INTEGER, PRIVATE ::  ICENUC_OPTION
+
 ! CLOUD MICROPHYSICS CONSTANTS
 
      REAL, PRIVATE ::      AI,AC,AS,AR,AG ! 'A' PARAMETER IN FALLSPEED-DIAM RELATIONSHIP
@@ -244,7 +255,11 @@ MODULE MODULE_MP_MORR_TWO_MOMENT
 CONTAINS
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-SUBROUTINE MORR_TWO_MOMENT_INIT(morr_rimed_ice) ! RAS  
+SUBROUTINE MORR_TWO_MOMENT_INIT(morr_rimed_ice  & !RAS
+#if ( WRF_CHEM == 1 )
+                                ,mp_morr_icenuc_option & !LMarelle
+#endif
+                               )
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! THIS SUBROUTINE INITIALIZES ALL PHYSICAL CONSTANTS AMND PARAMETERS 
 ! NEEDED BY THE MICROPHYSICS SCHEME.
@@ -254,6 +269,9 @@ SUBROUTINE MORR_TWO_MOMENT_INIT(morr_rimed_ice) ! RAS
       IMPLICIT NONE
 
       INTEGER, INTENT(IN):: morr_rimed_ice ! RAS  
+#if ( WRF_CHEM == 1 )
+      INTEGER, INTENT(IN):: mp_morr_icenuc_option ! LMarelle
+#endif
 
       integer n,i
 
@@ -345,6 +363,12 @@ SUBROUTINE MORR_TWO_MOMENT_INIT(morr_rimed_ice) ! RAS
       ELSE
          IHAIL = 0
       ENDIF
+
+      !LMarelle - Use CNT ice nucleation, changed to namelist option
+      ICENUC_OPTION = 0
+#if ( WRF_CHEM == 1 )
+      ICENUC_OPTION = mp_morr_icenuc_option
+#endif
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -572,6 +596,9 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                ,IMS,IME, JMS,JME, KMS,KME               & ! memory dims
                ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
 !jdf		   ,C2PREC3D,CSED3D,ISED3D,SSED3D,GSED3D,RSED3D & ! HM ADD, WRF-CHEM
+#if ( WRF_CHEM == 1 )
+               ,CHEM                                    &
+#endif
                ,wetscav_on, rainprod, evapprod                      &
 		   ,QLSINK,PRECR,PRECI,PRECS,PRECG &        ! HM ADD, WRF-CHEM
                                             )
@@ -641,6 +668,19 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
 
 ! WVAR - STANDARD DEVIATION OF SUB-GRID VERTICAL VELOCITY (M/S)
 
+#if ( WRF_CHEM == 1)
+   USE module_configure, only:                                  &
+      p_so4_a01, p_so4_a02, p_so4_a03, p_so4_a04,               &
+      p_nh4_a01, p_nh4_a02, p_nh4_a03, p_nh4_a04,               &
+      p_oin_a01, p_oin_a02, p_oin_a03, p_oin_a04,               &
+      p_no3_a01, p_no3_a02, p_no3_a03, p_no3_a04,               &
+      p_so4_cw01, p_so4_cw02, p_so4_cw03, p_so4_cw04,           &
+      p_nh4_cw01, p_nh4_cw02, p_nh4_cw03, p_nh4_cw04,           &
+      p_oin_cw01, p_oin_cw02, p_oin_cw03, p_oin_cw04,           &
+      p_no3_cw01, p_no3_cw02, p_no3_cw03, p_no3_cw04
+   USE module_state_description, only: num_chem
+#endif
+
    IMPLICIT NONE
 
    INTEGER,      INTENT(IN   )    ::   ids, ide, jds, jde, kds, kde , &
@@ -656,6 +696,10 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), optional,INTENT(INOUT):: QLSINK, &
                           rainprod, evapprod, &
                           PRECI,PRECS,PRECG,PRECR ! HM, WRF-CHEM
+#if ( WRF_CHEM == 1 )
+   REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), optional, INTENT(IN)    :: chem
+#endif
+
 !, effcs, effis
 
    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN):: &
@@ -674,6 +718,13 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
    REAL , DIMENSION( ims:ime , jms:jme ) , INTENT(IN) ::       ht
 
    LOGICAL, optional, INTENT(IN) :: wetscav_on
+#if ( WRF_CHEM == 1 )
+   !TODO updated for 4bin - Mean diameter in um of MOSAIC 4 bins version
+   REAL, PARAMETER :: dmean1=0.07815
+   REAL, PARAMETER :: dmean2=0.31245
+   REAL, PARAMETER :: dmean3=1.5
+   REAL, PARAMETER :: dmean4=5.0
+#endif
 
    ! LOCAL VARIABLES
 
@@ -709,6 +760,15 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
 ! wrf-chem
    REAL, DIMENSION(kts:kte) :: nc1d, nc_tend1d,C2PREC,CSED,ISED,SSED,GSED,RSED    
    REAL, DIMENSION(kts:kte) :: rainprod1d, evapprod1d
+!LMarelle
+#if (WRF_CHEM == 1)
+!TODO Add other columns if WRF_CHEM: dust, dmeandust, aer_neut_ratio
+ !TODO also define dust_cw, aer_neut_ratio_cw?
+   REAL, DIMENSION(kts:kte) :: dust, dmeandust, aer_neut_ratio, dust_cw, &
+                               dmeandust_cw, aer_neut_ratio_cw
+   REAL :: nh4, so4, no3, aer_neut_ratio_k
+!TODO do not use CNT if not WRF-CHEM
+#endif
 ! HM add reflectivity      
    REAL, DIMENSION(kts:kte) :: dBZ
                           
@@ -820,7 +880,72 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
       ENDDO
    ENDIF
 
+!LMarelle
+#if (WRF_CHEM == 1)
+   IF(ICENUC_OPTION .GE. 1) THEN
+     DO k=kts,kte
+       !TODO should also work with 8bin, should only be used for MOSAIC
+       dust(k) = chem(i,k,j,p_oin_a01)+chem(i,k,j,p_oin_a02) &
+                 + chem(i,k,j,p_oin_a03)+chem(i,k,j,p_oin_a04)
+       dust_cw(k) = chem(i,k,j,p_oin_cw01)+chem(i,k,j,p_oin_cw02) &
+                    + chem(i,k,j,p_oin_cw03)+chem(i,k,j,p_oin_cw04)
+
+       ! Mass weighted dust radius in um
+       dmeandust(k) = (dmean1*chem(i,k,j,p_oin_a01))+(dmean2*chem(i,k,j,p_oin_a02)) &
+                      + (dmean3*chem(i,k,j,p_oin_a03))+(dmean4*chem(i,k,j,p_oin_a04))
+       dmeandust(k) = dmeandust(k)/dust(k)
+       dmeandust_cw(k) = (dmean1*chem(i,k,j,p_oin_cw01))+(dmean2*chem(i,k,j,p_oin_cw02)) &
+                         + (dmean3*chem(i,k,j,p_oin_cw03))+(dmean4*chem(i,k,j,p_oin_cw04))
+       dmeandust_cw(k) = dmeandust_cw(k)/dust_cw(k)
+
+       ! nh4=                    !molar unit per m3 of nh4+
+       nh4 = chem(i,k,j,p_nh4_a01)+chem(i,k,j,p_nh4_a02)             &
+           +chem(i,k,j,p_nh4_a03)+chem(i,k,j,p_nh4_a04)
+       nh4 = nh4/18.038          ![ug/kg-dryair] -> [u mol/kg-dryair]
+       !                so4=                    !molar unit per m3 of so4--
+       !               chem : unit [ug/kg-dryair]
+       so4 = chem(i,k,j,p_so4_a01)+chem(i,k,j,p_so4_a02)             &
+           +chem(i,k,j,p_so4_a03)+chem(i,k,j,p_so4_a04)
+       so4 = so4/96.062          ![ug/kg-dryair] -> [u mol/kg-dryair]
+       !                 no3=                    !molar unit per m3 of nh3-
+       no3 = chem(i,k,j,p_no3_a01)+chem(i,k,j,p_no3_a02)          &
+           +chem(i,k,j,p_no3_a03)+chem(i,k,j,p_no3_a04)
+       no3 = no3/62.0049          ![ug/kg-dryair] -> [u mol/kg-dryair]
+       IF(((2.*so4)+no3) > 1.0E-10) THEN !TODO better epsilon value
+         aer_neut_ratio_k = nh4/((2.*so4)+no3)     !Neutralization factor
+         aer_neut_ratio_k = MIN(aer_neut_ratio_k, 1.)
+         aer_neut_ratio(k) = aer_neut_ratio_k
+       ELSE
+         aer_neut_ratio(k) = 1.0
+       END IF
+
+       ! nh4=                    !molar unit per m3 of nh4+
+       nh4 = chem(i,k,j,p_nh4_cw01)+chem(i,k,j,p_nh4_cw02)             &
+           +chem(i,k,j,p_nh4_cw03)+chem(i,k,j,p_nh4_cw04)
+       nh4 = nh4/18.038          ![ug/kg-dryair] -> [u mol/kg-dryair]
+       !                so4=                    !molar unit per m3 of so4--
+       !               chem : unit [ug/kg-dryair]
+       so4 = chem(i,k,j,p_so4_cw01)+chem(i,k,j,p_so4_cw02)             &
+           +chem(i,k,j,p_so4_cw03)+chem(i,k,j,p_so4_cw04)
+       so4 = so4/96.062          ![ug/kg-dryair] -> [u mol/kg-dryair]
+       !                 no3=                    !molar unit per m3 of nh3-
+       no3 = chem(i,k,j,p_no3_cw01)+chem(i,k,j,p_no3_cw02)          &
+           +chem(i,k,j,p_no3_cw03)+chem(i,k,j,p_no3_cw04)
+       no3 = no3/62.0049          ![ug/kg-dryair] -> [u mol/kg-dryair]
+       IF(((2.*so4)+no3) > 1.0E-10) THEN !TODO better epsilon value
+         aer_neut_ratio_k = nh4/((2.*so4)+no3)     !Neutralization factor
+         aer_neut_ratio_k = MIN(aer_neut_ratio_k, 1.)
+         aer_neut_ratio_cw(k) = aer_neut_ratio_k
+       ELSE
+         aer_neut_ratio_cw(k) = 1.0
+       END IF
+       !TODO do not use CNT if not WRF-CHEM/MOSAIC/4bin
+     END DO
+   END IF
+#endif
+
 !jdf  end do
+
       call MORR_TWO_MOMENT_MICRO(QC_TEND1D, QI_TEND1D, QNI_TEND1D, QR_TEND1D,            &
        NI_TEND1D, NS_TEND1D, NR_TEND1D,                                                  &
        QC1D, QI1D, QS1D, QR1D,NI1D, NS1D, NR1D,                                          &
@@ -836,6 +961,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                                   QGSTEN,QRSTEN,QISTEN,QNISTEN,QCSTEN, &
                                   nc1d, nc_tend1d, iinum, C2PREC,CSED,ISED,SSED,GSED,RSED & !wrf-chem
 #if (WRF_CHEM == 1)
+      ,dust, dmeandust, aer_neut_ratio, dust_cw, dmeandust_cw, aer_neut_ratio_cw &
                                   ,has_wetscav,rainprod1d, evapprod1d & !wrf-chem
 #endif
                        )
@@ -942,7 +1068,8 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
                         nc3d,nc3dten,iinum, & ! wrf-chem
 				c2prec,CSED,ISED,SSED,GSED,RSED  &  ! hm added, wrf-chem
 #if (WRF_CHEM == 1)
-        ,has_wetscav,rainprod, evapprod &
+      ,dust, dmeandust, aer_neut_ratio, dust_cw, dmeandust_cw, aer_neut_ratio_cw &
+      ,has_wetscav,rainprod, evapprod &
 #endif
                         )
 
@@ -975,6 +1102,11 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 ! INPUT/OUTPUT PARAMETERS                                 ! DESCRIPTION (UNITS)
       INTEGER, INTENT( IN)  :: IMS,IME, JMS,JME, KMS,KME,          &
                                ITS,ITE, JTS,JTE, KTS,KTE
+#if (WRF_CHEM == 1)
+      REAL, DIMENSION(KTS:KTE), INTENT(IN) :: DUST, DMEANDUST, AER_NEUT_RATIO
+      REAL, DIMENSION(KTS:KTE), INTENT(IN) :: DUST_CW, DMEANDUST_CW, AER_NEUT_RATIO_CW
+      REAL, DIMENSION(KTS:KTE), INTENT(INOUT) :: rainprod, evapprod
+#endif
 
       REAL, DIMENSION(KTS:KTE) ::  QC3DTEN            ! CLOUD WATER MIXING RATIO TENDENCY (KG/KG/S)
       REAL, DIMENSION(KTS:KTE) ::  QI3DTEN            ! CLOUD ICE MIXING RATIO TENDENCY (KG/KG/S)
@@ -1072,8 +1204,8 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
      REAL, DIMENSION(KTS:KTE) ::  PRD       ! DEP CLOUD ICE
      REAL, DIMENSION(KTS:KTE) ::  PRE       ! EVAP OF RAIN
      REAL, DIMENSION(KTS:KTE) ::  PRDS      ! DEP SNOW
-     REAL, DIMENSION(KTS:KTE) ::  NNUCCC    ! CHANGE N DUE TO CONTACT FREEZ DROPLETS
-     REAL, DIMENSION(KTS:KTE) ::  MNUCCC    ! CHANGE Q DUE TO CONTACT FREEZ DROPLETS
+     REAL, DIMENSION(KTS:KTE) ::  NNUCCC    ! CHANGE N DUE TO CONTACT FREEZ DROPLETS (1/Kg/S)
+     REAL, DIMENSION(KTS:KTE) ::  MNUCCC    ! CHANGE Q DUE TO CONTACT FREEZ DROPLETS (kg/kg/s)
      REAL, DIMENSION(KTS:KTE) ::  PRA       ! ACCRETION DROPLETS BY RAIN
      REAL, DIMENSION(KTS:KTE) ::  PRC       ! AUTOCONVERSION DROPLETS
      REAL, DIMENSION(KTS:KTE) ::  PCC       ! COND/EVAP DROPLETS
@@ -1236,6 +1368,27 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 
        REAL CRY,KRY   ! AEROSOL ACTIVATION PARAMETERS
 
+#if (WRF_CHEM == 1)
+!LMARELLE
+     REAL NNUCCC_CNT
+     REAL MNUCCC_CNT
+     REAL NNUCCD_CNT
+     REAL MNUCCD_CNT
+     REAL QV3D_CNT
+     REAL QC3D_CNT
+     REAL QVS_CNT, EVS_CNT
+     REAL QVI_CNT, EIS_CNT
+     REAL NC3D_CNT
+     REAL T3D_CNT
+     REAL PRES_CNT
+     REAL DUST_CNT
+     REAL DMEANDUST_CNT
+     REAL AER_NEUT_RATIO_CNT
+     REAL DUST_CW_CNT
+     REAL DMEANDUST_CW_CNT
+     REAL AER_NEUT_RATIO_CW_CNT
+#endif
+
 ! MORE WORKING/DUMMY VARIABLES
 
      REAL DUMQI,DUMNI,DC0,DS0,DG0
@@ -1260,10 +1413,9 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 
 ! FOR WRF-CHEM
 	REAL, DIMENSION(KTS:KTE)::C2PREC,CSED,ISED,SSED,GSED,RSED
-#if (WRF_CHEM == 1)
-    REAL, DIMENSION(KTS:KTE), INTENT(INOUT) :: rainprod, evapprod
-#endif
     REAL, DIMENSION(KTS:KTE)                :: tqimelt ! melting of cloud ice (tendency)
+
+    REAL :: T3DEFF, aeronum, raeros
 
 ! comment lines for wrf-chem since these are intent(in) in that case
 !       REAL, DIMENSION(KTS:KTE) ::  NC3DTEN            ! CLOUD DROPLET NUMBER CONCENTRATION (1/KG/S)
@@ -2346,62 +2498,83 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 ! FREEZING OF CLOUD DROPLETS
 ! ONLY ALLOWED BELOW -4 C
         IF (QC3D(K).GE.QSMALL .AND. T3D(K).LT.269.15) THEN
-
-! NUMBER OF CONTACT NUCLEI (M^-3) FROM MEYERS ET AL., 1992
-! FACTOR OF 1000 IS TO CONVERT FROM L^-1 TO M^-3
-
-! MEYERS CURVE
-
+	  ! NUMBER OF CONTACT NUCLEI (M^-3) FROM MEYERS ET AL., 1992
+	  ! FACTOR OF 1000 IS TO CONVERT FROM L^-1 TO M^-3
+	  ! MEYERS CURVE
            NACNT = EXP(-2.80+0.262*(273.15-T3D(K)))*1000.
+	  ! COOPER CURVE
+	  !  NACNT =  5.*EXP(0.304*(273.15-T3D(K)))
+	  ! FLECTHER
+	  !  NACNT = 0.01*EXP(0.6*(273.15-T3D(K)))
 
-! COOPER CURVE
-!        NACNT =  5.*EXP(0.304*(273.15-T3D(K)))
+	  ! CONTACT FREEZING
+	  ! MEAN FREE PATH
+          DUM = 7.37*T3D(K)/(288.*10.*PRES(K))/100.
+	  ! EFFECTIVE DIFFUSIVITY OF CONTACT NUCLEI
+	  ! BASED ON BROWNIAN DIFFUSION
+          DAP(K) = CONS37*T3D(K)*(1.+DUM/RIN)/MU(K)
+          MNUCCC(K) = CONS38*DAP(K)*NACNT*EXP(LOG(CDIST1(K))+   &
+                      LOG(GAMMA(PGAM(K)+5.))-4.*LOG(LAMC(K)))
+          NNUCCC(K) = 2.*PI*DAP(K)*NACNT*CDIST1(K)*             &
+                      GAMMA(PGAM(K)+2.)/                        &
+                      LAMC(K)
 
-! FLECTHER
-!     NACNT = 0.01*EXP(0.6*(273.15-T3D(K)))
+          !LMarelle - do not use if CNT immersion freezing active
+          !TODO USE NEQ 1 here and later
+          IF(ICENUC_OPTION .EQ. 0) THEN
+            ! IMMERSION FREEZING (BIGG 1953)
+            !  MNUCCC(K) = MNUCCC(K)+CONS39*EXP(LOG(CDIST1(K))+ &
+            !              LOG(GAMMA(7.+PGAM(K)))-6.*LOG(LAMC(K)))* &
+            !              EXP(AIMM*(273.15-T3D(K)))
+            !  NNUCCC(K) = NNUCCC(K)+CONS40*EXP(LOG(CDIST1(K))+ &
+            !              LOG(GAMMA(PGAM(K)+4.))-3.*LOG(LAMC(K))) &
+            !              *EXP(AIMM*(273.15-T3D(K)))
+            !              *EXP(AIMM*(273.15-T3D(K)))
+            ! hm 7/15/13 fix for consistency w/ original formula
+            MNUCCC(K) = MNUCCC(K)+CONS39*                   &
+                        EXP(LOG(CDIST1(K))+LOG(GAMMA(7.+PGAM(K))) &
+                        -6.*LOG(LAMC(K)))*(EXP(AIMM*(273.15-T3D(K)))-1.)
+            NNUCCC(K) = NNUCCC(K)+CONS40*EXP(LOG(CDIST1(K))+ &
+                        LOG(GAMMA(PGAM(K)+4.))-3.*LOG(LAMC(K))) &
+                        *(EXP(AIMM*(273.15-T3D(K)))-1.)
+            ! PUT IN A CATCH HERE TO PREVENT DIVERGENCE BETWEEN NUMBER CONC.
+            ! AND MIXING RATIO, SINCE STRICT CONSERVATION NOT CHECKED FOR
+            ! NUMBER CONC
+            NNUCCC(K) = MIN(NNUCCC(K),NC3D(K)/DT)
 
-! CONTACT FREEZING
+#if (WRF_CHEM == 1)
+          ELSE IF (ICENUC_OPTION .EQ. 1) THEN ! IF(ICENUC_OPTION .EQ. 0)
+            ! If ICENUC_OPTION .EQ. 1, use CNT aerosol-aware immersion freezing
+            ! from the method in https://doi.org/10.1175/JAS-D-13-0305.1: Still
+            ! use Bigg, but change the effective air temperature based on the
+            ! dust concentration. Critical dust concentration for Bigg aerosol
+            ! aware implementation is 100/m3. Use the interstitial+cw aerosol
+            ! number since this is what is used in Thompson and Eidhammer
+            raeros = (DMEANDUST(K) / 2.0) * 1.0E-6     !from um to m
+            aeronum = DUST(K) * PRES(K) / (287.05*T3D(K)) * 1.0E-9 / ((4.0/3.0)*PI*2000.0*raeros*raeros*raeros)
+            raeros = (DMEANDUST_CW(K) / 2.0) * 1.0E-6     !from um to m
+            aeronum = aeronum + DUST_CW(K) * PRES(K) / (287.05*T3D(K)) * 1.0E-9 / ((4.0/3.0)*PI*2000.0*raeros*raeros*raeros)
+            IF(aeronum/100.0 < 1.0E10) THEN
+              ! Each order of magnitude change of dust number changes Teff by 1.0 K
+              T3DEFF = T3D(K) - 1.0*LOG10(aeronum/100.0)
+              IF(T3DEFF < 273.15) THEN
+                ! write(*,*) 'aeronum/aeronumcrit=',aeronum/100.0
+                MNUCCC(K) = MNUCCC(K)+CONS39*                   &
+                            EXP(LOG(CDIST1(K))+LOG(GAMMA(7.+PGAM(K))) &
+                            -6.*LOG(LAMC(K)))*(EXP(AIMM*(273.15-T3DEFF))-1.)
+                NNUCCC(K) = NNUCCC(K)+CONS40*EXP(LOG(CDIST1(K))+ &
+                            LOG(GAMMA(PGAM(K)+4.))-3.*LOG(LAMC(K))) &
+                            *(EXP(AIMM*(273.15-T3DEFF))-1.)
+                ! PUT IN A CATCH HERE TO PREVENT DIVERGENCE BETWEEN NUMBER CONC.
+                ! AND MIXING RATIO, SINCE STRICT CONSERVATION NOT CHECKED FOR
+                ! NUMBER CONC
+                NNUCCC(K) = MIN(NNUCCC(K),NC3D(K)/DT)
 
-! MEAN FREE PATH
-
-            DUM = 7.37*T3D(K)/(288.*10.*PRES(K))/100.
-
-! EFFECTIVE DIFFUSIVITY OF CONTACT NUCLEI
-! BASED ON BROWNIAN DIFFUSION
-
-            DAP(K) = CONS37*T3D(K)*(1.+DUM/RIN)/MU(K)
- 
-           MNUCCC(K) = CONS38*DAP(K)*NACNT*EXP(LOG(CDIST1(K))+   &
-                   LOG(GAMMA(PGAM(K)+5.))-4.*LOG(LAMC(K)))
-           NNUCCC(K) = 2.*PI*DAP(K)*NACNT*CDIST1(K)*           &
-                    GAMMA(PGAM(K)+2.)/                         &
-                    LAMC(K)
-
-! IMMERSION FREEZING (BIGG 1953)
-
-!           MNUCCC(K) = MNUCCC(K)+CONS39*                   &
-!                  EXP(LOG(CDIST1(K))+LOG(GAMMA(7.+PGAM(K)))-6.*LOG(LAMC(K)))*             &
-!                   EXP(AIMM*(273.15-T3D(K)))
-
-!           NNUCCC(K) = NNUCCC(K)+                                  &
-!            CONS40*EXP(LOG(CDIST1(K))+LOG(GAMMA(PGAM(K)+4.))-3.*LOG(LAMC(K)))              &
-!                *EXP(AIMM*(273.15-T3D(K)))
-
-! hm 7/15/13 fix for consistency w/ original formula
-           MNUCCC(K) = MNUCCC(K)+CONS39*                   &
-                  EXP(LOG(CDIST1(K))+LOG(GAMMA(7.+PGAM(K)))-6.*LOG(LAMC(K)))*             &
-                   (EXP(AIMM*(273.15-T3D(K)))-1.)
-
-           NNUCCC(K) = NNUCCC(K)+                                  &
-            CONS40*EXP(LOG(CDIST1(K))+LOG(GAMMA(PGAM(K)+4.))-3.*LOG(LAMC(K)))              &
-                *(EXP(AIMM*(273.15-T3D(K)))-1.)
-
-! PUT IN A CATCH HERE TO PREVENT DIVERGENCE BETWEEN NUMBER CONC. AND
-! MIXING RATIO, SINCE STRICT CONSERVATION NOT CHECKED FOR NUMBER CONC
-
-           NNUCCC(K) = MIN(NNUCCC(K),NC3D(K)/DT)
-
-        END IF
+              END IF ! IF(T3DEFF < 273.15)
+            END IF ! IF(aeronum/dustncrit < 1E10)
+#endif
+          END IF ! IF(ICENUC_OPTION .EQ. 0)
+        END IF ! IF(QC3D(K).GE.QSMALL .AND. T3D(K).LT.269.15)
 
 !.................................................................
 !.......................................................................
@@ -2894,39 +3067,83 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 ! NUCLEATION OF CLOUD ICE FROM HOMOGENEOUS AND HETEROGENEOUS FREEZING ON AEROSOL
+         !LMarelle, do not use if CNT deposition freezing active
+         IF(ICENUC_OPTION .EQ. 0)  THEN
+           IF (INUC.EQ.0) THEN
+             ! add threshold according to Greg Thomspon
+             IF ((QVQVS(K).GE.0.999.and.T3D(K).le.265.15).or. &
+                  QVQVSI(K).ge.1.08) THEN
+               ! hm, modify dec. 5, 2006, replace with cooper curve
+               ! convert from L-1 to m-3
+               kc2 = 0.005*exp(0.304*(273.15-T3D(K)))*1000.
+               ! limit to 500 L-1
+               kc2 = min(kc2,500.e3)
+               kc2=MAX(kc2/rho(k),0.)  ! convert to kg-1
 
-         IF (INUC.EQ.0) THEN
+               IF (KC2.GT.NI3D(K)+NS3D(K)+NG3D(K)) THEN
+                 NNUCCD(K) = (KC2-NI3D(K)-NS3D(K)-NG3D(K))/DT
+                 MNUCCD(K) = NNUCCD(K)*MI0
 
-! add threshold according to Greg Thomspon
+               END IF ! IF (KC2.GT.NI3D(K)+NS3D(K)+NG3D(K))
+             END IF ! IF ((QVQVS(K).GE.0.999)
 
-         if ((QVQVS(K).GE.0.999.and.T3D(K).le.265.15).or. &
-              QVQVSI(K).ge.1.08) then
+           ELSE IF (INUC.EQ.1) THEN ! IF (INUC.EQ.0)
+             IF (T3D(K).LT.273.15.AND.QVQVSI(K).GT.1.) THEN
+               KC2 = 0.16*1000./RHO(K)  ! CONVERT FROM L-1 TO KG-1
+               IF (KC2.GT.NI3D(K)+NS3D(K)+NG3D(K)) THEN
+                 NNUCCD(K) = (KC2-NI3D(K)-NS3D(K)-NG3D(K))/DT
+                 MNUCCD(K) = NNUCCD(K)*MI0
 
-! hm, modify dec. 5, 2006, replace with cooper curve
-      kc2 = 0.005*exp(0.304*(273.15-T3D(K)))*1000. ! convert from L-1 to m-3
-! limit to 500 L-1
-      kc2 = min(kc2,500.e3)
-      kc2=MAX(kc2/rho(k),0.)  ! convert to kg-1
+               END IF ! IF (KC2.GT.NI3D(K)+NS3D(K)+NG3D(K))
+             END IF ! IF (T3D(K).LT.273.15.AND.QVQVSI(K).GT.1.)
+           END IF ! IF (INUC_OPTION
 
-          IF (KC2.GT.NI3D(K)+NS3D(K)+NG3D(K)) THEN
-             NNUCCD(K) = (KC2-NI3D(K)-NS3D(K)-NG3D(K))/DT
-             MNUCCD(K) = NNUCCD(K)*MI0
-          END IF
+#if (WRF_CHEM == 1)
+         ELSE IF (ICENUC_OPTION .GE. 1) THEN ! IF(ICENUC_OPTION
+           !LMarelle - perform both immersion freezing of droplets and
+           !deposition freezing on aerosols (primary ice nucleation)
+!check QC3D(K).GE.QSMALL for immersion
+!check IF ((QVQVS(K).GE.0.999.and.T3D(K).le.265.15).or.QVQVSI(K).ge.1.08) THEN
+           !TODO are these intermediate variables really needed?
+           NNUCCC_CNT = NNUCCC(K)
+           MNUCCC_CNT = MNUCCC(K)
+           NNUCCD_CNT = NNUCCD(K)
+           MNUCCD_CNT = MNUCCD(K)
+           QV3D_CNT = QV3D(K)
+           QC3D_CNT = QC3D(K)
+           QVS_CNT = QVS(K)
+           QVI_CNT = QVI(K)
+           EVS_CNT = EVS(K)
+           EIS_CNT = EIS(K)
+           NC3D_CNT = NC3D(K)
+           T3D_CNT = T3D(K)
+           PRES_CNT = PRES(K)
+           !TODO set to something else if not WRF-CHEM
+           DUST_CNT = DUST(K)
+           DMEANDUST_CNT = DMEANDUST(K)
+           AER_NEUT_RATIO_CNT = AER_NEUT_RATIO(K)
+           DUST_CW_CNT = DUST_CW(K)
+           DMEANDUST_CW_CNT = DMEANDUST_CW(K)
+           AER_NEUT_RATIO_CW_CNT = AER_NEUT_RATIO_CW(K)
+           !TODO use keyword arguments please
+           CALL cnt_icenuc(NNUCCC_CNT, MNUCCC_CNT, NNUCCD_CNT, MNUCCD_CNT, &
+                           QV3D_CNT, QC3D_CNT, QVS_CNT, QVI_CNT, EVS_CNT, &
+                           EIS_CNT, NC3D_CNT,  &
+                           DUST_CNT, DMEANDUST_CNT, AER_NEUT_RATIO_CNT, &
+                           DUST_CW_CNT, DMEANDUST_CW_CNT, AER_NEUT_RATIO_CW_CNT, &
+                           T3D_CNT, PRES_CNT, MI0, QSMALL, DT)
+           NNUCCC(K) = NNUCCC_CNT
+           MNUCCC(K) = MNUCCC_CNT
+           NNUCCD(K) = NNUCCD_CNT
+           MNUCCD(K) = MNUCCD_CNT
 
-          END IF
+           ! PUT IN A CATCH HERE TO PREVENT DIVERGENCE BETWEEN NUMBER CONC.
+           ! AND MIXING RATIO, SINCE STRICT CONSERVATION NOT CHECKED FOR
+           ! NUMBER CONC
+           NNUCCC(K) = MIN(NNUCCC(K),NC3D(K)/DT)
+#endif
 
-          ELSE IF (INUC.EQ.1) THEN
-
-          IF (T3D(K).LT.273.15.AND.QVQVSI(K).GT.1.) THEN
-
-             KC2 = 0.16*1000./RHO(K)  ! CONVERT FROM L-1 TO KG-1
-          IF (KC2.GT.NI3D(K)+NS3D(K)+NG3D(K)) THEN
-             NNUCCD(K) = (KC2-NI3D(K)-NS3D(K)-NG3D(K))/DT
-             MNUCCD(K) = NNUCCD(K)*MI0
-          END IF
-          END IF
-
-         END IF
+         END IF ! IF(ICENUC_OPTION .EQ. 0)
 
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
@@ -4682,6 +4899,334 @@ END SUBROUTINE MP_MORR_TWO_MOMENT
 
 
       end subroutine refl10cm_hm
+
+
+#if (WRF_CHEM == 1)
+      SUBROUTINE cnt_icenuc(NNUCCC, MNUCCC, NNUCCD, MNUCCD, &
+                           QV, QC, QVS, QVI, EVS, &
+                           EIS, NC,  &
+                           DUST, DMEANDUST, AER_NEUT_RATIO, &
+                           DUST_CW, DMEANDUST_CW, AER_NEUT_RATIO_CW, &
+                           T, PRES, MI0, QSMALL, DT)
+
+      !-------- CNT ice nucleation from immersion and deposition modes ---------
+      ! 2020/12/17, Eric Girard, Jean-Christophe Raut, Setigui Aboubacar Keita,
+      !             Louis Marelle, UQaM/LATMOS/CICERO
+
+      IMPLICIT NONE
+
+      !---- Calling arguments
+      REAL, INTENT(INOUT) ::  NNUCCC    ! CHANGE N DUE TO CONTACT/IMMERSION FREEZ DROPLETS
+      REAL, INTENT(INOUT) ::  MNUCCC    ! CHANGE Q DUE TO CONTACT/IMMERSION FREEZ DROPLETS
+      REAL, INTENT(INOUT) ::  NNUCCD ! CHANGE N FREEZING AEROSOL (PRIM ICE NUCLEATION)
+      REAL, INTENT(INOUT) ::  MNUCCD ! CHANGE Q FREEZING AEROSOL (PRIM ICE NUCLEATION)
+      REAL, INTENT(IN) ::  QV      ! WATER VAPOR MIXING RATIO (KG/KG)
+      REAL, INTENT(IN) ::  QC      ! CLOUD WATER MIXING RATIO (KG/KG)
+      REAL, INTENT(IN) ::  QVS     ! SAT WATER MIXING RATIO (KG/KG)
+      REAL, INTENT(IN) ::  QVI     ! SAT ICE MIXING RATIO (KG/KG)
+      REAL, INTENT(IN) ::  EVS, EIS ! SAT WATER/ICE PRESSURE (PA)
+      REAL, INTENT(IN) ::  DUST, DMEANDUST, AER_NEUT_RATIO ! DUST MMR (microG/KG), DIAM (microM), NEUTR. RATIO ()
+      REAL, INTENT(IN) ::  DUST_CW, DMEANDUST_CW, AER_NEUT_RATIO_CW ! CLOUDBORNE DUST PROPERTIES
+      REAL, INTENT(IN) ::  T       ! TEMPERATURE (K)
+      REAL, INTENT(IN) ::  PRES    ! ATMOSPHERIC PRESSURE (PA)
+      REAL, INTENT(IN) ::  NC      ! CLOUD DROPLET NUMBER CONCENTRATION (1/KG)
+      REAL, INTENT(IN) ::  MI0     ! AVERAGE MASS OF NUCLEATED CRYSTAL (KG)
+      REAL, INTENT(IN) ::  QSMALL  ! SMALLEST AVAILABLE QC (KG/KG)
+      REAL, INTENT(IN) ::  DT      ! MODEL TIME STEP (S)
+
+      !---- Local variables
+      integer, parameter :: dp = KIND(1.0D0)
+      integer, parameter :: optionCNT     = 1  !KS 1= Coupled ;  2= Teta12 Uncoated dust; 3= Teta26 coated dust
+!      integer, parameter :: immer         = 0  !EG 0= No immersion freezing of cloud droplets; 1= Admundsen 2014 CNT
+      integer, parameter :: contact       = 0  !EG 0= No contact freezing; 1= Contact freezing ON
+      ! CNT variables declaration
+      real, parameter ::  CTurn=1.7D11          !Turnb-Vonneg const, 1.7*10^11 erg/cm-3 21 Nov 2006, PK97 p243
+      real, parameter ::  sig_iv0=106.5_dp      !erg/cm2, 14 November 1998, PK97, p160
+      ! real, parameter ::  sig_iw0=24.5_dp       !erg/cm2, doi:10.1063/1.4819898
+      real, parameter ::  Rvap=4.615D6          !erg g^-1 K-1, PK97, p. 160
+      real, parameter ::  RHOIMEAN=0.9_dp       !g.cm^-3 mean ice density
+      real, parameter ::  akbol=1.3804D-16      !erg/K, Bolztmann constant
+      real, parameter :: kboltz = 1.38D-23 !(J K−1), Bolztmann constant
+      real, parameter ::  epsil=0.0_dp
+      ! real, parameter ::  aeronumi=1.e8         !Used for Admundsen 2014 Campaign (immersion freezing) !TODO Ask JC (m-3?)
+      ! real, parameter ::  aeronumi=1.e4         !Replace by oin_cw number?
+      real, parameter :: satw_peak   = 1.01_dp        !assumed max. peak saturation w.r.t. water (for calc of Simax)
+      real, parameter :: RGASD = 0.28705D+3          !J K-1 kg-1; gas constant for dry air !TODO use model version instead
+      real, parameter :: mio = 1.0D-12 !TODO Average mass of nucleated crystal
+      real, parameter :: CHLC =.2501D+7    !J kg-1; latent heat of condensation
+      real, parameter :: CHLF =.334D+6     !J kg-1; latent heat of fusion
+      real, parameter :: CPD  =.100546D+4  !J K-1 kg-1; specific heat of dry air
+      ! a_wat water activity of the droplet, decreases with cw <1< can
+      ! assume 1 for now
+      REAL, PARAMETER :: a_wat = 1.0_dp !unitless, water activity TODO should depend on droplet composition
+      REAL, PARAMETER :: masswatm = 2.99D-26 !kg, mass of a water molecule
+      REAL, PARAMETER :: n1w = 1.0D15 ! (cm-2) number/area molecules in contact with substrate
+      REAL, PARAMETER :: hplanck = 6.63D-27 ! (erg s) Planck constant
+      REAL, PARAMETER :: delta_gsharp_dust_imm = 15.7D-13 ! (erg) Activation energy for immersion nucleation, dust
+      REAL(dp) :: Si, Simax, tmp1, DE, Tc, LCP, LFP, LSP, ck6 !TODO describe
+      REAL(dp) :: qcm, hps, s, qm, incm, ncm
+      REAL(dp) :: rgerms, satw
+      REAL(dp) :: teta, wetcoef, fisize, xmfi, ccc1, ccc2, ccc3, raeros
+      REAL(dp) :: fshape, FGERMS, coefnucl, AJLSHetSD, AJLSHetS, aeronum, densite
+      REAL(dp) :: TEXPTFR2,  PODNTEG_DEP !EG
+      REAL(dp) :: NNUmax
+      REAL(dp) :: NuCONT, NUDEP, NUIMM, NuIMM_kg_s, NuCONT_kg_s, NuDEP_kg_s, NNUCCC_in, &
+                  NNUCCC_new, NNUCCD_new, MNUCCC_new, MNUCCD_new
+      REAL(dp) :: delta_g0_imm, Aprime_imm, J_imm, volwatm, rhoice, Aprime_imm_c1, &
+                  Aprime_imm_c2, Aprime_imm_c3, rgerms_cm
+      REAL(dp) ::  sig_iw0       !erg/cm2
+
+      IF (T < 273.15) THEN
+        Tc = T - 273.15_dp
+        ! Ice density (kg/m3) and surface tension of ice/water interface
+        ! (erg/cm2), from https://doi.org/10.1175/2010JAS3425.1
+        rhoice = 916.7_dp - 0.175_dp*Tc - 5D-4*Tc**2.0_dp
+        sig_iw0 = 28 + 0.25*Tc
+        ! Volume of a water molecule (m3)
+        volwatm = masswatm / rhoice
+        ! Air density (kg/m3)
+        DE = PRES / (RGASD*T)
+        ! Initialize parameters before CNT nucleation
+        LCP    = CHLC/CPD
+        LFP    = CHLF/CPD
+        LSP    = LCP+LFP
+        ck6    = 5806.485_dp*LSP
+        satw = QV/QVS !EG
+        NUDEP = 0.0_dp
+        NuCONT = 0.0_dp
+        Si = QV/QVI
+        IF (QVI > 1.D-20) THEN
+          Simax = MIN(Si, satw_peak * QVS/QVI)
+        ELSE
+          Simax = 0.0_dp
+        ENDIF
+        tmp1 = T - 7.66_dp
+        !TODO see how this fits with the Morrison framework, there might already be
+        !checks
+        NNUmax = MAX(0.0_dp, DE/mio*(QV-QVI) / (1.0_dp + ck6*(QVI/(tmp1*tmp1))) )
+
+        !TODO add conditions and checks before nucleation as in millbrandt or
+        !morrison (T, QC, etc.)
+
+        !================ CNT DEPOSITION NUCLEATION ================
+        !! (CNT with contact angle and contact nucleation)
+        IF (Si > 1.0) THEN
+          !TODO epsil is 0?
+          rgerms = 2.0 * sig_iv0 / (Rvap*T*LOG(Si) - CTurn*epsil**2.0)
+          IF (rgerms < 0.0) GO TO 1111 !TODO Remove this?
+
+          ! Find the number conc of dust particles
+          ! dust = 5.0 ! ug/kg ! placeholder
+          ! dmeandust = dmean3 ! placeholder
+          raeros = (dmeandust / 2.0) * 1.E-6     !from um to m
+          ! Number concentration in #/m3
+          ! 2000.0 is aerosol density. DE * 1.E-9 conversion factor from ug kg-1 to kg m3
+          aeronum = dust * DE * 1.E-9 / ((4./3.)*PI*2000.*raeros*raeros*raeros)
+
+          !EG, Contact angle determined using the neutralization factor (Fisher et al., 2011)
+          ! aer_neut_ratio = 0.5 ! placeholder
+          IF (optionCNT == 0) THEN !KS
+            ! Admundsen 2014 Campaign values
+            teta = (-0.0112*Tc*Tc) + (-0.9566*Tc) + 7.7245
+          ELSEIF (optionCNT == 1) THEN !KS
+            ! teta=26.-14.*aer_neut_ratio !teta with a linear decrease
+            ! teta=26.-14.*aer_neut_ratio**4. !teta close to 26 for aer_neut_ratio < 0.5, rapid decrease over 0.5
+            teta = 26. -14.*aer_neut_ratio**2. !teta with a more progressive decrease
+          ELSEIF (optionCNT == 2) THEN
+            !AS, Contact angle, degrees, Dymarska Msc. Thesis 2005)
+            teta = 12. ! Uncoated dust
+          ELSEIF (optionCNT == 3) THEN
+            !AS, Contact angle, degrees, Dymarska Msc. Thesis 2005)
+            teta = 26. ! Acid case
+          ENDIF !IF (optionCNT==1)
+
+          ! Shape factor fshape for a curved surface, e.g.
+          ! https://doi.org/10.1175/2010JAS3425.1
+          wetcoef = COS(teta * PI / 180.)
+          tmp1 = raeros * 100 / rgerms !12 Nov 1998, start
+          fisize = (1. -2.*wetcoef*tmp1 + tmp1**2.)**0.5 !12 Nov 1998, PK97, p. 302
+          xmfi = (tmp1 - wetcoef) / fisize
+          ccc1 = ( (1. - wetcoef*tmp1) / fisize)**3
+          ccc2 = (tmp1**3.) * (2. - 3.*xmfi + xmfi**3.)
+          ccc3 = 3. * wetcoef * (tmp1**2.) * (xmfi - 1.)
+          fshape = 0.5 * (1. + ccc1 + ccc2 + ccc3)
+
+          ! Nucleation rate for deposition nucleation, e.g.
+          ! https://doi.org/10.1175/2010JAS3425.1
+          FGERMS = 4./3. * PI * sig_iv0 * (rgerms**2.0) * fshape !Germ energy with shape
+          coefnucl = 1.E26 * raeros**2.0 !preexpon. factor in PK97, p.303, ice-vapor
+          AJLSHetSD = coefnucl * EXP(-FGERMS/(akbol*T)) !s^-1, heterogen salt nucleation rate, PK97, p. 342, KS.98
+          AJLSHetSD = MAX(AJLSHetSD, 1.E-37)
+          AJLSHetS = REAL(AJLSHetSD) !TODO should not be needed?
+          TEXPTFR2 = 1. - EXP(-AJLSHetS*DT) !14 october 1999, SLC,!Probability of nucleation in timestep
+
+          PODNTEG_DEP = TEXPTFR2*aeronum !(1-exp(-Jls-dep*DT)*f(kr) for Nnucl in m^-3
+          PODNTEG_DEP = MIN(aeronum, PODNTEG_DEP) !cannot nucleate more aerosols than total aerosols
+
+          !TODO, This goes in NNUCCD in morrison, check if I can use the MNUCCD
+          !formula as is - I think yes
+          NuDEP = PODNTEG_DEP !Total cryst. conc. nucleated depos in DT, in m^-3
+          NuDEP = MAX(NuDEP, 1.0E-40)
+
+          1111 continue
+
+        ENDIF ! IF (Si > 1.0)
+
+        !================ CNT IMMERSION NUCLEATION ================
+        ! Calculate the rate of heterogeneous nucleation by immersion, Hoose et al., 2010
+        !https://journals.ametsoc.org/view/journals/atsc/67/8/2010jas3425.1.xml
+        !TODO Ask JC. Should this be activated dust from cw phase only?
+        !TODO doi see ametsoc paper for timestep considerations
+        !See also better values for many parameters there, also check thompson
+        !scheme
+        IF (ICENUC_OPTION==2 .AND. QC>QSMALL .AND. NC>1.0E-40) THEN !EG
+          !! (CNT with contact angle and contact nucleation)
+
+!          write(*,*) 'In CNT immersion code'
+          IF ((a_wat * EVS/EIS)>1.0 .and. Tc<-5.0) THEN !Use tcrit? Other cutoffs? TODO
+            rgerms_cm = 2.0_dp * (volwatm * 1.0D6) * sig_iw0 / (akbol*T*LOG(a_wat * EVS/EIS))
+            rgerms = rgerms_cm * 1.0D-2
+            ! rgerms = 2.0 * sig_iw0 / (Rvap*T*LOG(a_wat * EVS/EIS) - CTurn*epsil**2.0)
+            !TODO is it the same as QVS/QVI? TODO check if I should use Si
+            IF (rgerms < 0.) GO TO 1112
+
+!            write(*,*) 'rgerms=', rgerms
+            ! Contact angle for CNT
+            !TODO all of this should !be computed out of the subroutine, also
+            ! for deposition
+            ! dust = 5.0 ! ug/kg !TODO placeholder, replace
+            ! dmeandust = dmean3 !TODO placeholder, replace
+            raeros = (dmeandust_cw / 2.0_dp) * 1.0D-6     !from um to m
+            ! Number concentration in #/m3
+            ! From ug kg-1 to kg m3 / from m3 to kg
+            aeronum = dust_cw * DE * 1.0D-9 / ((4.0_dp/3.0_dp)*PI*2000.0_dp*raeros*raeros*raeros)
+            !TODO Keita ref here
+            !EG, Contact angle determined using the neutralization factor (Fisher et al., 2011)
+            ! aer_neut_ratio = 0.5 !TODO placeholder
+            IF (optionCNT == 0) THEN !KS
+              ! Admundsen 2014 Campaign values
+              teta = (-0.0112*Tc*Tc) + (-0.9566*Tc) + 7.7245
+            ELSEIF (optionCNT == 1) THEN !KS
+              ! teta=26.-14.*aer_neut_ratio !teta with a linear decrease
+              ! teta=26.-14.*aer_neut_ratio**4. !teta close to 26 for aer_neut_ratio < 0.5, rapid decrease over 0.5
+              teta = 26.0_dp - 14.0_dp*aer_neut_ratio_cw**2.0_dp !teta with a more progressive decrease
+            ELSEIF (optionCNT == 2) THEN
+              !AS, Contact angle, degrees, Dymarska Msc. Thesis 2005)
+              teta = 12. ! Uncoated dust
+            ELSEIF (optionCNT == 3) THEN
+              !AS, Contact angle, degrees, Dymarska Msc. Thesis 2005)
+              teta = 26. ! Acid case
+            ENDIF !IF (optionCNT==1)
+
+            ! Shape factor fshape for a curved surface, e.g.
+            ! https://doi.org/10.1175/2010JAS3425.1
+            wetcoef = COS(teta * PI / 180.0_dp)
+            tmp1 = raeros / rgerms !12 Nov 1998, start
+            fisize = (1.0_dp -2.0_dp*wetcoef*tmp1 + tmp1**2.0_dp)**0.5_dp !12 Nov 1998, PK97, p. 302
+            xmfi = (tmp1 - wetcoef) / fisize
+            ccc1 = ( (1.0_dp - wetcoef*tmp1) / fisize)**3.0_dp
+            ccc2 = (tmp1**3.0_dp) * (2.0_dp - 3.0_dp*xmfi + xmfi**3.0_dp)
+            ccc3 = 3.0_dp * wetcoef * (tmp1**2.0_dp) * (xmfi - 1.0_dp)
+            fshape = 0.5_dp * (1.0_dp + ccc1 + ccc2 + ccc3)
+            ! write(*,*) 'fshape=', fshape
+
+            ! Immersion nucleation rate from
+            ! https://doi.org/10.1175/2010JAS3425.1
+            ! Homogeneous energy of germ formation (erg)
+            delta_g0_imm = 4.0_dp/3.0_dp * PI * sig_iw0 * (rgerms_cm**2.0_dp)
+            ! write(*,*) 'delta_g0_imm=', delta_g0_imm ! 5.0E-11 erg
+            ! Prefactor for immersion nucleation rate (cm-2 s-1)
+            !TODO Run with check to make sure values do not overflow (for single
+            !floats, max value is at  1E38!)
+            ! Aprime_imm_c1 = (volwatm * 1.0D-6) / hplanck
+            ! Aprime_imm_c1 = Aprime_imm_c1 / rgerms**2.0_dp
+            ! Aprime_imm_c2 = n1w / rgerms
+            ! Aprime_imm_c3 = SQRT(3.0_dp/pi * kboltz*T * delta_g0_imm)
+            ! Aprime_imm = Aprime_imm_c2 * Aprime_imm_c3 * Aprime_imm_c1
+            Aprime_imm = (volwatm * 1.0D6) * n1w / (hplanck * rgerms_cm**3.0_dp) &
+                         * SQRT(3.0_dp/PI * akbol*T * delta_g0_imm)
+            !Aprime_imm = n1w * (kboltz*T)**3.0 * (LOG(a_wat * EVS/EIS))**2.0 &
+            !             / (4.0 * hplanck * volwatm * sig_iw0**2.0) &
+            !             * SQRT(4.0 * sig_iw0 / (kboltz*T))
+            ! write(*,*) 'Aprime_imm=', Aprime_imm
+            ! Ice nucleation rate per particle (s-1) - raeros*100.0 in cm
+            J_imm = Aprime_imm * (raeros*100.0_dp)**2.0_dp * sqrt(fshape) &
+                    * EXP((-delta_gsharp_dust_imm - fshape*delta_g0_imm)/(akbol*T))
+            ! J_imm = Aprime_imm_c1 * (raeros*100.0)**2.0
+            ! J_imm = J_imm * sqrt(fshape) * EXP((-delta_gsharp_dust_imm - fshape*delta_g0_imm)/(akbol*T))
+!            write(*,*) 'J_imm=', J_imm
+            J_imm = MAX(J_imm, 1.0D-37) !TODO check this?
+            ! Probability of nucleation in timestep
+            TEXPTFR2 = 1.0_dp - EXP(-J_imm * DT)
+
+            ! Total cryst. conc. nucleated by immersion in DT (#/m3)
+            NuIMM = TEXPTFR2 * aeronum !(1-exp(-Jls-dep*DT)*f(kr) for aeronum in #/m3
+            ! Cannot nucleate more aerosols than total cloudborne aer
+            !TODO add limitation factors?
+            NuIMM = MIN(NuIMM, aeronum)
+            NuIMM = MAX(NuIMM, 1.0D-40)
+
+            1112  continue
+
+          ENDIF ! IF (a_wat * EVS/EIS)>1.0 .and. Tc<0.0
+        ENDIF ! IF (immer == 1)
+
+        !================ CONTACT NUCLEATION ================
+        ! !Disabled for now, Morrison already outputs NNUCCC and MNUCCC from
+        ! Contact code, using Meyer
+        ! IF (contact==1 .and. QC>epsQ .and. Tc<-2.0 .and. WZ>0.001) then
+        !   GG =  1. * idew / (RGASV * T/((QVS*PS(i)*Sigma(i,k))/EPS1)/Cdiff &
+        !                      + CHLC/Ka/T * (CHLC/RGASV/T - 1.))  !CP00a
+        !   Swmax  =  SxFNC(WZ,Tc,PRES,QVS,QVI,CCNtype,1)
+        !   if (QVS>1.e-20) then
+        !     ssat =  min((QV/QVS), Swmax) -1.
+        !   else
+        !     ssat= 0.
+        !   endif
+        !   Tcc    =  Tc + GG*ssat*CHLC/Kdiff                 !C86_eqn64
+        !   Na     =  exp(4.11-0.262*Tcc)                     !W95_eqn60/M92_2.6
+        !   Kn     =  LAMa0*(T)*p0/(T0*PRES*Ra)               !W95_eqn59
+        !   PSIa   =  -kBoltz*Tcc/(6.*PI*Ra*MUdyn)*(1.+Kn)    !W95_eqn58
+        !   ft     =  0.4*(1.+1.45*Kn+0.4*Kn*exp(-1./Kn))*(Ka+2.5*Kn*KAPa)/          &
+        !            (1.+3.*Kn)/(2.*Ka+5.*KAPa*Kn+KAPa)       !W95_eqn57
+        !   Dc     =  (DE*(QC*iNC)*icmr)**thrd
+        !   F1     =  PI2*Dc*Na*(NC)                     !W95_eqn55
+        !   F2     =  Ka/PRES*(Tc-Tcc)                        !W95_eqn56
+        !   NuCONTA= -F1*F2*RGASV*(T)/CHLC*iDE(i,k)           !diffusiophoresis
+        !   NuCONTB=  F1*F2*ft*iDE(i,k)                       !thermeophoresis
+        !   NuCONTC=  F1*PSIa                                 !Brownian diffusion
+        !   NuCONT =  max(0.,(NuCONTA+NuCONTB+NuCONTC)*DT)
+        ! ENDIF ! IF (contact==1 .and. QC>epsQ .and. Tc<-2.0 .and. WZ>0.001)
+
+        !================ ADD NUCLEATED ICE TENDENCIES TO MORRISON  ================
+        ! Convert from #/m3 to #/kg/s
+        NuIMM_kg_s = NuIMM / DE / DT
+        NuCONT_kg_s = NuCONT / DE / DT
+        NuDEP_kg_s = NuDEP / DE / DT
+        ! write(*,'(a,4E10.3)') 'check 01 : NNC, MNC, NND, MND = ', NNUCCC, MNUCCC, NNUCCD, MNUCCD
+        IF(NC > 1.0E-40) THEN !TODO improve this?
+          NNUCCC_in = NNUCCC
+          NNUCCC = NNUCCC_in + NuIMM_kg_s + NuCONT_kg_s
+          ! There cannot be more liquid->ice conversion than liquid number
+          NNUCCC = MIN(NNUCCC, NC/DT)
+          NNUCCC_new = NNUCCC - NNUCCC_in
+          MNUCCC_new = NNUCCC_new/NC*QC
+          !LMarelle I assume QI_NEW = New_NC/NC * QC (fraction of liquid water
+          ! newly converted to ice) TODO improve this?
+          MNUCCC = MNUCCC + NNUCCC_new/NC*QC
+        END IF
+        NNUCCD = NNUCCD + NuDEP/DT
+        MNUCCD = MNUCCD + NNUCCD*MI0
+        NNUCCD_new = NuDEP/DT
+        MNUCCD_new = NNUCCD*MI0
+        !TODO scale each part if below NNUmax? What is this NuMAX actually?
+        ! write(*,'(a,4E10.3)') 'check 02 : NNC, MNC, NND, MND = ', NNUCCC_new, MNUCCC_new, NNUCCD_new, MNUCCD_new
+
+      END IF ! IF(T<273.15)
+
+      END SUBROUTINE cnt_icenuc
+#endif
+
 
 !+---+-----------------------------------------------------------------+
 

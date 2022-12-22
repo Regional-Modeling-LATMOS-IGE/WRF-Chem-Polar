@@ -920,7 +920,8 @@ module_mp_wdm6.o :\
 		module_mp_radar.o
 
 module_mp_morr_two_moment.o :\
-		module_mp_radar.o
+		module_mp_radar.o \
+                module_data_gocart_dust.o
 
 module_mp_wsm3.o :\
 		module_mp_wsm3_accel.F

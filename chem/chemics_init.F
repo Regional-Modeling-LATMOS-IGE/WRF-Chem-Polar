@@ -354,6 +354,25 @@ call wrf_message("**************************************************************
      endif
    endif
 
+   ! LMarelle - WRF-Chem aerosol aware ice nucleation, only coupled for now with
+   ! MOSAIC_4bin AQ schemes in Morrison 2-moment microphysics
+   IF ( config_flags%mp_morr_icenuc_option /= 0 .AND. &
+        config_flags%mp_physics /= MORR_TWO_MOMENT ) THEN
+     CALL wrf_error_fatal("ERROR: mp_morr_icenuc_option /= 0 requires Morrison microphysics")
+   ELSEIF ( config_flags%mp_morr_icenuc_option /= 0 .AND. &
+            config_flags%mp_physics == MORR_TWO_MOMENT ) THEN
+     IF ( config_flags%chem_opt /= MOZART_MOSAIC_4BIN_AQ_KPP .AND. &
+          config_flags%chem_opt /= CBMZ_MOSAIC_4BIN_AQ .AND. &
+          config_flags%chem_opt /= CBMZ_MOSAIC_DMS_4BIN_AQ .AND. &
+          config_flags%chem_opt /= CRI_MOSAIC_4BIN_AQ_KPP ) THEN
+       CALL wrf_error_fatal("ERROR: mp_morr_icenuc_option /= 0 requires MOSAIC_4BIN_AQ aerosols")
+     ENDIF
+     IF( config_flags%mp_morr_icenuc_option /= 1 .AND. &
+         config_flags%mp_morr_icenuc_option /= 2 ) THEN
+       CALL wrf_error_fatal("ERROR: mp_morr_icenuc_option should be 0, 1, or 2")
+     ENDIF
+   ENDIF
+
 !!! TUCCELLA
    if ( config_flags%cldchem_onoff == 1 ) then
       if(  ( config_flags%chem_opt >= 8 .AND. config_flags%chem_opt <= 13)    .OR. &
