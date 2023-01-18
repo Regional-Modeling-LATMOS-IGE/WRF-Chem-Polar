@@ -5195,6 +5195,8 @@
 ! Calls the subroutine soap. Subroutine soap calls subroutine spfcn
 !        use module_data_mosaic_main
 !        use module_data_mosaic_aero
+         use module_data_mosaic_asect, only: lptr_pcg1_b_c_aer, ai_phase
+         use module_state_description, only: param_first_scalar
 
         implicit none
         real(kind=8), parameter :: tinys=1.0d-15
@@ -5268,9 +5270,16 @@
         enddo
       enddo
 ! Calculate pre-existing moles of OA (cpx) as sum of all size bins
-        do ibin=1,nbin_a
-        cpxaged= cpxaged+aer(ioc_a,jp,ibin)
-         enddo
+! LMarelle: Test if pcg1 species are present before performing the following
+! step. The following lines assume that OC only contains aged OA (source:
+! personal communication with Manish Shrivastava). pcg1 (S/I/VOC)
+! species were removed from the SAPRC99_MOSAIC_8BIN_VBS2_AQ_HALOGENS_KPP
+! mechanism, and instead fresh POA emissions were added directly to OC arrays.
+        if(lptr_pcg1_b_c_aer(1,1,ai_phase) .ge. param_first_scalar) then
+          do ibin=1,nbin_a
+            cpxaged= cpxaged+aer(ioc_a,jp,ibin)
+          enddo
+        end if
 
 !  Maps arrays starting from start_ind or ipcg1_b_c_g on to corresponding arrays starting from 1 for just soa species
         do i=1,N

@@ -395,18 +395,6 @@
 {242} SESQ + OH = biog1_c + SESQ + OH                  : Keff2(6.80D-11,nume,den,0.6912_dp,0.3403_dp) ;
 {243} SESQ + O3 = biog1_c + SESQ + O3                  : Keff2(6.21D-17,nume,den,0.0163_dp,0.0816_dp) ;
 {244} SESQ + NO3 = 0.0816biog1_c + SESQ + NO3          : 8.29D-12 ;
-{245} PCG1_B_C + OH  = PCG1_B_C + psd2                   : 0.0D0;
-{246} PCG1_B_O + OH  = PCG1_B_O +OH+ psd2                : 0.0D0;
-{247} OPCG1_B_C + OH = OPCG1_B_C + psd2                  : 0.0D0;
-{248} OPCG1_B_O + OH = OPCG1_B_O +OH+ psd2               : 0.0D0;
-{249} PCG1_F_C + OH  = PCG1_F_C  + psd2                  : 0.0D0;
-{250} PCG1_F_O + OH  = PCG1_F_O +OH + psd2               : 0.0D0;
-{251} OPCG1_F_C + OH = OPCG1_F_C  + psd2                 : 0.0D0;
-{252} OPCG1_F_O + OH = OPCG1_F_O +OH + psd2              : 0.0D0;
-{253} PCG2_B_C + OH  = OPCG1_B_C + 0.5OPCG1_B_O + psd2   : 0.5714D-11 ;
-{254} PCG2_B_O + OH  = OPCG1_B_O +OH + psd2              : 0.5714D-11 ;
-{255} PCG2_F_C + OH  = OPCG1_F_C + 0.5OPCG1_F_O + psd2   : 0.5714D-11 ;
-{256} PCG2_F_O + OH  = OPCG1_F_O +OH + psd2              : 0.5714D-11 ;
 
 
 

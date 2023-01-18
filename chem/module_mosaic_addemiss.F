@@ -455,8 +455,10 @@ real, save :: fr8b_bburn_mosaic(8) = &
 !--SAN
 
          chem_select_1 : SELECT CASE( config_flags%chem_opt )
-         CASE(SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-              SAPRC99_MOSAIC_8BIN_VBS2_KPP)!BSINGH(12/04/2013): Added SAPRC 8 bin and non-aq on 04/03/2014! Set the oc to zero for VBS
+         !BSINGH(12/04/2013): Added SAPRC 8 bin and non-aq on 04/03/2014! Set the oc to zero for VBS
+         !LMarelle - removed S/I/VOCs in SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP
+         CASE(SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
+              SAPRC99_MOSAIC_8BIN_VBS2_KPP)
              aem_oc = 0.0
          END SELECT  chem_select_1 
 
@@ -610,8 +612,10 @@ size_loop: &
                         + bburn_mosaic_c(n)*ebu(i,k,j,p_ebu_pm10) 
 
          chem_select_3 : SELECT CASE( config_flags%chem_opt )
-            CASE(SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &
-              SAPRC99_MOSAIC_8BIN_VBS2_KPP) ! Set the fire oc to zero for VBS
+         ! Set the fire oc to zero for VBS
+         !LMarelle - removed S/I/VOCs in SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP
+            CASE(SAPRC99_MOSAIC_4BIN_VBS2_KPP, &
+                 SAPRC99_MOSAIC_8BIN_VBS2_KPP)
               aem_oc = 0.0
             END SELECT  chem_select_3 
  
