@@ -139,6 +139,7 @@
         integer, save :: kbsoa4 = -999888777
 
         integer, save :: kgly        = -999888777
+        integer, save :: kmsa        = -999888777
 
 
 

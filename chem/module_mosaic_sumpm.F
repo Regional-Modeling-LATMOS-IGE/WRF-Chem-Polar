@@ -537,6 +537,7 @@
                        + chem(i,k,j,lptr_oin_aer(n,itype,iphase)) &
                        + chem(i,k,j,lptr_oc_aer(n,itype,iphase))  &
                        + chem(i,k,j,lptr_bc_aer(n,itype,iphase))  &
+                       + chem(i,k,j,lptr_msa_aer(n,itype,iphase))  &
                        + chem(i,k,j,lptr_glysoa_r1_aer(n,itype,iphase)) &
                        + chem(i,k,j,lptr_glysoa_r2_aer(n,itype,iphase)) &
                        + chem(i,k,j,lptr_glysoa_oh_aer(n,itype,iphase)) &
@@ -580,6 +581,7 @@
                                                           + chem(i,k,j,lptr_oin_aer(n,itype,iphase)) &
                                                           + chem(i,k,j,lptr_oc_aer(n,itype,iphase))  &
                                                           + chem(i,k,j,lptr_bc_aer(n,itype,iphase))  &
+                       + chem(i,k,j,lptr_msa_aer(n,itype,iphase))  &
                        + chem(i,k,j,lptr_glysoa_r1_aer(n,itype,iphase)) &
                        + chem(i,k,j,lptr_glysoa_r2_aer(n,itype,iphase)) &
                        + chem(i,k,j,lptr_glysoa_sfc_aer(n,itype,iphase)) &

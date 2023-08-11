@@ -535,11 +535,13 @@
        p_opcg5_f_o,p_opcg6_f_o,p_opcg7_f_o,p_opcg8_f_o, &
        p_smpa,p_smpbb, &
        p_gly, &
+       p_msa, &
        p_ant1_c,p_ant2_c,p_ant3_c,p_ant4_c,p_ant1_o,p_ant2_o,p_ant3_o,p_ant4_o,&
        p_biog1_c,p_biog2_c,p_biog3_c,p_biog4_c,p_biog1_o, &
        p_biog2_o,p_biog3_o,p_biog4_o, &
 !       p_n2o5, p_clno2
        p_n2o5, p_clno2, &
+       p_msa_a01, p_msa_a02, p_msa_a03, p_msa_a04, &
        p_asoaX_a01, p_asoaX_a02, p_asoaX_a03, p_asoaX_a04, &
        p_asoa1_a01, p_asoa1_a02, p_asoa1_a03, p_asoa1_a04, &
        p_asoa2_a01, p_asoa2_a02, p_asoa2_a03, p_asoa2_a04, &
@@ -1178,6 +1180,8 @@
                 rsub(kbsoa3,k1:k2,1)   = chem(it,kt1:kt2,jt,p_cvbsoa3)/factgas
             if (p_cvbsoa4 .ge. p1st)   &
                 rsub(kbsoa4,k1:k2,1)   = chem(it,kt1:kt2,jt,p_cvbsoa4)/factgas
+            if (p_msa .ge. p1st)   &
+                rsub(kmsa,k1:k2,1)   = chem(it,kt1:kt2,jt,p_msa)/factgas
 
 
 	    do iphase=1,nphase_aer
@@ -1631,6 +1635,7 @@
 		        (l .eq. kno3    ) .or. (l .eq. kno    ) .or.   &
 		        (l .eq. kno2    ) .or. (l .eq. khono  ) .or.   &
 		        (l .eq. kpan    )  .or.   &
+                        (l .eq. kmsa    )  .or.   &
                         (l .eq. kpcg1_b_c    ) .or. (l .eq. kpcg2_b_c   ) .or.   &
                         (l .eq. kpcg3_b_c    ) .or. (l .eq. kpcg4_b_c   ) .or.   &
                         (l .eq. kpcg5_b_c    ) .or. (l .eq. kpcg6_b_c   ) .or.   &
@@ -1925,6 +1930,8 @@
                 chem(it,kt1:kt2,jt,p_cvbsoa3)  = rsub(kbsoa3,k1:k2,1)*factgas
             if (p_cvbsoa4 .ge. p1st)   &
                 chem(it,kt1:kt2,jt,p_cvbsoa4)  = rsub(kbsoa4,k1:k2,1)*factgas
+            if (p_msa .ge. p1st)   &
+                chem(it,kt1:kt2,jt,p_msa)  = rsub(kmsa,k1:k2,1)*factgas
 	  end if
 
 	    do iphase=1,nphase_aer
@@ -2329,6 +2336,8 @@
 	   p_oin_cw06, p_oc_cw06,  p_bc_cw06, p_num_cw06,              &
 	   p_oin_cw07, p_oc_cw07,  p_bc_cw07, p_num_cw07,              &
 	   p_oin_cw08, p_oc_cw08,  p_bc_cw08, p_num_cw08,              &
+           p_msa_cw01, p_msa_cw02, p_msa_cw03, p_msa_cw04, &
+           p_msa_cw05, p_msa_cw06, p_msa_cw07, p_msa_cw08, &
      p_glysoa_r1_cw01, p_glysoa_r2_cw01, p_glysoa_sfc_cw01, p_glysoa_nh4_cw01, p_glysoa_oh_cw01,    &
      p_glysoa_r1_cw02, p_glysoa_r2_cw02, p_glysoa_sfc_cw02, p_glysoa_nh4_cw02, p_glysoa_oh_cw02,    &
      p_glysoa_r1_cw03, p_glysoa_r2_cw03, p_glysoa_sfc_cw03, p_glysoa_nh4_cw03, p_glysoa_oh_cw03,    &
@@ -2495,7 +2504,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 !   set master aerosol chemical types
 !
 !	ntot_mastercomp_aer = 96
-	ntot_mastercomp_aer = 111
+	ntot_mastercomp_aer = 112
 
 	l = 1
 	mastercompindx_so4_aer = l
@@ -3275,6 +3284,14 @@ n2o5_flag = config_flags%n2o5_hetchem
         mw_mastercomp_aer(   l ) =    mw_bsoa4_aer
         hygro_mastercomp_aer(l ) = hygro_bsoa4_aer
 
+        l = 112
+        mastercompindx_msa_aer = l
+        name_mastercomp_aer( l ) = 'msa  '
+        dens_mastercomp_aer( l ) =  dens_msa_aer
+        mw_mastercomp_aer(   l ) =    mw_msa_aer
+        hygro_mastercomp_aer(l ) = hygro_msa_aer
+
+
 !
 !   set section size arrays
 !
@@ -3336,6 +3353,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 		kso2, kh2o2, khcho, koh, kho2,   &
 		kno3, kno, kno2, khono, kpan,   &
                 lmaxd, l2maxd, ltot, ltot2, lunout, lunerr, &
+                kmsa, &
                 name,kpcg1_b_c,kpcg2_b_c,kpcg3_b_c,kpcg4_b_c, &
                 kpcg5_b_c,kpcg6_b_c,kpcg7_b_c,kpcg8_b_c, &
                 kpcg9_b_c,kpcg1_b_o,kpcg2_b_o,kpcg3_b_o, &
@@ -5470,6 +5488,12 @@ n2o5_flag = config_flags%n2o5_hetchem
             mcindx_dum = mastercompindx_bsoa4_aer
             spectxt = 'bsoa4_'
             nspectxt = 6
+
+        else if (l_mastercomp .eq. mastercompindx_msa_aer) then
+            lptr_dum = lptr_msa_aer(n,itype,iphase)
+            mcindx_dum = mastercompindx_msa_aer
+            spectxt = 'msa_'
+            nspectxt = 4
 	else
 	    goto 2500
 	end if
@@ -7209,6 +7233,9 @@ n2o5_flag = config_flags%n2o5_hetchem
 
        if (p_cvbsoa4 .ge. p1st) then
            kbsoa4 = p_cvbsoa4
+       endif
+       if (p_msa .ge. p1st) then
+           kmsa = p_msa
        endif
        if (p_ant1_c .ge. p1st) then
             kant1_c = p_ant1_c
