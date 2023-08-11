@@ -72,7 +72,7 @@ MODULES =                                 \
         module_wetdep_ls.o                \
         module_zero_plumegen_coms.o       \
         module_vash_settling.o            \
-	module_mosaic_settling.o          \
+        module_mosaic_settling.o          \
         module_chem_plumerise_scalar.o    \
         module_dep_simple.o               \
         module_gocart_dmsemis.o           \
@@ -86,7 +86,8 @@ MODULES =                                 \
         module_dust_load.o                \
         module_uoc_dustwd.o               \
         module_data_uoc_wd.o              \
-	module_nightingale_dmsemis.o      \
+        module_nightingale_dmsemis.o      \
+        module_seaspray_emis.o            \
         module_mosaic_addemiss.o          \
         module_mosaic_initmixrats.o       \
         module_mosaic_support.o           \

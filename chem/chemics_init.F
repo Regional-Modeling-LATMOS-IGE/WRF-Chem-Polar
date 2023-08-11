@@ -71,6 +71,7 @@
 
 !!CYY
    USE module_model_constants, only:t0
+   USE module_seaspray_emis, only:seaspray_emis_init
 
    IMPLICIT NONE
 
@@ -444,6 +445,26 @@ call wrf_message("**************************************************************
       call wrf_error_fatal ('chemics_init: error, nightingale_dmsemis (dmsemis_opt = 2) &
                             requires e_dms_oc to be defined in emis_ant (emiss_opt = 4,8,10,13)')
    endif
+
+   ! Checks for sea spray aerosol emissions option seas_opt = SEASMONAHAN, SEASIOANNIDIS, SEASGONG
+   IF ( config_flags%seas_opt == SEASMONAHAN .OR. config_flags%seas_opt == SEASIOANNIDIS &
+        .OR. config_flags%seas_opt == SEASGONG) THEN
+     SELECT CASE(config_flags%chem_opt)
+     CASE (MOZCART_KPP, T1_MOZCART_KPP, &
+           GOCART_SIMPLE, GOCARTRADM2,GOCARTRACM_KPP, &
+           CBMZ_MOSAIC_4BIN, CBMZ_MOSAIC_DMS_4BIN, CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, &
+           CBMZ_MOSAIC_8BIN, CBMZ_MOSAIC_DMS_8BIN, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ, &
+           MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
+           CRI_MOSAIC_4BIN_AQ_KPP, CRI_MOSAIC_8BIN_AQ_KPP, &
+           SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)
+       ! Initialize seaspray emissions for valid chem_opt
+       CALL seaspray_emis_init(config_flags%chem_opt, config_flags%seas_opt)
+     CASE DEFAULT
+       CALL wrf_error_fatal ('chemics_init: error, sea salt emissions seas_opt &
+         == SEASMONAHAN,SEASIOANNIDIS,SEASGONG, are only compatible &
+         with GOCART, MOSAIC_4BIN and MOSAIC_8BIN.')
+     END SELECT
+   ENDIF
 
     IF ( config_flags%chem_opt == 0 .AND. config_flags%aer_ra_feedback .NE. 0 ) THEN
 !       config_flags%aer_ra_feedback = 0
