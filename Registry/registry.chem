@@ -601,7 +601,8 @@ state    real  ddlen          ijo     misc        1         Z      rh       "DRY
 state    real  ddflx          ijo     misc        1         Z      r       "DRY_DEP_FLUX"      "dry deposition flux"             "mol or ug m^-2"
 state    real  wdflx          ijo     misc        1         Z      r       "WET_DEP_FLUX"      "column wet scavening flux"       "mmol or ug m^-2"
 
-state    real  e_nacl_ocean   ij      misc        1         Z      rh      "E_NACL_OCEAN"       "Ocean NaCl emsiss"       "ug m^-2"
+state    real  e_nacl_ocean   ij      misc        1         Z      rh      "E_NACL_OCEAN"       "Ocean NaCl emiss"               "ug m^-2"
+state    real  e_nacl_blow    ij      misc        1         Z      rh      "E_NACL_BLOW"        "Blowing snow NaCl emiss"        "ug m^-2"
 
 #
 state    real  e_bio          ijo     misc        1         Z      r        "E_BIO"             "EMISSIONS"             "ppm m/min"
@@ -3882,6 +3883,7 @@ rconfig   integer     dust_opt            namelist,chem          1              
 rconfig   integer     dust_schme          namelist,chem          1              2       rh    "dust_schme"       ""      ""
 rconfig   integer     dmsemis_opt         namelist,chem          1              0       rh    "dmsemis_opt"         ""      ""
 rconfig   integer     seas_opt            namelist,chem          1              0       rh    "seas_opt"            ""      ""
+rconfig   integer     blowing_snow_opt    namelist,chem          1              0       rh    "blowing_snow_opt"    ""      ""
 rconfig   integer     bio_emiss_opt       namelist,chem          max_domains    0       rh    "bio_emiss_opt"       ""      ""
 rconfig   integer     biomass_burn_opt    namelist,chem          max_domains    0       rh    "biomass_burn_opt"    ""      ""
 rconfig   integer     plumerisefire_frq   namelist,chem          max_domains    180     rh    "plumerisefire_frq"   ""      ""

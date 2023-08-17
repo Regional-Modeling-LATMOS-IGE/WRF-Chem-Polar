@@ -27,7 +27,7 @@ CONTAINS
          u10,v10,ivgtyp,isltyp,gsw,vegfra,rmol,ust,znt,dms_0,              &
          erup_beg,erup_end,                                                &
          xland,xlat,xlong,                                                 &
-         xice,                                                             &
+         xice, meltedsnow, snowh_melt,                                     &
          z_at_w,z,smois,dustin,seasin,                                     &
          sebio_iso,sebio_oli,sebio_api,sebio_lim,sebio_xyl,                &
          sebio_hc3,sebio_ete,sebio_olt,sebio_ket,sebio_ald,                &   
@@ -64,7 +64,7 @@ CONTAINS
          mebio_isop, mebio_apin, mebio_bpin, mebio_bcar,                   &
          mebio_acet, mebio_mbo, mebio_no,                                  &
          current_month,                                                    &
-         lakemask, e_nacl_ocean,                                           &
+         lakemask, e_nacl_ocean, e_nacl_blow,                              &
          ! end stuff for MEGAN v2.04
          ! stuff for LNOx emissions
          ht, refl_10cm,                                                    &
@@ -98,6 +98,7 @@ CONTAINS
   USE gocart_seasalt
   USE module_nightingale_dmsemis, only: nightingale_dmsemis
   USE module_seaspray_emis, only: seaspray_emis
+  USE module_blowing_snow_emis, only: blowing_snow_emis
   USE uoc_dust  
   USE module_dms_emis
   USE module_mosaic_addemiss
@@ -170,6 +171,7 @@ CONTAINS
            mean_fct_agtf,mean_fct_agef,                                    &
            mean_fct_agsv,mean_fct_aggr,firesize_agtf,firesize_agef,        &
            firesize_agsv,firesize_aggr
+   REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT) :: meltedsnow, snowh_melt
 
 !
 ! 
@@ -322,7 +324,7 @@ CONTAINS
            adapt_step_flag
 
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: lakemask
-      REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT) :: e_nacl_ocean
+      REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT) :: e_nacl_ocean, e_nacl_blow
 
 !     stuff for aircraft emissions
 
@@ -743,6 +745,20 @@ CONTAINS
            CALL wrf_debug(15,'no sea salt emissions')
         end if
       END SELECT seasalt_select
+
+      ! Blowing snow emissions
+      IF(config_flags%blowing_snow_opt == 1) THEN
+        ! Blowing snow emissions for GOCART or MOSAIC aerosols
+        CALL wrf_debug(15, 'Blowing snow sea salt emissions')
+        CALL blowing_snow_emis(id, dtstep, dz8w, &
+         moist, t_phy, p_phy,   &
+         rho_phy, chem, u10, v10, ust, T2,                             &
+         snowh, tsk, xice, lakemask, meltedsnow, snowh_melt,           &
+         e_nacl_blow,          &
+         ids,ide, jds,jde, kds,kde,                                    &
+         ims,ime, jms,jme, kms,kme,                                    &
+         its,ite, jts,jte, kts,kte)
+      ENDIF
 
       dust_select:  SELECT CASE(config_flags%dust_opt)
       CASE (DUSTGOCART)

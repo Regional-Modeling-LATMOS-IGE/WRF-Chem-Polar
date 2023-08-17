@@ -1033,6 +1033,9 @@ state    real   CLAY_PX          ij     misc        1         -      rh       "C
 state    real   CSAND_PX         ij     misc        1         -      rh       "CSAND_PX"      "Coarse sand perent for PX LSM"    "fraction"
 state    real   FMSAND_PX        ij     misc        1         -      rh       "FMSAND_PX"     "Fine-medium sand perent for PX LSM"    "fraction"
 
+state    real   MELTEDSNOW       ij     misc        1         -      irh      "MELTEDSNOW"    "PAST SNOW MELT FLAG" ""
+state    real   SNOWH_MELT       ij     misc        1         -      irh      "SNOWH_MELT"    "SNOW DEPTH AT LAST MELTING PERIOD END" "m"
+
 # sfclay PBL variables
 i1      real   PSIM           ij     misc        1         -     -         "PSIM"                "SIMILARITY FUNCTION FOR MOMENTUM"     ""
 i1      real   PSIH           ij     misc        1         -     -         "PSIH"                "SIMILARITY FUNCTION FOR HEAT"         ""

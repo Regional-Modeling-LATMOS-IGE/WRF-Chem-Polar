@@ -371,8 +371,7 @@ MODULE module_seaspray_emis
 
     !-------- Initialize size-resolved aerosol arrays for SSA emissions --------
     ! Initialize vol_emiss_dist (microm3/m2/s) and bin_diameters_cen
-    ! (micrometer) for each family of aerosol options selected by
-    ! chem_opt
+    ! (micrometer) for each family of aerosol options selected by chem_opt
 
     ! Allocate the size-resolved aerosol arrays
     IF (.NOT. ALLOCATED(vol_emiss_dist)) THEN
