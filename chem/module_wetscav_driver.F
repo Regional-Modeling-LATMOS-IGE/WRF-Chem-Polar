@@ -274,8 +274,6 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
    REAL, DIMENSION( ims:ime, jms:jme, num_chem ) :: qsrflx, delta_mass_col ! column change due to scavening
    REAL ::  tmp_minval = 1.0e7
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme ) :: rainrate, evaprate
-   !TODO replace by namelist option
-   INTEGER, PARAMETER :: wetscav_aer_simple = 1
 
 !
 ! Wet deposition over the current time step
@@ -394,8 +392,6 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
          rainrate(:,:,:) = 0.
          evaprate(:,:,:) = 0.
        endif
-       ! Trace gas wet scavenging for MOZART
-       CALL wrf_debug(15,'wetscav_driver calling wetscav_mozcart')
        call wetscav_mozcart( id, ktau, dtstep, ktauc, config_flags,             &
                              dtstepc, t_phy, p8w, t8w, p_phy,                   &
                              chem, rho_phy, cldfra_ls, rainrate, evaprate,      &
@@ -408,9 +404,9 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
                              ids,ide, jds,jde, kds,kde,                         &
                              ims,ime, jms,jme, kms,kme,                         &
                              its,ite, jts,jte, kts,kte                          )
-       hno3_col_mdel = delta_mass_col(:,:,p_hno3)
-       ! Simple wet scavenging for aerosols
-       IF(config_flags%chem_opt == MOZCART_KPP .AND. wetscav_aer_simple == 1) THEN
+       ! Additional simple scavenging for aerosols, wetscav_mozcart only treats
+       ! gases
+       IF(config_flags%chem_opt == MOZCART_KPP) THEN
          CALL wrf_debug(15,'wetscav_driver calling aer_wetscav_simple')
          call aer_wetscav_simple( id, dtstep, config_flags,                         &
                                   t_phy, p_phy, dz8w,                               &
@@ -424,9 +420,11 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
                                   its,ite, jts,jte, kts,kte                         )
        ENDIF
 
+        hno3_col_mdel = delta_mass_col(:,:,p_hno3)
    ! STUPID - cases have to be unique. We repeat both calls done above
    ! (mosaic_wetscav for aerosols, mozcart for gases)
    CASE (MOZART_MOSAIC_4BIN_AQ_KPP)
+       CALL wrf_debug(15,'wetscav_driver calling mosaic_wetscav_driver')
        if( config_flags%mp_physics == THOMPSON &
            .OR. config_flags%mp_physics == THOMPSONAERO) then
          rainrate(:,:,:) = rainprod(:,:,:)
@@ -444,7 +442,13 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
          rainrate(:,:,:) = 0.
          evaprate(:,:,:) = 0.
        endif
-       ! Trace gas wet scavenging for MOZART
+       call wetscav_mozart_mosaic (id,ktau,dtstep,ktauc,config_flags,        &
+               dtstepc,alt,t_phy,p8w,t8w,p_phy,chem,rho_phy,cldfra_ls,     &
+               qlsink,precr,preci,precs,precg, qsrflx,                     &
+               gas_aqfrac, numgas_aqfrac,                                  &
+               ids,ide, jds,jde, kds,kde,                                  &
+               ims,ime, jms,jme, kms,kme,                                  &
+               its,ite, jts,jte, kts,kte                                   )
        CALL wrf_debug(15,'wetscav_driver calling wetscav_mozcart')
        call wetscav_mozcart( id, ktau, dtstep, ktauc, config_flags,             &
                              dtstepc, t_phy, p8w, t8w, p_phy,                   &
@@ -459,33 +463,6 @@ REAL,  DIMENSION( ims:ime , kms:kme , jms:jme , ntot_amode ),       &
                              ims,ime, jms,jme, kms,kme,                         &
                              its,ite, jts,jte, kts,kte                          )
         hno3_col_mdel = delta_mass_col(:,:,p_hno3)
-        ! Aerosol wet scavenging
-        IF (wetscav_aer_simple == 1) THEN
-          IF(config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP) THEN
-            ! Simple wet scavenging for aerosols
-            CALL wrf_debug(15,'wetscav_driver calling aer_wetscav_simple')
-            call aer_wetscav_simple( id, dtstep, config_flags,                         &
-                                     t_phy, p_phy, dz8w,                               &
-                                     chem, rho_phy, cldfra_ls, rainrate, evaprate,     &
-                                     precr, preci, precs, precg, dx, dy,               &
-                                     moist(ims,kms,jms,p_qv), moist(ims,kms,jms,p_qc), &
-                                     moist(ims,kms,jms,p_qi), moist(ims,kms,jms,p_qs), &
-                                     moist(ims,kms,jms,p_qr),                          &
-                                     ids,ide, jds,jde, kds,kde,                        &
-                                     ims,ime, jms,jme, kms,kme,                        &
-                                     its,ite, jts,jte, kts,kte                         )
-          ENDIF
-        ELSE ! wetscav_aer_simple
-          ! Default MOZART-MOSAIC wet scavenging for aerosols
-          CALL wrf_debug(15,'wetscav_driver calling mosaic_wetscav_driver')
-          call wetscav_mozart_mosaic (id,ktau,dtstep,ktauc,config_flags,        &
-                  dtstepc,alt,t_phy,p8w,t8w,p_phy,chem,rho_phy,cldfra_ls,     &
-                  qlsink,precr,preci,precs,precg, qsrflx,                     &
-                  gas_aqfrac, numgas_aqfrac,                                  &
-                  ids,ide, jds,jde, kds,kde,                                  &
-                  ims,ime, jms,jme, kms,kme,                                  &
-                  its,ite, jts,jte, kts,kte                                   )
-        ENDIF ! wetscav_aer_simple
 
 CASE (CBMZ_CAM_MAM3_NOAQ,CBMZ_CAM_MAM3_AQ,CBMZ_CAM_MAM7_NOAQ,CBMZ_CAM_MAM7_AQ)       
        CALL wrf_debug(15,'wetscav_driver calling wetscav_cam_mam_driver')
