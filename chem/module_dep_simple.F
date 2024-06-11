@@ -65,6 +65,7 @@
     PRIVATE :: HL_init
 
     logical, allocatable :: is_aerosol(:) ! true if field is aerosol (any phase)
+    logical, allocatable :: is_cw_aerosol(:) ! true if field is aerosol (cloud (cw) phase)
 
     CONTAINS
 

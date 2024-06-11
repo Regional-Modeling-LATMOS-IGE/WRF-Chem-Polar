@@ -345,6 +345,7 @@ BENCH_START(rad_driver_tim)
      &        , ATOP2D_OUT=grid%atop2d_out                                &  !goddardrad
      &        , CHEM_OPT=config_flags%chem_opt                            &
      &        , GSFCRAD_GOCART_COUPLING=config_flags%gsfcrad_gocart_coupling &
+     &        , ACI_WRFCHEM_OPT=config_flags%aci_wrfchem_opt              &
 #endif
      &        , TLWDN=grid%tlwdn, TLWUP=grid%tlwup                        & ! goddard schemes
      &        , SLWDN=grid%slwdn, SLWUP=grid%slwup                        & ! goddard schemes
@@ -374,6 +375,7 @@ BENCH_START(rad_driver_tim)
      &        , cldovrlp=config_flags%cldovrlp                            & ! J. Henderson AER: cldovrlp namelist value
      &        , qc_bl=grid%qc_bl,qi_bl=grid%qi_bl,cldfra_bl=grid%cldfra_bl&
      &        , re_cloud=grid%re_cloud, re_ice=grid%re_ice, re_snow=grid%re_snow & ! G. Thompson
+     &        , re_cloud_aci=grid%re_cloud_aci & ! LMarelle
      &        , has_reqc=grid%has_reqc, has_reqi=grid%has_reqi, has_reqs=grid%has_reqs & ! G. Thompson
      &        , PB=grid%pb                                                &
      &        , F_ICE_PHY=grid%f_ice_phy,F_RAIN_PHY=grid%f_rain_phy       &
@@ -420,6 +422,9 @@ BENCH_START(rad_driver_tim)
      &        ,ICLOUD_CU=config_flags%ICLOUD_CU                            &
      &        ,QC_CU=grid%QC_CU , QI_CU=grid%QI_CU                         &
      &        ,CALC_CLEAN_ATM_DIAG=config_flags%calc_clean_atm_diag                  &
+     &        , WRF_AER_SOLUBLE_EXT=grid%wrf_aer_soluble_ext &
+     &        , WRF_AER_SO4_EXT=grid%wrf_aer_so4_ext &
+     &        , ACI_WRF_OPT=config_flags%aci_wrf_opt                      &
 #if (WRF_CHEM == 1)
      &        ,AER_RA_FEEDBACK=config_flags%aer_ra_feedback                &
      &        ,PM2_5_DRY=grid%pm2_5_dry, PM2_5_WATER=grid%pm2_5_water               &
@@ -436,7 +441,7 @@ BENCH_START(rad_driver_tim)
      &        ,TAUAERlw11 =grid%tauaerlw11, TAUAERlw12=grid%tauaerlw12    & 
      &        ,TAUAERlw13 =grid%tauaerlw13, TAUAERlw14=grid%tauaerlw14    & 
      &        ,TAUAERlw15 =grid%tauaerlw15, TAUAERlw16=grid%tauaerlw16   & 
-     &        ,progn=config_flags%progn                                            &
+     &        ,progn=config_flags%progn                                  &
 #endif
      &         ,slope_rad=config_flags%slope_rad,topo_shading=config_flags%topo_shading     &
      &         ,shadowmask=grid%shadowmask   &

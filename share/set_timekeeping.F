@@ -552,6 +552,75 @@ SUBROUTINE Setup_Timekeeping ( grid )
 ! end for wrf chem emiss input
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #endif
+!++lm read data in auxinput 18
+! AUXINPUT18_ INTERVAL
+! auxinput18_interval is left there (and means minutes) for consistency, but
+! auxinput18_interval_m will take precedence if specified
+   CALL nl_get_auxinput18_interval( grid%id, auxinput18_interval )   ! same as minutes
+   CALL nl_get_auxinput18_interval_d( grid%id, auxinput18_interval_d )
+   CALL nl_get_auxinput18_interval_h( grid%id, auxinput18_interval_h )
+   CALL nl_get_auxinput18_interval_m( grid%id, auxinput18_interval_m )
+   CALL nl_get_auxinput18_interval_s( grid%id, auxinput18_interval_s )
+   IF ( auxinput18_interval_m .EQ. 0 ) auxinput18_interval_m = auxinput18_interval
+
+   IF ( MAX( auxinput18_interval_d,   &
+             auxinput18_interval_h, auxinput18_interval_m , auxinput18_interval_s   ) .GT. 0 ) THEN
+     CALL WRFU_TimeIntervalSet( interval, D=auxinput18_interval_d, &
+                                        H=auxinput18_interval_h, M=auxinput18_interval_m, S=auxinput18_interval_s, rc=rc )
+     CALL wrf_check_error( WRFU_SUCCESS, rc, &
+                           'WRFU_TimeIntervalSet(auxinput18_interval) FAILED', &
+                           __FILE__ , &
+                           __LINE__  )
+   ELSE
+     interval =  padding_interval
+   ENDIF
+
+   CALL nl_get_auxinput18_begin_y( grid%id, auxinput18_begin_y )
+   CALL nl_get_auxinput18_begin_d( grid%id, auxinput18_begin_d )
+   CALL nl_get_auxinput18_begin_h( grid%id, auxinput18_begin_h )
+   CALL nl_get_auxinput18_begin_m( grid%id, auxinput18_begin_m )
+   CALL nl_get_auxinput18_begin_s( grid%id, auxinput18_begin_s )
+   IF ( MAX( auxinput18_begin_y, auxinput18_begin_d,   &
+             auxinput18_begin_h, auxinput18_begin_m , auxinput18_begin_s   ) .GT. 0 ) THEN
+      CALL WRFU_TimeIntervalSet( begin_time , D=auxinput18_begin_d, &
+                                      H=auxinput18_begin_h, M=auxinput18_begin_m, S=auxinput18_begin_s, rc=rc )
+      CALL wrf_check_error( WRFU_SUCCESS, rc, &
+                            'WRFU_TimeIntervalSet(auxinput18_begin) FAILED', &
+                            __FILE__ , &
+                            __LINE__  )
+   ELSE
+      begin_time = zero_time
+   ENDIF
+   CALL nl_get_auxinput18_end_y( grid%id, auxinput18_end_y )
+   CALL nl_get_auxinput18_end_d( grid%id, auxinput18_end_d )
+   CALL nl_get_auxinput18_end_h( grid%id, auxinput18_end_h )
+   CALL nl_get_auxinput18_end_m( grid%id, auxinput18_end_m )
+   CALL nl_get_auxinput18_end_s( grid%id, auxinput18_end_s )
+   IF ( MAX( auxinput18_end_y, auxinput18_end_d,   &
+             auxinput18_end_h, auxinput18_end_m , auxinput18_end_s   ) .GT. 0 ) THEN
+      CALL WRFU_TimeIntervalSet( end_time , D=auxinput18_end_d, &
+                                     H=auxinput18_end_h, M=auxinput18_end_m, S=auxinput18_end_s, rc=rc )
+      CALL wrf_check_error( WRFU_SUCCESS, rc, &
+                            'WRFU_TimeIntervalSet(auxinput18_end) FAILED', &
+                            __FILE__ , &
+                            __LINE__  )
+   ELSE
+      end_time =  padding_interval
+   ENDIF
+   CALL domain_alarm_create( grid, AUXINPUT18_ALARM, interval, begin_time, end_time )
+!TBH:  Should be OK to remove the "#else" section and the code it contains
+!TBH:  because later code overwrites grid%alarms( AUXINPUT18_ALARM )...
+!TBH:  In fact, by setting namelist values for auxinput18 correctly, it ought
+   CALL WRFU_AlarmEnable( grid%alarms( AUXINPUT18_ALARM ), rc=rc )
+   CALL WRFU_AlarmRingerOn( grid%alarms( AUXINPUT18_ALARM ), rc=rc )
+! TBH:  NOTE:  Proper setting of namelist variables for auxinput18 ought to
+! TBH:         make this hard-coded bit unnecessary.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   CALL WRFU_AlarmEnable( grid%alarms( AUXINPUT18_ALARM ), rc=rc )
+   CALL WRFU_AlarmRingerOn( grid%alarms( AUXINPUT18_ALARM ), rc=rc )
+
+
+
 
 ! without this test, it's possible for the value of the WRF_ALARM_SECS_TIL_NEXT_RING
 ! that is written as metadata to a restart file to be garbage for BOUNDARY_ALARM for 

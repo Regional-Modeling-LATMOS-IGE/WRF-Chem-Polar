@@ -3817,13 +3817,14 @@ BENCH_START(micro_driver_tim)
       &        ,refl_10cm=grid%refl_10cm                                  & ! hm, 9/22/09 for refl
       &        ,WARM_RAIN=grid%warm_rain                                  &
       &        ,T8W=t8w                                                   &
-      &        ,CLDFRA=grid%cldfra, EXCH_H=grid%exch_h &
+      &        ,CLDFRA=grid%cldfra, CLDFRA2=grid%cldfra2, EXCH_H=grid%exch_h &
       &        ,NSOURCE=grid%qndropsource                                 &
+      &        ,ACI_WRF_OPT=config_flags%aci_wrf_opt                      &
 #if (WRF_CHEM==1)
       &        ,QLSINK=grid%qlsink,CLDFRA_OLD=grid%cldfra_old             &
       &        ,PRECR=grid%precr, PRECI=grid%preci, PRECS=grid%precs, PRECG=grid%precg &
       &        ,CHEM_OPT=config_flags%chem_opt, PROGN=config_flags%progn  &
-      &        ,THOMPSON_AER_FROM_CHEM=config_flags%thompson_aer_from_chem &
+      &        ,ACI_WRFCHEM_OPT=config_flags%aci_wrfchem_opt              &
 !======================
       ! Variables required for CAMMGMP Scheme when run with WRF_CHEM
       &        ,CHEM=chem                                                 &

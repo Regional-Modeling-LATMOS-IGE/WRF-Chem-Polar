@@ -10,7 +10,7 @@ CONTAINS
                          phb, t, moist, n_moist,                 &  ! input
                          rho, p_phy ,          &  ! output
                          u_phy, v_phy, p8w, t_phy, t8w,               &  ! output
-                         z, z_at_w, dz8w,rh,                          &  ! output
+                         z, z_at_w, dz8w,rh, cldfral, cldfra_ls,      &  ! output
                          fzm, fzp,                                    &  ! params
                          ids, ide, jds, jde, kds, kde,                &
                          ims, ime, jms, jme, kms, kme,                &
@@ -39,7 +39,10 @@ CONTAINS
                                                                 rho, &
                                                                   z, &
                                                                dz8w, &
-                                                         rh,  z_at_w
+                                                                 rh, &
+                                                             z_at_w, &
+                                                            cldfral, &
+                                                            cldfra_ls
 
    REAL , DIMENSION( ims:ime , kms:kme , jms:jme ) ,                 &
           INTENT(IN   )                                  ::      pb, &
@@ -147,6 +150,21 @@ CONTAINS
     enddo
     enddo
 
+    ! Compute liquid cloud fraction for aqueous chem, rainout and other operations on cw aerosols
+    cldfral(:, :, :) = 0.0
+    CALL cal_cldfral4(cldfral, moist(:,:,:,p_qv), moist(:,:,:,p_qc),   &
+             p_phy, t_phy, rho,       &
+             ids,ide, jds,jde, kds,kde,                   &
+             ims,ime, jms,jme, kms,kme,                   &
+             its,ite, jts,jte, kts,kte)
+    cldfra_ls(:, :, :) = 0.0
+    CALL cal_cldfra4(cldfra_ls, moist(:,:,:,p_qv), moist(:,:,:,p_qc),   &
+             moist(:,:,:,p_qi),   &
+             p_phy, t_phy, rho,       &
+             ids,ide, jds,jde, kds,kde,                   &
+             ims,ime, jms,jme, kms,kme,                   &
+             its,ite, jts,jte, kts,kte)
+
 !  extrapolate p and t to surface and top.
 !  we'll use an extrapolation in z for now
 
@@ -203,5 +221,109 @@ END SUBROUTINE chem_prep
    end do
 
    end subroutine UPCASE
+
+!----------------------------------------
+
+   SUBROUTINE cal_cldfral4(cldfra, qv, qc, p, t, rho,  &
+                          ids,ide, jds,jde, kds,kde,           &
+                          ims,ime, jms,jme, kms,kme,           &
+                          its,ite, jts,jte, kts,kte)
+
+   ! Calculate grid-scale liquid cloud fraction
+   !
+   ! LMarelle - from module_convtrans_prep.F
+   !
+   ! Siebesma et al., JAS, Vol. 60, no. 10, 1201-1219, 2003 (based on LES
+   ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of liquid
+   ! water and saturation vapor pressure must be in g/kg within the Siebesma et
+   ! al. cloud fraction scheme
+
+   IMPLICIT NONE
+
+   INTEGER, INTENT(IN):: ids,ide, jds,jde, kds,kde,                  &
+                         ims,ime, jms,jme, kms,kme,                  &
+                         its,ite, jts,jte, kts,kte
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qv,p,t,rho
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qc
+
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: cldfra
+
+   INTEGER :: i,j,k
+   REAL :: satvp,rhgrid,h2oliq
+   REAL, PARAMETER  ::  coef_p = 0.25, coef_gamm = 0.49, coef_alph = 100.
+
+   DO j = jts,jte
+      DO k = kts,kte
+         DO i = its,ite
+           cldfra(i,k,j) = 0.
+           satvp = 3.80*EXP(17.27*(t(i,k,j)-273.)/ &
+                   (t(i,k,j)-36.))/(.01*p(i,k,j))
+           rhgrid = MAX(.1, MIN( .95, qv(i,k,j) / satvp))
+           ! Only liquid clouds
+           h2oliq = 1000. * (qc(i,k,j))
+           satvp = 1000. * satvp
+           cldfra(i,k,j) = (1. - EXP(-coef_alph*h2oliq/((1.-rhgrid)*satvp)**coef_gamm))*(rhgrid**coef_p)
+           ! Set to 0 out of liquid clouds
+           IF(qc(i,k,j) <= 0.) cldfra(i,k,j) = 0.0
+           cldfra(i,k,j) = MAX(0., MIN(1., cldfra(i,k,j)))
+           IF(cldfra(i,k,j) > 0.) cldfra(i,k,j) = MAX(0.01, cldfra(i,k,j))
+         ENDDO
+      ENDDO
+   ENDDO
+
+   END SUBROUTINE cal_cldfral4
+
+!----------------------------------------
+
+   SUBROUTINE cal_cldfra4(cldfra, qv, qc, qi, p, t, rho,  &
+                          ids,ide, jds,jde, kds,kde,           &
+                          ims,ime, jms,jme, kms,kme,           &
+                          its,ite, jts,jte, kts,kte)
+
+   ! Calculate grid-scale cloud fraction
+   !
+   ! LMarelle - from module_convtrans_prep.F
+   !
+   ! Siebesma et al., JAS, Vol. 60, no. 10, 1201-1219, 2003 (based on LES
+   ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of liquid
+   ! water and saturation vapor pressure must be in g/kg within the Siebesma et
+   ! al. cloud fraction scheme
+
+   IMPLICIT NONE
+
+   INTEGER, INTENT(IN):: ids,ide, jds,jde, kds,kde,                  &
+                         ims,ime, jms,jme, kms,kme,                  &
+                         its,ite, jts,jte, kts,kte
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qv,p,t,rho
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qc,qi
+
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: cldfra
+
+   INTEGER :: i,j,k
+   REAL :: satvp,rhgrid,h2oliq
+   REAL, PARAMETER  ::  coef_p = 0.25, coef_gamm = 0.49, coef_alph = 100.
+
+   DO j = jts,jte
+      DO k = kts,kte
+         DO i = its,ite
+           cldfra(i,k,j) = 0.
+           satvp = 3.80*EXP(17.27*(t(i,k,j)-273.)/ &
+                   (t(i,k,j)-36.))/(.01*p(i,k,j))
+           rhgrid = MAX(.1, MIN( .95, qv(i,k,j) / satvp))
+           h2oliq = 1000. * (qc(i,k,j) + qi(i,k,j))
+           satvp = 1000. * satvp
+           cldfra(i,k,j) = (1. - EXP(-coef_alph*h2oliq/((1.-rhgrid)*satvp)**coef_gamm))*(rhgrid**coef_p)
+           ! Set to 0 out of clouds
+           IF((qc(i,k,j) + qi(i,k,j)) <= 0.) cldfra(i,k,j) = 0.0
+           cldfra(i,k,j) = MAX(0., MIN(1., cldfra(i,k,j)))
+           IF(cldfra(i,k,j) > 0.) cldfra(i,k,j) = MAX(0.01, cldfra(i,k,j))
+         ENDDO
+      ENDDO
+   ENDDO
+
+   END SUBROUTINE cal_cldfra4
+
+!----------------------------------------
+
 
 END MODULE module_chem_utilities

@@ -13,6 +13,8 @@ rconfig   integer    io_form_auxinput12  namelist,time_control   1  2
 
 
 state    real    CLDFRA2         ikj    misc        1         -      h        "CLDFRA2"             "CLOUD FRACTION"
+state    real    CLDFRAL_CHEM    ikj    misc        1         -      rh       "CLDFRAL_CHEM"        "LIQUID GRID-SCALE CLOUD FRAC. FROM CHEM STEP"
+state    real    CLDFRA_LS_CHEM  ikj    misc        1         -      rh       "CLDFRA_LS_CHEM"       "GRID-SCALE CLOUD FRAC. FROM CHEM STEP"
 state    real    QV_B4MP         ikj    misc        1         -      -        "QV_B4MP"             "WATER VAPOR BEFORE MICROPHYSICS"  "kg kg-1"
 state    real    QC_B4MP         ikj    misc        1         -      -        "QC_B4MP"             "CLOUD WATER BEFORE MICROPHYSICS"  "kg kg-1"
 state    real    QI_B4MP         ikj    misc        1         -      -        "QI_B4MP"             "CLOUD ICE BEFORE MICROPHYSICS"    "kg kg-1"
@@ -1370,6 +1372,24 @@ state    real  asmpsoa_a01      ikj     misc          1         -      -        
 state    real  asmpsoa_a02      ikj     misc          1         -      -         "asmpsoa_a02"             "asmpsoa_a02"                              "ug m^-3"
 state    real  asmpsoa_a03      ikj     misc          1         -      -         "asmpsoa_a03"             "asmpsoa_a03"                              "ug m^-3"
 state    real  asmpsoa_a04      ikj     misc          1         -      -         "asmpsoa_a04"             "asmpsoa_a04"                              "ug m^-3"
+
+# Parameters for THOMPSONAERO activation TODO mosaic-4bin only for now
+state    real  thompson_aernum1      ikj    misc     1      -      rh         "thompson_aernum1"        "thompson_aernum1"        "kg-1"
+state    real  thompson_aernum2      ikj    misc     1      -      rh         "thompson_aernum2"        "thompson_aernum2"        "kg-1"
+state    real  thompson_aernum3      ikj    misc     1      -      rh         "thompson_aernum3"        "thompson_aernum3"        "kg-1"
+state    real  thompson_aernum4      ikj    misc     1      -      rh         "thompson_aernum4"        "thompson_aernum4"        "kg-1"
+state    real  thompson_aerra1       ikj    misc     1      -      rh         "thompson_aerra1"         "thompson_aerra1"         "um"
+state    real  thompson_aerra2       ikj    misc     1      -      rh         "thompson_aerra2"         "thompson_aerra2"         "um"
+state    real  thompson_aerra3       ikj    misc     1      -      rh         "thompson_aerra3"         "thompson_aerra3"         "um"
+state    real  thompson_aerra4       ikj    misc     1      -      rh         "thompson_aerra4"         "thompson_aerra4"         "um"
+state    real  thompson_aerkappa1    ikj    misc     1      -      rh         "thompson_aerkappa1"      "thompson_aerkappa1"      ""
+state    real  thompson_aerkappa2    ikj    misc     1      -      rh         "thompson_aerkappa2"      "thompson_aerkappa2"      ""
+state    real  thompson_aerkappa3    ikj    misc     1      -      rh         "thompson_aerkappa3"      "thompson_aerkappa3"      ""
+state    real  thompson_aerkappa4    ikj    misc     1      -      rh         "thompson_aerkappa4"      "thompson_aerkappa4"      ""
+state    real  thompson_aeractfrac1    ikj    misc     1      -      rh         "thompson_aeractfrac1"      "thompson_aeractfrac1"      ""
+state    real  thompson_aeractfrac2    ikj    misc     1      -      rh         "thompson_aeractfrac2"      "thompson_aeractfrac2"      ""
+state    real  thompson_aeractfrac3    ikj    misc     1      -      rh         "thompson_aeractfrac3"      "thompson_aeractfrac3"      ""
+state    real  thompson_aeractfrac4    ikj    misc     1      -      rh         "thompson_aeractfrac4"      "thompson_aeractfrac4"      ""
 
 # photolysis rates
 state    real  ph_o31d         ikj     misc        1         -      rh       "PHOTR2"                "O31D Photolysis Rate" "min{-1}"
@@ -3881,7 +3901,7 @@ rconfig   integer     gas_drydep_opt      namelist,chem          max_domains    
 rconfig   integer     aer_drydep_opt      namelist,chem          max_domains    1       rh    "aer_drydep_opt"      ""      ""
 #LMarelle add an option for gravitational settling in MOSAIC
 rconfig   integer     mosaic_aer_settling_opt    namelist,chem          max_domains    0       rh    "mosaic_aer_settling_opt"    ""      ""
-rconfig   integer     thompson_aer_from_chem    namelist,chem          max_domains    0       rh    "thompson_aer_from_chem"    ""      ""
+rconfig   integer     aci_wrfchem_opt     namelist,chem          1              0       rh    "aci_wrfchem_opt"     ""      ""
 rconfig   integer     diagnostic_chem     namelist,chem          max_domains    1       rh    "diagnostic_chem"     ""      ""
 rconfig   integer     aero_diag_opt       namelist,chem          max_domains    0       rh    "diagnostic_aerosol"  ""      ""
 rconfig   integer     aero_cw_diag_opt    namelist,chem          max_domains    0       rh    "diagnostic_cw_aerosol"     ""      ""

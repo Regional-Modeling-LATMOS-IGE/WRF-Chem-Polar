@@ -2914,8 +2914,10 @@ contains
 
                elseif (liqflag .eq. 1) then
                   radliq = relqmc(lay)
-                  if (radliq .lt. 2.5_rb .or. radliq .gt. 60._rb) stop &
-                       'LIQUID EFFECTIVE RADIUS OUT OF BOUNDS'
+                  if (radliq .lt. 2.5_rb .or. radliq .gt. 60._rb) then
+                    WRITE(*,*) 'radliq',radliq
+                    stop 'LIQUID EFFECTIVE RADIUS OUT OF BOUNDS'
+                  endif
                   index = int(radliq - 1.5_rb)
                   if (index .eq. 0) index = 1
                   if (index .eq. 58) index = 57

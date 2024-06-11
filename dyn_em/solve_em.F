@@ -181,6 +181,9 @@ SUBROUTINE solve_em ( grid , config_flags  &
    INTEGER                                    :: num, den
    TYPE(WRFU_TimeInterval)                    :: dtInterval, intervaltime,restartinterval
 
+   CHARACTER (LEN=256) :: current_date_char
+   INTEGER :: current_month
+
 ! Define benchmarking timers if -DBENCH is compiled
 #include "bench_solve_em_def.h"
 
@@ -3621,6 +3624,10 @@ BENCH_END(moist_physics_prep_tim)
 
      CALL wrf_debug ( 200 , ' call microphysics_driver' )
 
+     ! For Thompsonaero
+     CALL domain_clock_get( grid, current_timestr=current_date_char )
+     read(current_date_char(6:7),FMT='(I2)') current_month
+
      grid%sr = 0.
      specified_bdy = config_flags%specified .OR. config_flags%nested
      channel_bdy = config_flags%specified .AND. config_flags%periodic_x
@@ -3676,12 +3683,15 @@ BENCH_START(micro_driver_tim)
       &        ,WARM_RAIN=grid%warm_rain                                  &
       &        ,T8W=t8w                                                   &
       &        ,CLDFRA=grid%cldfra, EXCH_H=grid%exch_h &
+      &        ,CLDFRAL_PHYS=grid%cldfral_phys &
+      &        ,CLDFRAL_PHYS_OLD=grid%cldfral_phys_old &
       &        ,NSOURCE=grid%qndropsource                                 &
+      &        ,ACI_WRF_OPT=config_flags%aci_wrf_opt                      &
 #if (WRF_CHEM == 1)
       &        ,QLSINK=grid%qlsink,CLDFRA_OLD=grid%cldfra_old             &
       &        ,PRECR=grid%precr, PRECI=grid%preci, PRECS=grid%precs, PRECG=grid%precg &
       &        ,CHEM_OPT=config_flags%chem_opt, PROGN=config_flags%progn  &
-      &        ,THOMPSON_AER_FROM_CHEM=config_flags%thompson_aer_from_chem &
+      &        ,ACI_WRFCHEM_OPT=config_flags%aci_wrfchem_opt              &
 !======================
       ! Variables required for CAMMGMP Scheme when run with WRF_CHEM
       &        ,CHEM=chem                                                 &
@@ -3763,6 +3773,22 @@ BENCH_START(micro_driver_tim)
       &        , EVAPPROD=wetscav_frcing(ims,kms,jms,p_evapprod)          &
       &        , QV_B4MP=grid%qv_b4mp,QC_B4MP=grid%qc_b4mp                &
       &        , QI_B4MP=grid%qi_b4mp, QS_B4MP=grid%qs_b4mp               &
+      &        , THOMPSON_AERNUM1=grid%thompson_aernum1 &
+      &        , THOMPSON_AERNUM2=grid%thompson_aernum2 &
+      &        , THOMPSON_AERNUM3=grid%thompson_aernum3 &
+      &        , THOMPSON_AERNUM4=grid%thompson_aernum4 &
+      &        , THOMPSON_AERRA1=grid%thompson_aerra1 &
+      &        , THOMPSON_AERRA2=grid%thompson_aerra2 &
+      &        , THOMPSON_AERRA3=grid%thompson_aerra3 &
+      &        , THOMPSON_AERRA4=grid%thompson_aerra4 &
+      &        , THOMPSON_AERKAPPA1=grid%thompson_aerkappa1 &
+      &        , THOMPSON_AERKAPPA2=grid%thompson_aerkappa2 &
+      &        , THOMPSON_AERKAPPA3=grid%thompson_aerkappa3 &
+      &        , THOMPSON_AERKAPPA4=grid%thompson_aerkappa4 &
+      &        , THOMPSON_AERACTFRAC1=grid%thompson_aeractfrac1 &
+      &        , THOMPSON_AERACTFRAC2=grid%thompson_aeractfrac2 &
+      &        , THOMPSON_AERACTFRAC3=grid%thompson_aeractfrac3 &
+      &        , THOMPSON_AERACTFRAC4=grid%thompson_aeractfrac4 &
 #endif
       &        , QT_CURR=scalar(ims,kms,jms,P_QT), F_QT=F_QT              &
       &        , QNN_CURR=scalar(ims,kms,jms,P_QNN), F_QNN=F_QNN          &
@@ -3773,6 +3799,8 @@ BENCH_START(micro_driver_tim)
       &        , QNG_CURR=scalar(ims,kms,jms,P_QNG), F_QNG=F_QNG          &
       &        , QNWFA_CURR=scalar(ims,kms,jms,P_QNWFA), F_QNWFA=F_QNWFA  & ! for Thompson water-friendly aerosol
       &        , QNIFA_CURR=scalar(ims,kms,jms,P_QNIFA), F_QNIFA=F_QNIFA  & ! for Thompson ice-friendly aerosol
+      &        , QNWFA_EXT=grid%qnwfa_ext, QNIFA_EXT=grid%qnifa_ext &
+      &        , current_month=current_month &
       &        , QNH_CURR=scalar(ims,kms,jms,P_QNH), F_QNH=F_QNH          & ! for milbrandt2mom and nssl_2mom
       &        , QNIC_CURR=scalar(ims,kms,jms,P_QNIC), F_QNIC=F_QNIC          &
       &        , QNIP_CURR=scalar(ims,kms,jms,P_QNIP), F_QNIP=F_QNIP          &

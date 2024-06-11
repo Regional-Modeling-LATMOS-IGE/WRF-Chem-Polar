@@ -229,6 +229,16 @@ SUBROUTINE med_before_solve_io ( grid , config_flags )
        IF( config_flags%obs_nudge_opt .EQ. 1) THEN
          CALL med_fddaobs_in ( grid , config_flags )
        ENDIF
+! Read data from auxinput18
+     ELSE IF( ialarm .EQ. AUXINPUT18_ALARM ) THEN
+         IF( WRFU_AlarmIsRinging( grid%alarms( ialarm ), rc=rc ) .OR.  &
+         ((config_flags%restart) .AND. ( currTime .EQ. startTime ))) THEN
+           CALL med_auxinput_in ( grid, ialarm, config_flags )
+           WRITE ( message , FMT='(A,i3,A,i3)') 'Input data processed for aux input ',&
+                  ialarm - first_auxinput + 1, ' for domain ',grid%id
+           CALL wrf_debug ( 15 , message )
+           CALL WRFU_AlarmRingerOff( grid%alarms( ialarm ), rc=rc )
+         ENDIF
 #endif
      ELSE IF( WRFU_AlarmIsRinging( grid%alarms( ialarm ), rc=rc ) ) THEN
 #if ( WRFPLUS == 1 )

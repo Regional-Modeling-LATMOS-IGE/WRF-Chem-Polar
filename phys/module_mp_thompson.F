@@ -58,6 +58,10 @@
       LOGICAL, PARAMETER, PRIVATE:: dustyIce = .true.
       LOGICAL, PARAMETER, PRIVATE:: homogIce = .true.
 
+      ! Enable or not the subgrid variability of the vertical windspeed from
+      ! TKE (Ghan et al., 1997)
+      INTEGER, PARAMETER, PRIVATE:: ACI_SUBGRID_W_OPT = 1
+
       INTEGER, PARAMETER, PRIVATE:: IFDRY = 0
       REAL, PARAMETER, PRIVATE:: T_0 = 273.15
       REAL, PARAMETER, PRIVATE:: PI = 3.1415926536
@@ -981,9 +985,15 @@
                               SNOWNC, SNOWNCV, &
                               GRAUPELNC, GRAUPELNCV, SR, &
 #if ( WRF_CHEM == 1 )
-                              wetscav_on, rainprod, evapprod, &
+                              wetscav_on, rainprod, evapprod, qlsink,  &
+                              thompson_aernum, &
+                              thompson_aerra, &
+                              thompson_aerkappa, &
+                              thompson_aeractfrac, &
+                              thompson_aer_from_chem, &
+                              naerbins, &
 #endif
-                              wfa_ifa_from_chem, &
+                              exch_h, &
                               refl_10cm, diagflag, ke_diag, do_radar_ref,      &
                               re_cloud, re_ice, re_snow,              &
                               has_reqc, has_reqi, has_reqs,           &
@@ -1006,9 +1016,17 @@
                           re_cloud, re_ice, re_snow
       INTEGER, INTENT(IN):: has_reqc, has_reqi, has_reqs
 #if ( WRF_CHEM == 1 )
+      !TODO remove all hardcoded naerbins=4 values
+      INTEGER, INTENT(IN) :: naerbins
       REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT):: &
-                          rainprod, evapprod
+                          rainprod, evapprod, qlsink
+      REAL, DIMENSION(ims:ime, kms:kme, jms:jme, naerbins), &
+         INTENT(INOUT) :: thompson_aernum, &
+                          thompson_aerra, &
+                          thompson_aerkappa, &
+                          thompson_aeractfrac
 #endif
+      REAL, DIMENSION(ims:ime, kms:kme, jms:jme), OPTIONAL, INTENT(IN):: exch_h
       REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN):: &
                           pii, p, w, dz
       REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT):: &
@@ -1021,8 +1039,10 @@
       INTEGER, INTENT(IN):: itimestep
 #if ( WRF_CHEM == 1 )
       LOGICAL, INTENT(in) :: wetscav_on
+      ! Option for using WRF-Chem aerosols or external aerosol climatology for
+      ! droplet activation in aerosol-aware scheme
+      INTEGER, OPTIONAL, INTENT(IN) :: thompson_aer_from_chem
 #endif
-      LOGICAL, INTENT(IN) :: wfa_ifa_from_chem
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: &
@@ -1032,8 +1052,11 @@
       REAL, DIMENSION(kts:kte):: re_qc1d, re_qi1d, re_qs1d
 #if ( WRF_CHEM == 1 )
       REAL, DIMENSION(kts:kte):: &
-                          rainprod1d, evapprod1d
+                          rainprod1d, evapprod1d, c2prec
+      REAL, DIMENSION(kts:kte, naerbins):: &
+                          aernum1d,aerra1d,aerkappa1d,aeractfrac1d
 #endif
+      REAL, DIMENSION(kts:kte):: exch_h_1d
       REAL, DIMENSION(its:ite, jts:jte):: pcp_ra, pcp_sn, pcp_gr, pcp_ic
       REAL:: dt, pptrain, pptsnow, pptgraul, pptice
       REAL:: qc_max, qr_max, qs_max, qi_max, qg_max, ni_max, nr_max
@@ -1139,6 +1162,15 @@
          if (is_aerosol_aware) then
             do k = kts, kte
                nc1d(k) = nc(i,k,j)
+#if ( WRF_CHEM == 1 )
+               IF(thompson_aer_from_chem > 0 ) THEN
+                 aernum1d(k,:) = thompson_aernum(i, k, j, :)
+                 aerra1d(k,:) = thompson_aerra(i, k, j, :)
+                 aerkappa1d(k,:) = thompson_aerkappa(i, k, j, :)
+                 aeractfrac1d(k, :) = 0.0
+               ENDIF
+#endif
+               exch_h_1d(k) = exch_h(i,k,j)
                nwfa1d(k) = nwfa(i,k,j)
                nifa1d(k) = nifa(i,k,j)
             enddo
@@ -1156,9 +1188,12 @@
                       nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dz1d,  &
                       pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
-                      wetscav_on, rainprod1d, evapprod1d, &
+                      wetscav_on, rainprod1d, evapprod1d, c2prec, &
+                      aernum1d,aerra1d,aerkappa1d,aeractfrac1d, &
+                      thompson_aer_from_chem, &
+                      naerbins, &
 #endif
-                      wfa_ifa_from_chem, &
+                      exch_h_1d, &
                       kts, kte, dt, i, j)
 
          pcp_ra(i,j) = pptrain
@@ -1186,15 +1221,22 @@
 !-GT        nwfa1d(kts) = nwfa1
             ! Do not use for WRF-Chem since emissions are already performed
             ! there
-            IF (.NOT. wfa_ifa_from_chem) THEN
+#if ( WRF_CHEM == 1 )
+            IF (thompson_aer_from_chem == 0) THEN
+#endif
               nwfa1d(kts) = nwfa1d(kts) + nwfa2d(i,j)*dt_in
               nifa1d(kts) = nifa1d(kts) + nifa2d(i,j)*dt_in
+#if ( WRF_CHEM == 1 )
             ENDIF
+#endif
 
             do k = kts, kte
                nc(i,k,j) = nc1d(k)
                nwfa(i,k,j) = nwfa1d(k)
                nifa(i,k,j) = nifa1d(k)
+#if ( WRF_CHEM == 1 )
+               thompson_aeractfrac(i, k, j, :) = aeractfrac1d(k,:)
+#endif
             enddo
          endif
 
@@ -1212,6 +1254,11 @@
           IF ( wetscav_on ) THEN
             rainprod(i,k,j) = rainprod1d(k)
             evapprod(i,k,j) = evapprod1d(k)
+            IF(qc1d(k) .GT. 1.0E-10) THEN
+              qlsink(i,k,j) = MIN(1.0, MAX(0.0, c2prec(k)/qc1d(k)))
+            ELSE
+              qlsink(i,k,j) = 0.0
+            ENDIF
           ENDIF
 #endif
             if (qc1d(k) .gt. qc_max) then
@@ -1366,9 +1413,12 @@
                           nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
-                          wetscav_on, rainprod, evapprod, &
+                          wetscav_on, rainprod, evapprod, c2prec, &
+                          aernum1d,aerra1d,aerkappa1d,aeractfrac1d, &
+                          thompson_aer_from_chem, &
+                          naerbins, &
 #endif
-                          wfa_ifa_from_chem, &
+                          exch_h_1d, &
                           kts, kte, dt, ii, jj)
 
       implicit none
@@ -1383,10 +1433,15 @@
       REAL, INTENT(IN):: dt
 #if ( WRF_CHEM == 1 )
       REAL, DIMENSION(kts:kte), INTENT(INOUT):: &
-                          rainprod, evapprod
+                          rainprod, evapprod, c2prec
       LOGICAL, INTENT(IN) :: wetscav_on
+      REAL, DIMENSION(kts:kte, naerbins), INTENT(IN) :: &
+                          aernum1d,aerra1d,aerkappa1d
+      REAL, DIMENSION(kts:kte, naerbins), INTENT(INOUT) :: &
+                          aeractfrac1d
+      INTEGER, INTENT(IN) :: thompson_aer_from_chem, naerbins
 #endif
-      LOGICAL, INTENT(IN) :: wfa_ifa_from_chem
+      REAL, DIMENSION(kts:kte), INTENT(INOUT):: exch_h_1d
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: tten, qvten, qcten, qiten, &
@@ -1454,6 +1509,7 @@
       REAL:: a_, b_, loga_, A1, A2, tf
       REAL:: tempc, tc0, r_mvd1, r_mvd2, xkrat
       REAL:: xnc, xri, xni, xmi, oxmi, xrc, xrr, xnr
+      REAL :: xncmin
       REAL:: xsat, rate_max, sump, ratio
       REAL:: clap, fcd, dfcd
       REAL:: otemp, rvs, rvs_p, rvs_pp, gamsc, alphsc, t1_evap, t1_subl
@@ -1473,6 +1529,41 @@
       LOGICAL:: debug_flag
       CHARACTER*256:: mp_debug
       INTEGER:: nu_c
+
+      ! LMarelle - Variables for subgrid vertical wind speed integration:
+      ! Exchange coefficient for heat (m2 s-1)
+      REAL :: ekd
+      ! Subgrid variability of the vertical windspeed (m s-1)
+      REAL :: sigw
+      ! Vertical windspeed from TKE (m s-1)
+      REAL :: wtke
+      ! Vertical windspeed subgrid integration step (m s-1)
+      REAL :: dw
+      ! Grid-cell average vertical windspeed (m s-1)
+      REAL :: w_grid
+      ! Vertical windspeed subgrid integration min value (m s-1)
+      ! Vertical windspeed subgrid integration max value (m s-1)
+      REAL :: wmin,wmax
+      ! Subgrid vertical windspeed for integration (m s-1)
+      REAL :: w_subgrid
+      ! Subgrid vertical windspeed for integration, value at rectangle corners (m s-1)
+      REAL :: w_integ
+      ! Wind speed probability density function at w_integ, and corresponding integrals
+      REAL :: normal_pdf_up,normal_pdf_dn,normal_integ,normal_integ_sum
+      ! Fraction of the integral of the wind speed probability density function above wmax
+      REAL :: normal_integ_above
+      REAL :: zf1
+      INTEGER :: i_w
+#if ( WRF_CHEM == 1 )
+      ! Activation fraction for size resolved aerosols (0-1)
+      REAL, DIMENSION(naerbins) :: actfrac_arg02_tot, actfrac_arg02
+      INTEGER :: isize
+#endif
+      ! Bulk activated number of aerosols
+      REAL :: actnum_te14_tot, actnum_te14, actnum_arg02_tot
+      ! Parameters for subgrid vertical wind speed integration, from activate()
+      REAL, PARAMETER :: ekdmax=100.0, ekdmin=0.01, sq2pi=2.506628, wtkemin=0.2
+      INTEGER, PARAMETER :: n_w = 200
 
 !+---+
 
@@ -1591,6 +1682,7 @@
       do k = kts, kte
          rainprod(k) = 0.
          evapprod(k) = 0.
+         c2prec(k) = 0.
       enddo
     endif
 #endif
@@ -1617,14 +1709,17 @@
          qv(k) = MAX(1.E-10, qv1d(k))
          pres(k) = p1d(k)
          rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
-         IF(wfa_ifa_from_chem) THEN
-           !TODO LMarelle check again, why not apply min/max val here?
+#if ( WRF_CHEM == 1 )
+         IF(thompson_aer_from_chem > 0) THEN
            nwfa(k) = nwfa1d(k)*rho(k)
            nifa(k) = nifa1d(k)*rho(k)
          ELSE
+#endif
            nwfa(k) = MAX(11.1E6, MIN(9999.E6, nwfa1d(k)*rho(k)))
            nifa(k) = MAX(naIN1*0.01, MIN(9999.E6, nifa1d(k)*rho(k)))
+#if ( WRF_CHEM == 1 )
          ENDIF
+#endif
 
          if (qc1d(k) .gt. R1) then
             no_micro = .false.
@@ -2804,14 +2899,17 @@
          ocp(k) = 1./(Cp*(1.+0.887*qv(k)))
          lvt2(k)=lvap(k)*lvap(k)*ocp(k)*oRv*otemp*otemp
 
-         IF(wfa_ifa_from_chem) THEN
+#if ( WRF_CHEM == 1 )
+         IF(thompson_aer_from_chem > 0) THEN
            ! Do not use for WRF-Chem because tendencies are already applied
            ! there
-           !TODO check if the min value should be reapplied
            nwfa(k) = nwfa1d(k)*rho(k)
          ELSE
+#endif
            nwfa(k) = MAX(11.1E6, (nwfa1d(k) + nwfaten(k)*DT)*rho(k))
+#if ( WRF_CHEM == 1 )
          ENDIF
+#endif
       enddo
 
       do k = kts, kte
@@ -2988,10 +3086,151 @@
 !+---+-----------------------------------------------------------------+ !  DROPLET NUCLEATION
            if (clap .gt. eps) then
             if (is_aerosol_aware) then
-               xnc = MAX(2., activ_ncloud(temp(k), w1d(k), nwfa(k)))
-            else
+               IF(thompson_aer_from_chem == 0) THEN
+                 !---- Activate droplets for aerosol-aware scheme with
+                 !     thompson_aer_from_chem == 0 (default Thompson
+                 !     aerosol-aware scheme)
+                 xnc = MAX(2., activ_ncloud(temp(k), w1d(k), nwfa(k)))
+
+               ELSE ! IF thompson_aer_from_chem /= 0
+                 !---- Activate droplets for aerosol-aware scheme with
+                 !     thompson_aer_from_chem /= 0 (Thompson aerosol-aware
+                 !     scheme with WRF-Chem aerosols or external climatology)
+
+                 if(ACI_SUBGRID_W_OPT == 0) THEN
+                   !-- No subgrid W variability for aerosol activation
+#if ( WRF_CHEM ==   1 )
+                     actfrac_arg02_tot(1:naerbins) = 0.0
+                     IF(thompson_aer_from_chem > 0 ) THEN
+                       CALL ccn_actfrac_arg02(actfrac_arg02_tot(1:naerbins), &
+                         pres(k), temp(k), w1d(k), aernum1d(k,:)*rho(k), &
+                         aerkappa1d(k,:), naerbins)
+                     ENDIF
+#endif
+                     actnum_te14_tot = MAX(2., activ_ncloud(temp(k), w1d(k), nwfa(k)))
+
+                 elseif(ACI_SUBGRID_W_OPT == 1) then
+                   !-- Subgrid W variability for aerosol activation
+                   !   (Ghan et al., 1997, https://doi.org/10.1029/97JD01810)
+                   !TODO is this valid at all resolutions? If not, include a
+                   !cutoff dx scale here or when setting up aci_subgrid_w_opt
+                   !TODO wbar << wmix asumption. From mixactivate
+                   IF(k == kts) THEN
+                     wtke = wtkemin
+                   ELSE
+                     ekd = MAX(exch_h_1d(k), ekdmin)
+                     ekd = MIN(ekd, ekdmax)
+                     !TODO Should the sq2pi factor be here? It is in the original
+                     ! publication, but it seems like it should not be included
+                     ! twice in wtke and in the normal dist integration
+                     wtke = sq2pi * ekd/dzq(k) ! Can be calculated directly from TKE, better
+                     wtke = max(wtke, wtkemin)
+                   ENDIF
+                   sigw = wtke
+                   ! Calculate subgrid min and max vertical windspeed wmin, wmax
+                   ! (normal distribution, cutting off at +/- 3 sigma)
+                   w_grid = w1d(k)
+                   wmin = MAX(w_grid - 3*sigw, 0.0)
+                   wmax = MIN(w_grid + 3*sigw, 50.0)
+                   ! Calculate integration step dw
+                   dw = (wmax-wmin)/float(n_w)
+                   ! Loop over updrafts between wmin,wmax,number of steps n_w, step dw
+                   actfrac_arg02_tot(:) = 0.0
+                   normal_integ_sum = 0.0
+                   actnum_te14_tot = 0.0
+                   DO i_w = 1, n_w
+                     ! Calculate aerosol activation in the fraction  of the cell
+                     ! where vertical wind speed is ~= w_subgrid
+                     w_subgrid = wmin+(FLOAT(i_w)-0.5)*dw
+#if ( WRF_CHEM ==   1 )
+                     actfrac_arg02(1:naerbins) = 0.0
+#endif
+                     IF(w_subgrid .GT. 0.0) THEN
+#if ( WRF_CHEM ==   1 )
+                       IF(thompson_aer_from_chem > 0 ) THEN
+                         CALL ccn_actfrac_arg02(actfrac_arg02(1:naerbins), &
+                           pres(k), temp(k), w_subgrid, aernum1d(k,:)*rho(k), &
+                           aerkappa1d(k,:), naerbins)
+                       ENDIF
+#endif
+                       actnum_te14 = MAX(2., activ_ncloud(temp(k), w_subgrid, nwfa(k)))
+                     ENDIF
+                     ! Calculate normal distribution integral = fraction of cell
+                     ! area where w ~= w_subgrid
+                     w_integ = w_subgrid - dw/2.0
+                     normal_pdf_dn = 1./(sigw*sq2pi)*EXP(-0.5*((w_integ-w1d(k))/sigw)**2.0)
+                     w_integ = w_subgrid + dw/2.0
+                     normal_pdf_up = 1./(sigw*sq2pi)*EXP(-0.5*((w_integ-w1d(k))/sigw)**2.0)
+                     normal_integ =  0.5 * (normal_pdf_up + normal_pdf_dn) * dw
+                     normal_integ_sum = normal_integ_sum + normal_integ
+#if ( WRF_CHEM ==   1 )
+                     IF(thompson_aer_from_chem > 0 ) THEN
+                       ! Accumulate gridcell-wide activation fraction (Abdul-Razzak & Ghan)
+                       actfrac_arg02_tot(1:naerbins) = actfrac_arg02_tot(1:naerbins) + normal_integ * actfrac_arg02(1:naerbins)
+                     ENDIF
+#endif
+                     ! Accumulate gridcell-wide activated aer number (Thompson
+                     ! and Eidhammer, 2014)
+                     actnum_te14_tot = actnum_te14_tot + normal_integ * actnum_te14
+                   ENDDO
+                   ! IF(thompson_aer_from_chem > 0 ) THEN
+                   !   ! Include this to take into account the contribution of
+                   !   ! updrafts stronger than wmax (<0.15% of grid cell with 3
+                   !   ! sigma)
+                   !   zf1 = (wmax-w_grid)/(sigw*SQRT(2.0))
+                   !   normal_integ_above = ... 1.-CDF at wmax
+                   !   actfrac_arg02_tot(1:naerbins) = actfrac_arg02_tot(1:naerbins) + normal_integ_above * actfrac_arg02(1:naerbins)
+                   !   normal_integ_sum = normal_integ_sum + normal_integ_above
+                   ! ENDIF
+
+                  else ! if ACI_SUBGRID_W_OPT
+                    CALL wrf_error_fatal("ACI_SUBGRID_W_OPT should be 0 or 1")
+
+                  endif ! if ACI_SUBGRID_W_OPT
+
+#if ( WRF_CHEM == 1 )
+                 IF(thompson_aer_from_chem > 0 ) THEN
+                   ! Activation fraction from Abdul-Razzak & Ghan
+                   !
+                   ! Constrain actfrac_arg02_tot to [0., -1].
+                   actfrac_arg02_tot(1:naerbins) = MAX(actfrac_arg02_tot(1:naerbins), 0.0)
+                   actfrac_arg02_tot(1:naerbins) = MIN(actfrac_arg02_tot(1:naerbins), 1.0)
+                   ! Activation fraction from Abdul-Razzak & Ghan for
+                   ! chemistry !TODO should use mass actfrac, not num aqfrac
+                   aeractfrac1d(k,1:naerbins) = actfrac_arg02_tot(1:naerbins)
+                 ENDIF
+#endif
+                 !---- Activate droplets for aerosol-aware scheme with
+                 !     thompson_aer_from_chem /= 0
+                 ! To stay consistent with the base THOMPSONAERO, define a minimum
+                 ! activated droplet number using an NWFA of 11.1E6
+                 xncmin =  MAX(2., activ_ncloud(temp(k), w1d(k), 11.1E6))
+                 IF(thompson_aer_from_chem == 1) THEN
+#if ( WRF_CHEM == 1 )
+                   ! Use Abdul-Razzak & Ghan activated aerosol number to form droplets in THOMPSON MP
+                   actnum_arg02_tot = 0.0
+                   DO isize=1,naerbins
+                     actnum_arg02_tot = actnum_arg02_tot + actfrac_arg02_tot(isize)*aernum1d(k,isize)*rho(k)
+                   ENDDO
+                   actnum_arg02_tot = MAX(2., actnum_arg02_tot)
+                   xnc = actnum_arg02_tot
+                   xnc = MAX(xnc, xncmin)
+#endif
+                 ELSEIF(thompson_aer_from_chem == 2 .OR. thompson_aer_from_chem == -1) THEN
+                   ! Use Thompson & Eidhammer activated aerosol number to form droplets in THOMPSON MP
+                   xnc = actnum_te14_tot
+                   xnc = MAX(xnc, xncmin)
+
+                 ENDIF
+#if ( WRF_CHEM == 1 )
+               ENDIF
+#endif
+            else !if is_aerosol_aware
+               !---- Activate droplets for aerosol-unaware microphysics
                xnc = Nt_c
-            endif
+
+            endif !if is_aerosol_aware
+
             pnc_wcd(k) = 0.5*(xnc-nc(k) + abs(xnc-nc(k)))*odts*orho
 
 !+---+-----------------------------------------------------------------+ !  EVAPORATION
@@ -3156,6 +3395,10 @@
                                      prg_scw(k) + prs_iau(k) + &
                                      prg_gcw(k) + prs_sci(k) + &
                                      pri_rci(k)
+          ! Cloud water conversion to precipitation, from water tendency +
+          ! rainprod tendencies overlap
+          c2prec(k) = prr_wau(k) + prr_rcw(k) + prs_scw(k) +&
+                      prg_scw(k) +  prg_gcw(k)
         enddo
       endif
 #endif
@@ -3521,18 +3764,18 @@
          qv1d(k) = MAX(1.E-10, qv1d(k) + qvten(k)*DT)
          qc1d(k) = qc1d(k) + qcten(k)*DT
          nc1d(k) = MAX(2./rho(k), MIN(nc1d(k) + ncten(k)*DT, Nt_c_max))
-         IF(.NOT. wfa_ifa_from_chem) THEN
+#if ( WRF_CHEM == 1 )
+         IF(thompson_aer_from_chem == 0) THEN
            ! Do not use for WRF-Chem because tendencies are already applied
            ! there
-           !TODO LMarelle I am 99% sure these values should be divided by
-           !     rho, check again
-           !TODO check why I do not reapply min/max values, probably because
-           ! this is already done in wfa/ifa calc?
+#endif
            nwfa1d(k) = MAX(11.1E6/rho(k), MIN(9999.E6/rho(k),             &
                        (nwfa1d(k)+nwfaten(k)*DT)))
            nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6/rho(k),                &
                        (nifa1d(k)+nifaten(k)*DT)))
+#if ( WRF_CHEM == 1 )
          ENDIF
+#endif
 
          if (qc1d(k) .le. R1) then
            qc1d(k) = 0.0
@@ -4730,6 +4973,144 @@
       end function activ_ncloud
 
 !+---+-----------------------------------------------------------------+
+
+#if ( WRF_CHEM == 1 )
+      SUBROUTINE ccn_actfrac_arg02(actfrac_arg, Pp, Tt, Ww, aernum, &
+          aerkappa, naerbins)
+        ! 2024/04/30, Louis Marelle, LATMOS
+        !
+        ! Purpose:
+        !  Calculate aerosol activation fraction for internally mixed
+        !  sectional aerosols, following Abdul-Razzak and Ghan (1998, 2000,
+        !  2002)
+        !
+        ! Arguments:
+        !  Input:
+        !   - Pp: Air pressure (Pa)
+        !   - Tt: Air temperature (K)
+        !   - Ww: Updraft speed in cloud (m/s)
+        !   - aernum: Aerosol number concentration in size bins (m-3)
+        !   - aerkappa: Aerosol kappa coefficient in size bins (dimensionless)
+        !   - naerbins: Number of aerosol size bins
+        !  Output:
+        !   - actfrac_arg: aerosol activation fraction in each size bin (dimensionless, 0-1)
+        !
+        ! Remarks:
+        !  - Sometimes follows the existing implementation in activate()
+        !    rather than the original publications
+        !
+        ! References:
+        !  - Abdul‐Razzak, H., Ghan, S. J., & Rivera‐Carpio, C. (1998). A
+        !  parameterization of aerosol activation: 1. Single aerosol type.
+        !  Journal of Geophysical Research: Atmospheres, 103(D6), 6123-6131.
+        !  - Abdul‐Razzak, H., & Ghan, S. J. (2000). A parameterization of
+        !  aerosol activation: 2. Multiple aerosol types. Journal of
+        !  Geophysical Research: Atmospheres, 105(D5), 6837-6844.
+        !  - Abdul‐Razzak, H., & Ghan, S. J. (2002). A parameterization of
+        !  aerosol activation 3. Sectional representation. Journal of
+        !  Geophysical Research: Atmospheres, 107(D3), AAC-1.
+
+        ! Model physical constants
+        !TODO For consistency it might be better to use values from thompson
+        ! MP for lvap:lvap qs:qvs, dv:diffu, mu:visco (first making sure that
+        ! values are similar and units are the same)
+        USE module_model_constants, only: g,rhowater,xlv0,xlv1,cp,r_d,r_v,svp1,svp2,svp3,svpt0,ep_2,piconst
+
+        IMPLICIT NONE
+
+        ! Arguments
+        INTEGER, INTENT(IN) :: naerbins
+        ! Temperature (K), Updraft speed (m/s), pressure (Pa)
+        REAL, INTENT(IN):: Tt, Ww, Pp ! Temperature (K), Updraft speed (m/s),
+        REAL, DIMENSION(naerbins), INTENT(IN):: aernum,aerkappa
+        REAL, DIMENSION(naerbins), INTENT(OUT):: actfrac_arg
+        REAL, PARAMETER :: surften = 76.E-3 ! J m-2 surface tension of air-water interface
+        ! Local
+        INTEGER :: ibin
+        ! Abdul-Razzak & Ghan parameters, names and units are given below in
+        ! module, additional information in ARG1998
+        REAL :: smax, sil, siu, se, zeta, eta, dvprime,dv,kaprime,ka,gg,alpha,gammafac,afac,qs,es,rhoair,mu,Ww2
+        REAL :: aernumtot
+        REAL, DIMENSION(naerbins) :: si_cen,si_low,si_high
+        REAL, DIMENSION(naerbins) :: rad_bins_l,rad_bins,rad_bins_h
+        REAL :: lvap
+        ! Parameters TODO hardcoded for the default MOSAIC 4bin, should at least get values from MOSAIC
+        rad_bins_l = (/0.0390625, 0.15625, 0.6250, 2.5000/)/2.0 * 1.E-6 ! Lower bin radius, m
+        rad_bins_h = (/0.15625, 0.6250, 2.5000, 10.000/)/2.0 * 1.E-6 ! Higher bin radius, m
+        rad_bins = (/0.0781, 0.3125, 1.2500, 5.0000/) / 2.0 * 1.E-6 ! Center bin radius, m
+
+        ! lvap latent heat of vaporization (J kg-1)
+        lvap = xlv0 - xlv1*tt
+        ! dv mass diffusivity of water in air (m2/s)
+        dv = 8.794e-5*Tt**1.81/Pp ! from morrison mp
+        ! ka thermal conductivity of air (m2/s)
+        mu = 1.496e-6*Tt**1.5/(Tt+120.) ! viscosity, m2/s
+        ka = 1.414e3*mu ! from morrison mp
+        rhoair = Pp/(r_d*Tt) ! kg/m3
+        ! Saturation mixing ratio (kg/kg)
+        es = 1000.*svp1*EXP( svp2*(Tt-svpt0)/(Tt-svp3) ) ! Pa
+        qs = ep_2*es/(Pp-es)
+
+        ! ARG1998,ARG2000 calculations
+        ! Size invariant coefficients alpha (m-1) and gamma (m3 kg-1)
+        ! Units alpha = (m s-2) * 1/(J K-1 kg-1 * K) = m s-2 J-1 kg = (m s-2 kg) * (m-2 s2 kg-1) = m-1
+        ! Units gamma = 1/(kg m-3 * kg/kg) = m3 kg-1
+        alpha = (g*lvap/(cp*r_v*Tt**2.0)) - (g/(r_d*Tt))
+        gammafac = (1+lvap/cp*(lvap/(r_v*Tt*Tt)*qs))/(rhoair*qs)
+        ! afac surface tension coefficient of the curvature effect (m)
+        ! Unit = J m-2/((kg m-3)*(J K-1 kg-1)*K) = m-2 / m-3 = m
+        afac = 2*surften/(rhowater*r_v*Tt)
+        DO ibin = 1,naerbins
+          ! Sil, Siu, Sic are the critical surpersaturations at bin lower limit, upper
+          ! limit, center (unitless)
+          si_low(ibin) = 2. / (aerkappa(ibin)**1./2.) * (afac/(3*rad_bins_l(ibin))) ** (3./2.)
+          si_cen(ibin) = 2. / (aerkappa(ibin)**1./2.) * (afac/(3*rad_bins(ibin))) ** (3./2.)
+          si_high(ibin) = 2. / (aerkappa(ibin)**1./2.) * (afac/(3*rad_bins_h(ibin))) ** (3./2.)
+        ENDDO
+        actfrac_arg(:) = 0.0
+        DO ibin = 1,naerbins
+          ! Max and min supersaturation in bin
+          siu = max(si_low(ibin), si_high(ibin))
+          sil = min(si_low(ibin), si_high(ibin))
+          ! Modified diffusivity and thermal conductivity
+          ! Dvprime = Dv / (rad_bins[ibin]/(rad_bins[ibin]+deltav) + DV/(r*alphac)*(2*pi*Mw/(R*T))**(1./2.) )
+          ! Kaprime =  Ka / (rad_bins[ibin]/(rad_bins[ibin]+deltav) + Ka/(r*alphat*Cpa)*(2*pi*Mw/(R*T))**(1./2.) )
+          ! This is neglected in WRF-Chem, and alphac, deltav, alphat are not defined
+          ! in ARG1998. Use the base diffusivity/conductivity instead
+          dvprime = dv
+          kaprime = ka
+          ! gg growth coefficient (m2/s) (should be size dependent) if modified Ka' and Dv' were used
+          gg = 1. / ( (rhowater/(dvprime*rhoair*qs)) + (lvap*rhowater/(kaprime*Tt)*(lvap/(r_v*Tt) - 1.)) )
+          ! Prevent Ww<=0. This will cause issues with fog, see GT's note
+          ! about radiation fog in original Thompson and Eidhammer activation routine
+          Ww2 = MAX(Ww, 1.E-12)
+          aernumtot = SUM(aernum)
+          ! Eta and Zeta terms from ARG1998 (dimensionless)
+          ! Units: (m-2)**3/2 / (kg m-3 * m3 kg-1 * aernum) => dimensionless if aernumtot in kg/m3
+          eta = (alpha * Ww2 / gg) ** (3./2.) / (2*piconst * rhowater * gammafac * aernumtot)
+          zeta = 2. * afac / 3. * (alpha*Ww2/gg) ** (1./2.)
+          ! se is the effective critical supersaturation of the bulk model aerosol
+          se = ( aernumtot / sum(aernum/(si_cen**(2./3.))) )**(3./2.)
+          ! smax is the maximum critical supersaturation of the air parcel
+          smax = se / (0.5 * (zeta/eta)**(3./2.) + (se**2./(eta+3.*zeta))**3./4.) ** (1./2.)
+          ! Number fraction activated in section i. Aerosol is activated where s < smax
+          !TODO Should use the mass fraction for the aerosol MMR activation
+          IF(smax <= sil .OR. smax <= 0.) THEN
+            actfrac_arg(ibin) = 0.0
+          ELSEIF(siu <= smax) THEN
+            actfrac_arg(ibin) = 1.0
+          ELSE
+            actfrac_arg(ibin) =  LOG(smax/sil)/LOG(siu/sil)
+          ENDIF
+          ! Catch values out of 0-1
+          ! IF(actfrac_arg(ibin) > 1 .OR. actfrac_arg(ibin)<0.) THEN
+          !   WRITE(*,*) 'actfrac out of bounds:',actfrac_arg(ibin),Ww,Tt,Pp,SUM(aernum)
+          ! ENDIF
+        ENDDO ! ibin
+      END SUBROUTINE ccn_actfrac_arg02
+
+#endif
+
 !+---+-----------------------------------------------------------------+
       SUBROUTINE GCF(GAMMCF,A,X,GLN)
 !     --- RETURNS THE INCOMPLETE GAMMA FUNCTION Q(A,X) EVALUATED BY ITS

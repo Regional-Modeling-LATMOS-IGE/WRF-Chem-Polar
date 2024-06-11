@@ -6389,6 +6389,7 @@ SUBROUTINE         aerosols_sorgam_vbs_init(chem,convfac,z_at_w,                
                    tsoa,asoa,bsoa,                                             &
 !KW
                    chem_in_opt,aer_ic_opt, is_aerosol,                         &
+                   is_cw_aerosol, &
                    ids,ide, jds,jde, kds,kde,                                  &
                    ims,ime, jms,jme, kms,kme,                                  &
                    its,ite, jts,jte, kts,kte, config_flags                     )
@@ -6401,6 +6402,7 @@ SUBROUTINE         aerosols_sorgam_vbs_init(chem,convfac,z_at_w,                
                                    ims,ime, jms,jme, kms,kme,    &
                                    its,ite, jts,jte, kts,kte
    LOGICAL, INTENT(OUT) :: is_aerosol(num_chem)
+   LOGICAL, INTENT(OUT) :: is_cw_aerosol(num_chem)
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme, num_chem ) ,     &
           INTENT(INOUT   ) ::                                      &
                               chem
@@ -6539,7 +6541,7 @@ SUBROUTINE         aerosols_sorgam_vbs_init(chem,convfac,z_at_w,                
 
 ! initialize pointers used by aerosol-cloud-interaction routines
         call aerosols_sorgam_vbs_init_aercld_ptrs( &
-           num_chem, is_aerosol, config_flags )
+           num_chem, is_aerosol, is_cw_aerosol, config_flags )
 
         pm2_5_dry(its:ite, kts:kte-1, jts:jte)    = 0.
         pm2_5_water(its:ite, kts:kte-1, jts:jte)  = 0.
@@ -6644,7 +6646,7 @@ SUBROUTINE         aerosols_sorgam_vbs_init(chem,convfac,z_at_w,                
     END SUBROUTINE aerosols_sorgam_vbs_init
 
     SUBROUTINE aerosols_sorgam_vbs_init_aercld_ptrs(   &
-         num_chem, is_aerosol, config_flags )
+         num_chem, is_aerosol, is_cw_aerosol, config_flags )
 !
 ! initialize pointers used by aerosol-cloud-interaction routines
 !
@@ -6654,6 +6656,7 @@ SUBROUTINE         aerosols_sorgam_vbs_init(chem,convfac,z_at_w,                
     implicit none
     INTEGER, INTENT(IN) :: num_chem
     LOGICAL, INTENT(OUT) :: is_aerosol(num_chem)
+    LOGICAL, INTENT(OUT) :: is_cw_aerosol(num_chem)
     TYPE (grid_config_rec_type) , INTENT (in) :: config_flags
 
 
@@ -7043,13 +7046,20 @@ SUBROUTINE         aerosols_sorgam_vbs_init(chem,convfac,z_at_w,                
         end do
 
         is_aerosol(:) = .false.
+        is_cw_aerosol(:) = .false.
         do iphase=1,nphase_aer
         do itype=1,ntype_aer
         do n = 1, nsize_aer(itype)
             do ll = 1, ncomp_aer(itype)
               is_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+              if(iphase == cw_phase) then
+                is_cw_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+              endif
             end do
             is_aerosol(numptr_aer(n,itype,iphase))=.true.
+            if(iphase == cw_phase) then
+              is_cw_aerosol(numptr_aer(n,itype,iphase))=.true.
+            endif
         end do ! size
         end do ! type
         end do ! phase

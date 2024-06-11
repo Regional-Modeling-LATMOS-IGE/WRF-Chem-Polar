@@ -345,8 +345,8 @@ call wrf_message("**************************************************************
        endif
      elseif( id == 1 ) then
        if ( config_flags%mp_physics /= 6 .and. config_flags%mp_physics /= 8 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 17  &
-            .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22) then
-         call wrf_error_fatal("ERROR: wet scavenging option for MOZART,MOZCART requires mp_phys = 6 (WSM6) or 8 (Thompson) or 10 (Morrison) .or 17/18/22 (NSSL 2-moment) to function.")
+            .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 .and. config_flags%mp_physics /= THOMPSONAERO) then
+         call wrf_error_fatal("ERROR: wet scavenging option for MOZART,MOZCART requires mp_phys = 6 (WSM6) or 8,28 (Thompson) or 10 (Morrison) .or 17/18/22 (NSSL 2-moment) to function.")
        else
          write(message_txt,*) 'chem_init: calling wetscav_mozcart_init for domain ',id
          call wrf_message( trim(message_txt) )
@@ -388,10 +388,12 @@ call wrf_message("**************************************************************
       else
         call wrf_error_fatal("ERROR: cloud chemistry option requires chem_opt = 8 through 13 or 31 to 36 or 41 to 43 or 109 to function.")
       endif
-       if ( config_flags%mp_physics /= 2 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 11  &
-            .and. config_flags%mp_physics /= 17 .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 ) then
-         call wrf_error_fatal("ERROR: cloud chemistry option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or 17/18/22 NSSL_2mom to function.")
-       endif
+      if ( config_flags%mp_physics /= 2 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 11  &
+               .and. config_flags%mp_physics /= 17 .and. config_flags%mp_physics /= 18 .and. config_flags%mp_physics /= 22 &
+               .and. (config_flags%mp_physics /= THOMPSONAERO .or. config_flags%aci_wrfchem_opt  <= 0) ) then
+        call wrf_error_fatal("ERROR: cloud chemistry option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or &
+                              & 17/18/22 (NSSL_2mom) or 28(THOMPSONAERO)+aci_wrfchem_opt>0 to function.")
+      endif
    endif
 
    !BSINGH - kfcup schme only works with Mosaic aqueoue packages:
@@ -415,17 +417,6 @@ call wrf_message("**************************************************************
        call wrf_error_fatal("chemics_init: KF-CuP cumulus scheme only tested with lnox_opt = 0 or 1")
      endif
    endif
-
-   ! Coupling THOMPSONAERO microphysics to WRF-Chem aerosols is only allowed with GOCART
-   IF (config_flags%mp_physics == THOMPSONAERO .AND. config_flags%thompson_aer_from_chem == 1) THEN
-     IF (.not. (config_flags%chem_opt == MOZCART_KPP .OR. &
-                config_flags%chem_opt == T1_MOZCART_KPP .OR. &
-                config_flags%chem_opt == GOCART_SIMPLE .OR. &
-                config_flags%chem_opt == GOCARTRADM2 .OR. &
-                config_flags%chem_opt == GOCARTRACM_KPP)) THEN
-       CALL wrf_error_fatal('chemics_init: thompson_aer_from_chem in THOMPSONAERO microphysics requires GOCART aerosols')
-     ENDIF
-   ENDIF
 
    if ( config_flags%cu_physics == 5 .OR. config_flags%cu_physics == 3) then
    if ( config_flags%cu_diag == 0) then
@@ -773,6 +764,13 @@ end if
         allocate (is_aerosol(num_chem))
      else
         if( size(is_aerosol) /= num_chem ) &
+             call wrf_error_fatal("The number of chemistry species has changed between nests. Are you trying to mix chem_opt settings between nests? Shame on you!")
+     end if
+     !LMarelle
+     if( .not.allocated(is_cw_aerosol) ) then
+        allocate (is_cw_aerosol(num_chem))
+     else
+        if( size(is_cw_aerosol) /= num_chem ) &
              call wrf_error_fatal("The number of chemistry species has changed between nests. Are you trying to mix chem_opt settings between nests? Shame on you!")
      end if
 
@@ -1861,7 +1859,7 @@ ENDIF ghg_block
 
        call aerosols_sorgam_init(chem,convfac,z_at_w,                &
                pm2_5_dry,pm2_5_water,pm2_5_dry_ec,                   &
-               chem_in_opt,config_flags%aer_ic_opt,is_aerosol,       &
+               chem_in_opt,config_flags%aer_ic_opt,is_aerosol,is_cw_aerosol,       &
                ids,ide, jds,jde, kds,kde,                            &
                ims,ime, jms,jme, kms,kme,                            &
                its,ite, jts,jte, kts,kte, config_flags               )
@@ -1869,7 +1867,7 @@ ENDIF ghg_block
 !!!TUCCELLA (BUG, before it was called in module_aerosols_sorgam.F)
        ! initialize pointers used by aerosol-cloud-interaction routines
         call aerosols_sorgam_init_aercld_ptrs( &
-           num_chem, is_aerosol, config_flags )
+           num_chem, is_aerosol, is_cw_aerosol, config_flags )
 
 !...Convert aerosols to mixing ratio
         if( .NOT. config_flags%restart ) then
@@ -1895,6 +1893,7 @@ ENDIF ghg_block
                pm2_5_dry,pm2_5_water,pm2_5_dry_ec,                   &
                tsoa,asoa,bsoa,                                       &
                chem_in_opt,config_flags%aer_ic_opt,is_aerosol,       &
+               is_cw_aerosol, &
                ids,ide, jds,jde, kds,kde,                            &
                ims,ime, jms,jme, kms,kme,                            &
                its,ite, jts,jte, kts,kte, config_flags               )
@@ -1920,6 +1919,7 @@ ENDIF ghg_block
        call aerosols_soa_vbs_init(chem,convfac,z_at_w,                &
                pm2_5_dry,pm2_5_water,pm2_5_dry_ec,                   &
                chem_in_opt,config_flags%aer_ic_opt,is_aerosol,       &
+               is_cw_aerosol, &
                ids,ide, jds,jde, kds,kde,                            &
                ims,ime, jms,jme, kms,kme,                            &
                its,ite, jts,jte, kts,kte, config_flags               )
@@ -1927,7 +1927,7 @@ ENDIF ghg_block
 !!!TUCCELLA (BUG, before it was called in module_aerosols_soa_vbs.F)
        ! initialize pointers used by aerosol-cloud-interaction routines
         call aerosols_soa_vbs_init_aercld_ptrs( &
-           num_chem, is_aerosol, config_flags )
+           num_chem, is_aerosol, is_cw_aerosol, config_flags )
 
 !...Convert aerosols to mixing ratio
         if( .NOT. config_flags%restart ) then
@@ -1978,7 +1978,7 @@ ENDIF ghg_block
            CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, &  !BSINGH(12/03/2013): Added SAPRC 8 bin
            SAPRC99_MOSAIC_8BIN_VBS2_KPP) !BSINGH(04/03/2014): Added SAPRC 8 bin non-aq
        call wrf_debug(15,'call MOSAIC aerosols initialization')
-       call init_data_mosaic_asect( id, config_flags, grid%vbs_nbin, is_aerosol )
+       call init_data_mosaic_asect( id, config_flags, grid%vbs_nbin, is_aerosol, is_cw_aerosol )
        if(config_flags%chem_in_opt == 0 )then
        if( .NOT. config_flags%restart ) &
             call mosaic_init_wrf_mixrats(                            &
@@ -1996,12 +1996,60 @@ ENDIF ghg_block
    CASE (RADM2SORG_AQ, RADM2SORG_AQCHEM, RACMSORG_AQ, RACMSORG_AQCHEM_KPP, RACM_ESRLSORG_AQCHEM_KPP, &
          RACM_SOA_VBS_AQCHEM_KPP, CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, &
          CBMZ_MOSAIC_DMS_8BIN_AQ,CBMZSORG_AQ,CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
-         MOZART_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,   &
+         SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,   &
          CB05_SORG_AQ_KPP, CB05_SORG_VBS_AQ_KPP)
       if( config_flags%progn /= 1 ) &
            call wrf_error_fatal( &
            "ERROR: When using a ..._AQ chemistry package, progn must be 1")
+   ! For MOZART_MOSAIC_4BIN_AQ_KPP ACI, either use progn = 1 (with Morrison
+   ! or Lin MP) or use aci_wrfchem_opt>0 (with THOMPSONAERO MP)
+   CASE(MOZART_MOSAIC_4BIN_AQ_KPP)
+      IF(config_flags%progn /= 1 .AND. config_flags%mp_physics /= THOMPSONAERO) THEN
+        call wrf_error_fatal("ERROR MOZART_MOSAIC_4BIN_AQ_KPP ACI requires&
+        & mp_physics=THOMPSONAERO or progn=1")
+      ENDIF
    END SELECT progn_sanity_check
+
+   ! Check THOMPSONAERO aerosol-cloud options
+   IF(config_flags%aci_wrfchem_opt>0) THEN
+     IF(config_flags%mp_physics /= THOMPSONAERO) THEN
+       CALL wrf_error_fatal("chemics_init: aci_wrfchem_opt>0 requires&
+       & THOMPSONAERO microphysics")
+     ELSEIF(config_flags%aci_wrf_opt > 0) THEN
+       CALL wrf_error_fatal("chemics_init: aci_wrf_opt and aci_wrfchem_opt cannot be&
+       & enabled at the same time")
+     ELSEIF (.NOT. (config_flags%chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                 config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                 config_flags%chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                 config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                 config_flags%chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                 config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                 config_flags%chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                 config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP) ) THEN
+       CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt>0 requires&
+       & MOSAIC-4bin aerosols')
+     ELSEIF(config_flags%aci_wrfchem_opt > 2) THEN
+       CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt should be&
+       & either: 0 - disabled, 1 - enabled, Abdul-Razzak and Ghan aerosols&
+       & (cw phase) and Abdul-Razzak and Ghan droplet numbers,&
+       & or 2 - enabled, Abdul-Razzak and Ghan aerosols (cw phase) and&
+       & Thompson and Eidhammer droplet numbers')
+       ! 0 - No coupling between WRF-Chem aerosols and THOMPSONAERO (default
+       !     option, as in base WRF. ACI in THOMPSONAERO are based on
+       !     climatological fields of NWFA and NIFA)
+       ! 1 - WRF-Chem aerosols (MOSAIC-4bin) are used to calculate
+       !     aerosol activation with Abdul-Razzak and Ghan parameterization in
+       !     THOMPSONAERO, both for the droplet number in the microphysics code
+       !     and to set cw aerosols for cloud chemistry and wet scavenging
+       ! 2 - WRF-Chem aerosols (MOSAIC-4bin) are used to set NWFA in
+       !     THOMPSONAERO and to calculate the droplet number in the
+       !     microphysics code. Abdul-Razzak and Ghan is used to set cw
+       !     aerosols for cloud chemistry and wet scavenging
+     ELSEIF(config_flags%progn == 1) THEN
+        call wrf_error_fatal("ERROR progn=1 should not be used with&
+        & mp_physics=THOMPSONAERO, use aci_wrfchem_opt>0 instead")
+     ENDIF
+   ENDIF
 
    do nv=1,num_chem
       do j=jts,jte

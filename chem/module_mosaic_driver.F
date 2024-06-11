@@ -2309,7 +2309,7 @@
 
 !-----------------------------------------------------------------------
 ! *** note - eventually is_aerosol will be a subr argument
-	subroutine init_data_mosaic_asect( id, config_flags, vbs_nbin, is_aerosol )
+	subroutine init_data_mosaic_asect( id, config_flags, vbs_nbin, is_aerosol, is_cw_aerosol )
 !	subroutine init_data_mosaic_asect( id, n2o5_hetchem, is_aerosol )
 !	subroutine init_data_mosaic_asect( )
 
@@ -2394,6 +2394,7 @@
 
 ! *** note - eventually is_aerosol will be a subr argument
 	logical, intent(out) :: is_aerosol(num_chem)
+	logical, intent(out) :: is_cw_aerosol(num_chem)
 !   control flag for N2O5 het chem scheme
 	integer, intent(in) :: id, &
 	                       vbs_nbin(1)
@@ -3329,7 +3330,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 !
 !   set pointers to wrf chem-array species
 !
-	call init_data_mosaic_ptr( id,is_aerosol )
+	call init_data_mosaic_ptr( id,is_aerosol,is_cw_aerosol )
 
 !
 !   csuesat initialization
@@ -3347,7 +3348,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 
         idum = mod( max( config_flags%mosaic_aerchem_optaa, 0 ), 10 )   ! use mosaic2 when 1s digit = 2
         if ( idum == 2 ) then
-            call init_data_mosaic2_asect( id, config_flags, is_aerosol, vbs_nbin )
+            call init_data_mosaic2_asect( id, config_flags, is_aerosol, is_cw_aerosol, vbs_nbin )
         end if
 
 
@@ -3355,7 +3356,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 
 
 !-----------------------------------------------------------------------
-	subroutine init_data_mosaic_ptr( id,is_aerosol )
+	subroutine init_data_mosaic_ptr( id,is_aerosol,is_cw_aerosol )
 
 	use module_configure
 	use module_state_description, only:  param_first_scalar,num_chem
@@ -3402,6 +3403,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 
 !   subr arguments
         logical, intent(out) :: is_aerosol(num_chem)
+        logical, intent(out) :: is_cw_aerosol(num_chem)
         integer, intent(in) :: id
 !   local variables
 	integer l, ll, n, p1st
@@ -7355,6 +7357,7 @@ n2o5_flag = config_flags%n2o5_hetchem
 !   calc ltot, ltot2, kh2o, ktemp
 !
 	is_aerosol(:) = .false.
+	is_cw_aerosol(:) = .false.
 	ltot = 0
 	ltot = max( ltot, kh2so4 )
 	ltot = max( ltot, khno3 )
@@ -7477,6 +7480,9 @@ n2o5_flag = config_flags%n2o5_hetchem
 		    do ll = 1, ncomp_plustracer_aer(itype)
 		       ltot = max( ltot, massptr_aer(ll,n,itype,iphase) )
 		       is_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+                       if(iphase == cw_phase) then
+                         is_cw_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+                       endif
 		    end do
 		    ltot = max( ltot, hyswptr_aer(n,itype) )
 		    ltot = max( ltot, waterptr_aer(n,itype) )
@@ -7487,6 +7493,10 @@ n2o5_flag = config_flags%n2o5_hetchem
 		    if (l .ge. p1st) is_aerosol(l)=.true.
 		    l = numptr_aer(n,itype,iphase)
 		    if (l .ge. p1st) is_aerosol(l)=.true.
+                    if(iphase == cw_phase) then
+		      l = numptr_aer(n,itype,iphase)
+		      if (l .ge. p1st) is_cw_aerosol(l)=.true.
+                    endif
 		end do
 	    end do
 	end do
