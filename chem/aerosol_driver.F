@@ -16,6 +16,8 @@
                vdrog3, vdrog3_vbs,brch_ratio,dgnum,dgnumwet,wetdens_ap,    &
                del_h2so4_gasprod,dvmrdt_sv13d,dvmrcwdt_sv13d,              &
                is_CAMMGMP_used,                                            &!BSINGH:01/31/2013: Added is_CAMMGMP_used for cam_mam_aerchem_driver
+               ph_aer01, ph_aer02, ph_aer03, ph_aer04,                     &
+               ph_aer05, ph_aer06, ph_aer07, ph_aer08,                     &
                ids,ide, jds,jde, kds,kde,                                  &
                ims,ime, jms,jme, kms,kme,                                  &
                its,ite, jts,jte, kts,kte                                   )
@@ -190,6 +192,12 @@
      REAL, dimension (ims:ime,kms:kme-0,jms:jme),                   &
                INTENT(INOUT) ::                                     &
                                vcsulf_old
+
+!  Aerosol pH from MOSAIC
+   REAL,  DIMENSION( ims:ime , kms:kme , jms:jme )         ,        &
+          INTENT(OUT  ) ::                                          &
+                               ph_aer01, ph_aer02, ph_aer03, ph_aer04, &
+                               ph_aer05, ph_aer06, ph_aer07, ph_aer08
 !
 !tendencies:dvmrdt_sv13d,dvmrcwdt_sv13d are the tendencies which are passsed on from the CAM-MAM cloud chemistry
 !           to gasaerexch subroutine
@@ -288,6 +296,8 @@
             id, curr_secs, ktau, dtstep, ktauc, dtstepc, config_flags,  &
             t_phy, rho_phy, p_phy,                                      &
             moist, chem,vbs_nbin,                                       &
+            ph_aer01, ph_aer02, ph_aer03, ph_aer04,                     &
+            ph_aer05, ph_aer06, ph_aer07, ph_aer08,                     &
             ids,ide, jds,jde, kds,kde,                                  &
             ims,ime, jms,jme, kms,kme,                                  &
             its,ite, jts,jte, kts,kte                                   )
