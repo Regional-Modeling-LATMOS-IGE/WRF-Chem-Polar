@@ -26,7 +26,9 @@ CONTAINS
          firesize_agsv,firesize_aggr,                                      &
          u10,v10,ivgtyp,isltyp,gsw,vegfra,rmol,ust,znt,dms_0,              &
          erup_beg,erup_end,                                                &
-         xland,xlat,xlong,z_at_w,z,smois,dustin,seasin,                    &
+         xland,xlat,xlong,                                                 &
+         xice,                                                             &
+         z_at_w,z,smois,dustin,seasin,                                     &
          sebio_iso,sebio_oli,sebio_api,sebio_lim,sebio_xyl,                &
          sebio_hc3,sebio_ete,sebio_olt,sebio_ket,sebio_ald,                &   
          sebio_hcho,sebio_eth,sebio_ora2,sebio_co,sebio_nr,                &
@@ -62,6 +64,7 @@ CONTAINS
          mebio_isop, mebio_apin, mebio_bpin, mebio_bcar,                   &
          mebio_acet, mebio_mbo, mebio_no,                                  &
          current_month,                                                    &
+         lakemask, e_nacl_ocean,                                           &
          ! end stuff for MEGAN v2.04
          ! stuff for LNOx emissions
          ht, refl_10cm,                                                    &
@@ -94,6 +97,7 @@ CONTAINS
   USE gocart_dust_afwa
   USE gocart_seasalt
   USE module_nightingale_dmsemis, only: nightingale_dmsemis
+  USE module_seaspray_emis, only: seaspray_emis
   USE uoc_dust  
   USE module_dms_emis
   USE module_mosaic_addemiss
@@ -193,6 +197,7 @@ CONTAINS
                                                      xland,                &
                                                      xlat,                 &
                                                      xlong,                &
+                                                     xice,                 &
                                                      znt,                  &
 
 ! Add for the GHG_tracer option
@@ -315,6 +320,10 @@ CONTAINS
 
       LOGICAL, INTENT(IN   ) ::                                        &
            adapt_step_flag
+
+      REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: lakemask
+      REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT) :: e_nacl_ocean
+
 !     stuff for aircraft emissions
 
       REAL, DIMENSION( ims:ime, 1:config_flags%kemit_aircraft, jms:jme,num_emis_aircraft), &
@@ -711,6 +720,17 @@ CONTAINS
          ids,ide, jds,jde, kds,kde,                                        &
          ims,ime, jms,jme, kms,kme,                                        &
          its,ite, jts,jte, kts,kte                                         )
+
+      CASE(SEASMONAHAN, SEASIOANNIDIS, SEASGONG, SEASSALTER)
+        ! Sea spray emissions for GOCART or MOSAIC aerosols
+        CALL wrf_debug(15, 'seaspray_emis sea-spray emissions')
+        CALL seaspray_emis( id, dtstep, dz8w, config_flags%chem_opt, &
+         config_flags%seas_opt,                                     &
+         rho_phy, chem, e_nacl_ocean,                               &
+         u10, v10, xland, tsk, xice, lakemask,                      &
+         ids,ide, jds,jde, kds,kde,                                 &
+         ims,ime, jms,jme, kms,kme,                                 &
+         its,ite, jts,jte, kts,kte                                  )
 
       CASE DEFAULT 
         if(seasalt_emiss_active.eq.1) then 
