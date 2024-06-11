@@ -1164,6 +1164,12 @@
         gas(ibsoa4_g) = 0.0
         end if
 
+        if (kmsa .ge. p1st) then
+            gas(imsa_g)   = rsub(kmsa,k,m)*conv1a
+        else
+        gas(imsa_g) = 0.0
+        end if
+
 
 
 
@@ -2145,6 +2151,8 @@
             rsub(kbsoa3,k,m)   = gas(ibsoa3_g)*conv1b
         if (kbsoa4 .ge. p1st)   &
             rsub(kbsoa4,k,m)   = gas(ibsoa4_g)*conv1b
+        if (kmsa .ge. p1st)   &
+            rsub(kmsa,k,m)   = gas(imsa_g)*conv1b
 
 ! aerosol
         iphase = ai_phase
@@ -15692,7 +15700,7 @@
       subroutine load_kappa_nonelectro
 
       use module_data_mosaic_asect, only: &
-         hygro_oin_aer, hygro_oc_aer, hygro_bc_aer,  &
+         hygro_oin_aer, hygro_oc_aer, hygro_bc_aer,  hygro_msa_aer, &
          hygro_pcg1_b_c_aer,  hygro_pcg2_b_c_aer,  hygro_pcg3_b_c_aer,  &
          hygro_pcg4_b_c_aer,  hygro_pcg5_b_c_aer,  hygro_pcg6_b_c_aer,  &
          hygro_pcg7_b_c_aer,  hygro_pcg8_b_c_aer,  hygro_pcg9_b_c_aer,  &
@@ -15836,6 +15844,7 @@
       if (ibsoa2_a      > 0) kappa_nonelectro(ibsoa2_a     ) = hygro_bsoa2_aer
       if (ibsoa3_a      > 0) kappa_nonelectro(ibsoa3_a     ) = hygro_bsoa3_aer
       if (ibsoa4_a      > 0) kappa_nonelectro(ibsoa4_a     ) = hygro_bsoa4_aer
+      if (imsa_a      > 0) kappa_nonelectro(imsa_a     ) = hygro_msa_aer
 
       return
       end subroutine load_kappa_nonelectro
