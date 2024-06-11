@@ -358,6 +358,9 @@
 !
 !     load ipar, rpar
 !
+      !LMarelle - initialize rpar to 0.0
+      rpar(:) = 0.0
+
       ipar(1) = icount
       ipar(2) = iprint
       ipar(3) = 0
@@ -680,6 +683,7 @@
       integer i, icount, info, iprint, iradical
       integer j
       integer n, nfev
+      integer :: init_metal_opt = 0
 
       double precision akeq(17), akhen(21), akre(120)
       double precision c(46), cmet(4), con(28)
@@ -699,13 +703,14 @@
       double precision dum
       double precision form
       double precision hc1, hc2, hyd, hno2
-      double precision ph, photo, pres
+      double precision ph, photo, pres, rho
       double precision qsat
       double precision rad, rsrate
       double precision salt, sodium, sulfrate, sulfrateb
       double precision temp, tlwc, tmin
       double precision vlwc
       double precision watvap, watcont, wl, wlm, wvol
+      double precision fe_dust, fe_ant, mn_dust, mn_ant
                 ! lwc,wat. vapor in g/m3
                 ! crustal species concentration inside droplets (ug/m3)
                 ! na concentration inside droplets (ug/m3)
@@ -820,8 +825,46 @@
 !     note : na+ is an input. the rest of the metal species are
 !            calculated as a fraction of the crustal aerosol mass.
 !
+      ! Calculate Fe and Mn
       cmet(1) = firon*crustal*1000./(55.85*wlm)  ! fe(3+) mol/l
       cmet(2) = fman*crustal*1000./(54.9*wlm)    ! mn(2+) mol/l
+
+      if(init_metal_opt == 2) then
+        ! Calculate Fe and Mn as in Alexander et al., (2009),
+        ! https://doi.org/10.1029/2008JD010486
+        ! Fe mass is 3.5% of dust mass and Mn = Fe/50 in dust
+        fe_dust = crustal * 3.5E-2 * 1000./(55.85*wlm) ! Fe mol/L
+        mn_dust = crustal * 3.5E-2 * 1000./(54.9*wlm) ! Fe mol/L
+        ! Mn mass is Fe/30 in anthropogenic ash
+        !TODO Set at 0 for now, but could be calculated prognostically in chem/aer code
+        fe_ant = 0.0
+        mn_ant = 0.0
+        ! rho = 101325.*pres/(287.1*temp)
+        ! fe_ant = fe_a / 28.97 * rho / wl ! ppmv to mol/L
+        mn_ant = fe_ant * 55.85/54.9 / 30. ! mol(fe)/L to mol(mn)/L
+        ! 50% of Mn is dissolved, but only 1% of dust-sourced Fe and 10%
+        ! of anthropogenic Fe
+        !TODO fe solubility should vary with pH
+        fe_dust = fe_dust * 0.01
+        mn_dust = mn_dust * 0.5
+        fe_ant = fe_ant * 0.1
+        mn_ant = mn_ant * 0.5
+        ! Total Fe(III) and Mn(II)
+        cmet(1) = fe_dust + fe_ant ! fe(3+) mol/l
+        cmet(2) = mn_dust + mn_ant ! mn(2+) mol/l
+        ! Dissolved Mn is assumed top be 100% speciated into Mn(II) but Fe(III)
+        ! speciation depends on sunlight
+        IF(photo > 0.) THEN
+          cmet(1) = cmet(1) * 0.1
+        ELSE
+          cmet(1) = cmet(1) * 0.9
+        ENDIF
+        ! Force Mn(II) < Fe(III), Martin and Good, (1991),
+        ! https://doi.org/10.1016/0960-1686(91)90113-L
+        cmet(2) = MIN(cmet(1), cmet(2))
+      endif
+
+      ! Set na+ and ca2+
       cmet(3) = salt*1000./(23.*wlm)          ! na(+)  mol/l
       cmet(4) = caratio*crustal*1000./(40.08*wlm)   ! ca(2+) mol/l
 !
@@ -2011,11 +2054,13 @@
 !
 !     dimension c(46),cmet(4),con(28),zkre(120),rr(120)
       double precision c(46),cmet(4),con(28),zkre(120),rr(120)
-      double precision photo,arytm
+      double precision photo,arytm,c_siv,c_svi
 
 !   local variables
       double precision ph, r1, r2, r3, r4, r5, sn
 
+      !LMarelle - Initialize rr to 0.0
+      rr(:) = 0.0
 
       rr(1)=zkre(1)*c(14)*photo
       rr(2)=zkre(2)*c(22)*photo
@@ -2102,56 +2147,77 @@
 !
 !     rate expressions for the metal catalysed oxidation of s(iv)
 !
-!     ** phenomenological expression by martin et al. (1991) **
       ph=-log10(c(46))
+
+!     Martin et al. (1991), https://doi.org/10.1029/90JD02611
+      c_siv = c(1)+c(2)+c(3)
+      c_svi = c(4)+c(5)+c(6)
       if (kiron .eq. 1) then
-!
-      if (ph .le. 3.0) rr(74)=6.*cmet(1)*con(1)/c(46)
-      if (ph .gt. 3.0 .and. ph .le. 4.5)   &
-       rr(74) = 1.e9*con(1)*cmet(1)*cmet(1)
-      if (ph .gt. 4.5 .and. ph .le. 6.5) rr(74) = 1.0e-3*con(1)
-      if (ph .gt. 6.5) rr(74)=1.0e-4*con(1)
-      endif
+        ! ""Phenomenological"" expressions for each pH range
+        if (ph .le. 3.0) rr(74)=6.*cmet(1)*c_siv/c(46)
+        if (ph .gt. 3.0 .and. ph .le. 4.5) rr(74) = 1.e9*c_siv*cmet(1)*cmet(1)
+        if (ph .gt. 4.5 .and. ph .le. 6.5) rr(74) = 1.0e-3*c_siv
+        if (ph .gt. 6.5) rr(74)=1.0e-4*c_siv
 
-!     ** expression by martin (1984) **
-      if (kiron .eq. 2) then
-      if ((c(46) .ge. 1.0d-4).and.(con(1) .ge. 1.0d-5)) then
-      r1=(zkre(76)*cmet(2)*cmet(2))/c(46)
-      r2=(zkre(77)*cmet(1)*con(1)/c(46))
-      if (cmet(2) .le. 0.0d0) cmet(2)=1.0d-30
-      r3=r2*(1.0d0+(1.7d3*cmet(2)**1.5)/(6.3d-6+cmet(1)))
-      rr(74)=r1+r3
-      go to 1300
-      end if
+!     Martin (1984)
+      else if (kiron .eq. 2) then
+        if ((c(46) .ge. 1.0d-4).and.(c_siv .ge. 1.0d-5)) then
+          r1=(zkre(76)*cmet(2)*cmet(2))/c(46)
+          r2=(zkre(77)*cmet(1)*c_siv/c(46))
+          if (cmet(2) .le. 0.0d0) cmet(2)=1.0d-30
+          r3=r2*(1.0d0+(1.7d3*cmet(2)**1.5)/(6.3d-6+cmet(1)))
+          rr(74)=r1+r3
+        else if ((c(46) .ge. 1.0d-4).and.(c_siv .lt. 1.0d-5)) then
+          if (cmet(1)*cmet(2) .lt. 1.0d-15) then
+            sn=1.0d0
+          else
+            sn=3.0d0
+          end if
+          rr(74)=sn*(zkre(78)*cmet(2)*c(2)+zkre(77)*cmet(1)*c_siv/c(46))
+        else if ((c(46) .lt. 1.0d-4).and.(c_siv .ge. 1.0d-5)) then
+          r4=zkre(76)*cmet(2)*cmet(2)/c(46)
+          r5=zkre(79)*cmet(1)*c_siv*c_siv
+          rr(74)=r4+r5
+        else
+          rr(74)=zkre(78)*cmet(2)*c(2)
+        end if
+        ! 09-nov-2005 rce - if rate constants 76,77,78,79 are all zero, set rr(74)=0.
+        ! This allows ANY/ALL rxns to be turned on/off in subr constants.
+        if (abs(zkre(76)+zkre(77)+zkre(78)+zkre(79)) .le. 1.0e-37) rr(74)=0.0
 
-      if (cmet(1)*cmet(2) .lt. 1.0d-15) then
-      sn=1.0d0
-      else
-      sn=3.0d0
-      end if
+!     Martin and Good, 1991, https://doi.org/10.1016/0960-1686(91)90113-L
+      else if (kiron .eq. 3) then
+        if (pH .le. 3.) then
+          ! "The synergism has a hydrogen ion dependence of 1/[H+] in the low pH regime"
+          ! (At pH = 3, c(46) = 0.001 and this expression is equal to the pH = 3 expression from MG1991)
+          !TODO is this due to Fe solubility?
+          rr(74) = (2.6*cmet(1) + 0.750*cmet(2) + 1.E7*cmet(1)*cmet(2)) / c(46) * c_siv
+        else if (pH .le. 4.5) then
+          ! This is valid at pH 3 but not at 5, Alexander et al. (2009) uses it at 4.5
+          rr(74) = (2600.*cmet(1) + 750.*cmet(2) + 1.E10*cmet(1)*cmet(2)) * c_siv
+        else if (pH .le. 6.5) then
+          ! At pH = 5 and above the iron is saturated
+          ! cmet(1) = 3E-7 mol/L
+          !TODO should this be done when cmet is calculated and should this be continuous in pH?
+          rr(74) = (2600*3E-7 + 750.*cmet(2) + 1.E10*3.E-7*cmet(2)) * c_siv
+        ! At larger pH the reaction should be slow, use the M1991 rate
+        else if (pH .gt. 6.5) then
+          rr(74)=1.0e-4*c_siv
+        endif
+        ! Sulfate (S(VI)) inhibition of the reaction, determined at pH 3, from Martin and Good, 1991
+        rr(74) = rr(74)/(1.+ 75.0*(c_svi)**(2./3.))
+        !TODO There should be other inhibition mechanisms, see 1991 papers, e.g. ionic strength
+        !TODO limits on cmet concentrations?
 
-      if ((c(46) .ge. 1.0d-4).and.(con(1) .lt. 1.0d-5)) then
-      rr(74)=sn*(zkre(78)*cmet(2)*c(2)+zkre(77)*cmet(1)*con(1)/c(46))
-      go to 1300
-      end if
+      ! Alexander et al. (2009) doi:10.1029/2008JD010486
+      else if (kiron .eq. 4) then
+        rr(74) = (2600.*cmet(1) + 750.*cmet(2) + 1.E10*cmet(1)*cmet(2)) * c_siv
+        !TODO there should be ionic strength and pH modifiers included
 
-      if ((c(46) .lt. 1.0d-4).and.(con(1) .ge. 1.0d-5)) then
-      r4=zkre(76)*cmet(2)*cmet(2)/c(46)
-      r5=zkre(79)*cmet(1)*con(1)*con(1)
-      rr(74)=r4+r5
-      go to 1300
-      end if
+      else ! default to kiron = 0
+        rr(74) = 0.0
 
-      rr(74)=zkre(78)*cmet(2)*c(2)
-
-1300  continue
-      endif
-
-! 09-nov-2005 rce - if rate constants 76,77,78,79 are all zero, set rr(74)=0.
-! This allows ANY/ALL rxns to be turned on/off in subr constants.
-      if (abs(zkre(76)+zkre(77)+zkre(78)+zkre(79)) .le. 1.0e-37) rr(74)=0.0
-
-!     ** end of martin's expression **
+      end if ! if kiron
 
       rr(75)=zkre(80)*c(3)*c(28)
       rr(76)=zkre(81)*c(2)*c(28)
