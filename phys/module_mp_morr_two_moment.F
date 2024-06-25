@@ -568,6 +568,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                 refl_10cm, diagflag, do_radar_ref,      & ! GT added for reflectivity calcs
                 qrcuten, qscuten, qicuten               & ! hm added
                ,F_QNDROP, qndrop                        & ! hm added, wrf-chem 
+               ,chem_opt                                & ! lm added, wrf-chem
                ,IDS,IDE, JDS,JDE, KDS,KDE               & ! domain dims
                ,IMS,IME, JMS,JME, KMS,KME               & ! memory dims
                ,ITS,ITE, JTS,JTE, KTS,KTE               & ! tile   dims            )
@@ -662,6 +663,7 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
                           pii, p, dz, rho, w !, tke, nctend, nitend,kzh
    REAL, INTENT(IN):: dt_in
    INTEGER, INTENT(IN):: ITIMESTEP
+   INTEGER, OPTIONAL, INTENT(IN) :: chem_opt
 
    REAL, DIMENSION(ims:ime, jms:jme), INTENT(INOUT):: &
                           RAINNC, RAINNCV, SR, &
@@ -807,18 +809,26 @@ SUBROUTINE MP_MORR_TWO_MOMENT(ITIMESTEP,                       &
           qicu1d(k)     = qicuten(i,k,j)
       end do  !jdf added this
 ! below for wrf-chem
-   IF (flag_qndrop .AND. PRESENT( qndrop )) THEN
-      iact = 3
-      DO k = kts, kte
-         nc1d(k)=qndrop(i,k,j)
-         iinum=0
-      ENDDO
+   IF (flag_qndrop .AND. PRESENT( qndrop ) .AND. PRESENT(chem_opt)) THEN
+      IF(chem_opt > 0) THEN
+        iact = 3
+        DO k = kts, kte
+           nc1d(k)=qndrop(i,k,j)
+           iinum=0
+        ENDDO
+      ELSE
+        DO k = kts, kte
+           nc1d(k)=0. ! temporary placeholder, set to constant in microphysics subroutine
+           iinum=1
+        ENDDO
+      ENDIF
    ELSE
       DO k = kts, kte
          nc1d(k)=0. ! temporary placeholder, set to constant in microphysics subroutine
          iinum=1
       ENDDO
    ENDIF
+
 
 !jdf  end do
       call MORR_TWO_MOMENT_MICRO(QC_TEND1D, QI_TEND1D, QNI_TEND1D, QR_TEND1D,            &
