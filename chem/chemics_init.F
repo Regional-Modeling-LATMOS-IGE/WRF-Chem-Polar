@@ -153,6 +153,11 @@
    real, DIMENSION (1,1) :: sza,cosszax
    real :: xtime,xhour,xmin,gmtp,xlonn,rlat
    logical :: is_moz_chm
+   ! = .true. if this is a GOCART chem_opt
+   LOGICAL :: aer_is_gocart
+   ! = .true. if this is a MOSAIC-4bin chem_opt
+   LOGICAL :: aer_is_mosaic4bin
+
 #include "version_decl"
 #include "commit_decl"
 #ifdef CHEM_DBG_I
@@ -1991,6 +1996,22 @@ ENDIF ghg_block
 
    END SELECT aer_select
 
+   ! Initialize chem mechanism families IDs
+   aer_is_gocart = config_flags%chem_opt == MOZCART_KPP .OR. &
+                   config_flags%chem_opt == T1_MOZCART_KPP .OR. &
+                   config_flags%chem_opt == GOCART_SIMPLE .OR. &
+                   config_flags%chem_opt == GOCARTRADM2 .OR. &
+                   config_flags%chem_opt == GOCARTRACM_KPP
+
+   aer_is_mosaic4bin = config_flags%chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                       config_flags%chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                       config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                       config_flags%chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                       config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
+
 !!! TUCCELLA
    progn_sanity_check : SELECT CASE(config_flags%chem_opt)
    CASE (RADM2SORG_AQ, RADM2SORG_AQCHEM, RACMSORG_AQ, RACMSORG_AQCHEM_KPP, RACM_ESRLSORG_AQCHEM_KPP, &
@@ -2018,15 +2039,13 @@ ENDIF ghg_block
      ELSEIF(config_flags%aci_wrf_opt > 0) THEN
        CALL wrf_error_fatal("chemics_init: aci_wrf_opt and aci_wrfchem_opt cannot be&
        & enabled at the same time")
-     ELSEIF (.NOT. (config_flags%chem_opt == CBMZ_MOSAIC_4BIN .OR. &
-                 config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
-                 config_flags%chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
-                 config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
-                 config_flags%chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
-                 config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
-                 config_flags%chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
-                 config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP) ) THEN
-       CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt>0 requires&
+     ELSEIF (config_flags%aci_wrfchem_opt == 1 &
+             .AND. .NOT. aer_is_mosaic4bin ) THEN
+       CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt==1 requires&
+       & MOSAIC-4bin aerosols')
+     ELSEIF (config_flags%aci_wrf_opt == 2 &
+             .AND. .NOT. (aer_is_mosaic4bin .OR. aer_is_gocart) ) THEN
+       CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt==2 requires&
        & MOSAIC-4bin aerosols')
      ELSEIF(config_flags%aci_wrfchem_opt > 2) THEN
        CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt should be&
@@ -2041,8 +2060,8 @@ ENDIF ghg_block
        !     aerosol activation with Abdul-Razzak and Ghan parameterization in
        !     THOMPSONAERO, both for the droplet number in the microphysics code
        !     and to set cw aerosols for cloud chemistry and wet scavenging
-       ! 2 - WRF-Chem aerosols (MOSAIC-4bin) are used to set NWFA in
-       !     THOMPSONAERO and to calculate the droplet number in the
+       ! 2 - WRF-Chem aerosols (MOSAIC-4bin or GOCART) are used to set NWFA
+       !     in THOMPSONAERO and to calculate the droplet number in the
        !     microphysics code. Abdul-Razzak and Ghan is used to set cw
        !     aerosols for cloud chemistry and wet scavenging
      ELSEIF(config_flags%progn == 1) THEN

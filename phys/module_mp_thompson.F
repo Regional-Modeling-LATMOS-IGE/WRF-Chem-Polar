@@ -1163,7 +1163,7 @@
             do k = kts, kte
                nc1d(k) = nc(i,k,j)
 #if ( WRF_CHEM == 1 )
-               IF(thompson_aer_from_chem > 0 ) THEN
+               IF(thompson_aer_from_chem == 1 .OR. thompson_aer_from_chem == 2) THEN
                  aernum1d(k,:) = thompson_aernum(i, k, j, :)
                  aerra1d(k,:) = thompson_aerra(i, k, j, :)
                  aerkappa1d(k,:) = thompson_aerkappa(i, k, j, :)
@@ -3101,7 +3101,7 @@
                    !-- No subgrid W variability for aerosol activation
 #if ( WRF_CHEM ==   1 )
                      actfrac_arg02_tot(1:naerbins) = 0.0
-                     IF(thompson_aer_from_chem > 0 ) THEN
+                     IF(thompson_aer_from_chem == 1 .OR. thompson_aer_from_chem == 2) THEN
                        CALL ccn_actfrac_arg02(actfrac_arg02_tot(1:naerbins), &
                          pres(k), temp(k), w1d(k), aernum1d(k,:)*rho(k), &
                          aerkappa1d(k,:), naerbins)
@@ -3147,7 +3147,7 @@
 #endif
                      IF(w_subgrid .GT. 0.0) THEN
 #if ( WRF_CHEM ==   1 )
-                       IF(thompson_aer_from_chem > 0 ) THEN
+                       IF(thompson_aer_from_chem == 1 .OR. thompson_aer_from_chem == 2) THEN
                          CALL ccn_actfrac_arg02(actfrac_arg02(1:naerbins), &
                            pres(k), temp(k), w_subgrid, aernum1d(k,:)*rho(k), &
                            aerkappa1d(k,:), naerbins)
@@ -3164,7 +3164,7 @@
                      normal_integ =  0.5 * (normal_pdf_up + normal_pdf_dn) * dw
                      normal_integ_sum = normal_integ_sum + normal_integ
 #if ( WRF_CHEM ==   1 )
-                     IF(thompson_aer_from_chem > 0 ) THEN
+                     IF(thompson_aer_from_chem == 1 .OR. thompson_aer_from_chem == 2) THEN
                        ! Accumulate gridcell-wide activation fraction (Abdul-Razzak & Ghan)
                        actfrac_arg02_tot(1:naerbins) = actfrac_arg02_tot(1:naerbins) + normal_integ * actfrac_arg02(1:naerbins)
                      ENDIF
@@ -3189,7 +3189,7 @@
                   endif ! if ACI_SUBGRID_W_OPT
 
 #if ( WRF_CHEM == 1 )
-                 IF(thompson_aer_from_chem > 0 ) THEN
+                 IF(thompson_aer_from_chem == 1 .OR. thompson_aer_from_chem == 2) THEN
                    ! Activation fraction from Abdul-Razzak & Ghan
                    !
                    ! Constrain actfrac_arg02_tot to [0., -1].
@@ -3216,7 +3216,7 @@
                    xnc = actnum_arg02_tot
                    xnc = MAX(xnc, xncmin)
 #endif
-                 ELSEIF(thompson_aer_from_chem == 2 .OR. thompson_aer_from_chem == -1) THEN
+                 ELSEIF(thompson_aer_from_chem == 2 .OR. thompson_aer_from_chem == -1 .OR. thompson_aer_from_chem == 3) THEN
                    ! Use Thompson & Eidhammer activated aerosol number to form droplets in THOMPSON MP
                    xnc = actnum_te14_tot
                    xnc = MAX(xnc, xncmin)
