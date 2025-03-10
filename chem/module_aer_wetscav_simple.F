@@ -494,7 +494,7 @@ CONTAINS
       ! Fraction of activated aerosols for aer_pointers species, values from
       ! Luo et al. (2020)
       aq_aer_ratio = (/ 1., 1., 1., 1., 1., 0.5, 0.5, 0., 0., 0., 0., 0. /)
-      ice_aer_ratio = (/ 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 0.5 /)
+      ice_aer_ratio = (/ 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 0. /)
       ! List of washed out fine aerosol for aer_pointers species (r<=1
       ! micrometer)
       aer_is_fine = (/ .true., .true., .true., .false., &
