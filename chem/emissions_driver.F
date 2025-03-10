@@ -650,8 +650,9 @@ CONTAINS
         IF ( ktau==1 ) then
            do_plumerisefire = .true.
         ELSE IF ( adapt_step_flag ) THEN
-           IF ( (plumerisefire_frq<=0) .or. &
-                ( curr_secs+real(dtstep,8)+0.01 >= &
+           IF ( (plumerisefire_frq<=0) ) THEN
+              do_plumerisefire = .true.
+           ELSEIF ( ( curr_secs+real(dtstep,8)+0.01 >= &
                 ( INT( curr_secs/real(plumerisefire_frq*60.,8)+1,8 )*real(plumerisefire_frq*60.,8) ) ) &
                 ) then
               do_plumerisefire = .true.
@@ -665,8 +666,9 @@ CONTAINS
       IF ( ktau==1 ) then
          do_bioemiss = .true.
       ELSE IF ( adapt_step_flag ) THEN
-         IF ( (bioemdt<=0) .or. &
-              ( curr_secs+real(dtstep,8)+0.01 >= &
+         IF ( (bioemdt<=0) ) THEN
+            do_bioemiss = .true.
+         ELSE IF ( (  curr_secs+real(dtstep,8)+0.01 >= &
               ( INT( curr_secs/real(bioemdt*60.,8)+1,8 )*real(bioemdt*60.,8) ) ) &
               ) then
             do_bioemiss = .true.
@@ -723,7 +725,7 @@ CONTAINS
          ims,ime, jms,jme, kms,kme,                                        &
          its,ite, jts,jte, kts,kte                                         )
 
-      CASE(SEASMONAHAN, SEASIOANNIDIS, SEASGONG)
+      CASE(SEASMONAHAN, SEASIOANNIDIS, SEASGONG, SEASSALTER)
         ! Sea spray emissions for GOCART or MOSAIC aerosols
         CALL wrf_debug(15, 'seaspray_emis sea-spray emissions')
         CALL seaspray_emis( id, dtstep, dz8w, config_flags%chem_opt, &
@@ -1124,7 +1126,7 @@ CONTAINS
              end do
           end do
        end do
-!
+
     CASE(CO2_TRACER,GHG_TRACER)  ! for ghg_tracer package
 
       ! Update the biospheric CO2 fluxes

@@ -346,10 +346,11 @@
   IF ( ktau==1 ) then
      do_photstep = .true.
   ELSE IF ( adapt_step_flag ) THEN
-     IF ( (grid%photdt<=0) .or. &
-          ( curr_secs+real(grid%dt,8)+0.01 >= &
+     IF ( (grid%photdt<=0)) THEN
+       do_photstep = .true.
+     ELSE IF (( curr_secs+real(grid%dt,8)+0.01 >= &
           ( INT( curr_secs/real(grid%photdt*60.,8)+1,8 )*real(grid%photdt*60.,8) ) ) &
-          ) then
+          ) THEN
           !NOTE: The 0.01 added to the LHS of the conditional is to compensate
           !      for occasional round off errors that prevented the >= from
           !      ever testing as true. This adjustment has been added to the
@@ -391,8 +392,18 @@
      do_chemstep = .true.
      grid%ktauc = 1
   ELSE IF ( adapt_step_flag ) THEN
-     IF ( (grid%chemdt<=0) .or. &
-          ( curr_secs+real(grid%dt,8)+0.01 >= &
+     IF ( (grid%chemdt<=0)) THEN
+        do_chemstep = .true.
+        grid%ktauc = grid%ktauc+1
+        last_chem_time(grid%id) = domain_get_current_time( grid )
+        call WRFU_TimeGet( last_chem_time(grid%id),         &
+                           YY = grid%last_chem_time_year,   &
+                           MM = grid%last_chem_time_month,  &
+                           DD = grid%last_chem_time_day,    &
+                           H  = grid%last_chem_time_hour,   &
+                           M  = grid%last_chem_time_minute, &
+                           S  = grid%last_chem_time_second  )
+     ELSE IF ( ( curr_secs+real(grid%dt,8)+0.01 >= &
           ( INT( curr_secs/real(grid%chemdt*60.,8)+1,8 )*real(grid%chemdt*60.,8) ) ) &
           ) then
         do_chemstep = .true.
@@ -807,7 +818,8 @@
                          moist, num_3d_m, rho,                                        &
                          p_phy,  u_phy, v_phy,                                        &
                          p8w, t_phy, t8w, grid%z, z_at_w,                          &
-                         dz8w, rh, grid%fnm, grid%fnp,                              &
+                         dz8w, rh, grid%cldfral_chem, grid%cldfra_ls_chem, &
+                         grid%fnm, grid%fnp,                              &
                          ids, ide, jds, jde, kds, kde,                                &
                          ims, ime, jms, jme, kms, kme,                                &
                          its,ite,jts,jte,                                             &
@@ -1065,7 +1077,7 @@
             call dry_dep_driver(grid%id,curr_secs,ktau,grid%dt,config_flags,          &
                  grid%gmt,ijulian,t_phy,moist,scalar,p8w,t8w,vvel,                &
                  rri,p_phy,chem,tracer,rho,dz8w,rh,grid%exch_h,grid%hfx,grid%dx,      & 
-                 grid%cldfra_ls,grid%cldfra_old,grid%raincv_b,seasin,dustin,          &
+                 grid%cldfral_chem,grid%cldfra_old,grid%raincv_b,seasin,dustin,          &
 	         grid%ccn1, grid%ccn2, grid%ccn3, grid%ccn4, grid%ccn5, grid%ccn6,    &
                  grid%qndropsource,grid%ivgtyp,grid%tsk,grid%gsw,grid%vegfra,pbl_h,   &
                  grid%rmol,grid%ust,grid%znt,grid%xlat,grid%xlong,                    &
@@ -1510,10 +1522,10 @@ if ( cam_mam_aerosols ) &
                 grid%id, ktau, grid%ktauc, grid%dt, dtstepc, config_flags,              &
                 t_phy, p_phy, rho, rri, dz8w, zmid, z_at_w,                             &
 #if (NMM_CORE == 1)
-                moist_trans, grid%cldfra_ls, grid%ph_no2,                               &
+                moist_trans, grid%cldfra_ls_chem, grid%ph_no2,                               &
 #endif
 #if (EM_CORE == 1)
-                moist, grid%cldfra_ls, grid%ph_no2,                                     &
+                moist, grid%cldfra_ls_chem, grid%ph_no2,                                     &
 #endif
                 chem, grid%chem_cupflag,                                                &
                 grid%cupflag, grid%shall, grid%tcloud_cup, grid%nca, grid%wact_cup,     &
@@ -1568,7 +1580,7 @@ if ( cam_mam_aerosols ) &
                t_phy, p_phy, rho, rri, dz8w,                                          &
                p8w,grid%prain3d,scalar,grid%dvmrdt_sv13d,grid%dvmrcwdt_sv13d,         &
                grid%f_ice_phy,grid%f_rain_phy,grid%cldfrai, grid%cldfral,             &
-               grid%cldfra_ls,      &
+               grid%cldfral_chem,      &
                moist, grid%cldfra, grid%cldfra_mp_all, grid%ph_no2,                   &
                chem, gas_aqfrac, numgas_mam,grid%is_CAMMGMP_used,                     &
                ids,ide, jds,jde, kds,kde,                                             &
@@ -1595,6 +1607,8 @@ if ( cam_mam_aerosols ) &
               vdrog3,vdrog3_vbs,grid%br_rto,grid%dgnum4d,grid%dgnumwet4d,wetdens_ap,  &
               del_h2so4_gasprod,grid%dvmrdt_sv13d,grid%dvmrcwdt_sv13d,                &
               grid%is_CAMMGMP_used,                                                   &
+              grid%ph_aer01, grid%ph_aer02, grid%ph_aer03, grid%ph_aer04,             &
+              grid%ph_aer05, grid%ph_aer06, grid%ph_aer07, grid%ph_aer08,             &
               ids,ide, jds,jde, kds,kde,                                              &
               ims,ime, jms,jme, kms,kme,                                              &
               its,ite,jts,jte,kts,kte                                                 )
@@ -1628,7 +1642,7 @@ if ( cam_mam_aerosols ) &
         call wetscav_driver (grid%id,ktau,grid%dt,grid%ktauc,config_flags,dtstepc,    &
               rri,t_phy,moist,p8w,t8w,                                                &
               grid%dx, grid%dy,                                                       &
-              p_phy,chem,rho,grid%cldfra,grid%cldfra2,grid%cldfra_ls,                 &
+              p_phy,chem,rho,grid%cldfra,grid%cldfra2,grid%cldfra_ls_chem,                 &
               wetscav_frcing(ims,kms,jms,p_rainprod),                                 &
               wetscav_frcing(ims,kms,jms,p_evapprod),                                 &
               grid%hno3_col_mdel,                                                     &                
@@ -1802,12 +1816,14 @@ end if !Chemistry time step check
 !-- set upper boundary condition
     if( config_flags%have_bcs_upper )then
        call wrf_debug(15,'set upper boundary condition')
+       call wrf_debug(100, 'Upper boundary condition - call tropopause_driver')
        call tropopause_driver( grid%id, grid%dt, current_date_char,         &
                                t_phy, p_phy, p8w, zmid, z_at_w,             &
                                grid%tropo_lev, grid%tropo_p,  grid%tropo_z, &
                                ids, ide, jds, jde, kds, kde,                &
                                ims, ime, jms, jme, kms, kme,                &
                                its, ite, jts, jte, kts, kte                 )
+       call wrf_debug(100, 'Upper boundary condition - call upper_bc_driver')
        call upper_bc_driver  ( grid%id, grid%dt, current_date_char, &
                                chem, p_phy, p8w, grid%tropo_lev,    &
                                ids,ide, jds,jde, kds,kde,           &
@@ -1831,6 +1847,7 @@ end if !Chemistry time step check
      deallocate( irr_rates )
    ENDIF
 
+   call wrf_debug(100, 'chem_driver - exiting chem_driver')
 
     END subroutine chem_driver
 

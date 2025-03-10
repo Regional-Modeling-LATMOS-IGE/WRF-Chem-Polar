@@ -488,7 +488,7 @@ main_it_loop: &
 
 
 !-----------------------------------------------------------------------
-	subroutine init_data_mosaic2_asect( id, config_flags, is_aerosol, vbs_nbin)
+	subroutine init_data_mosaic2_asect( id, config_flags, is_aerosol, is_cw_aerosol, vbs_nbin)
 !
 !   major refactoring in jun-2015 to clean up this very old code
 !   before implementing external mixing
@@ -512,6 +512,7 @@ main_it_loop: &
 	integer, intent(in) :: vbs_nbin(*)
 	type(grid_config_rec_type), intent(in) :: config_flags
 	logical, intent(out) :: is_aerosol(num_chem)
+	logical, intent(out) :: is_cw_aerosol(num_chem)
 
 !   local variables
 	integer :: i, itype, itmpa, j, jtmpa, l, n
@@ -594,7 +595,7 @@ main_it_loop: &
 !
 !   set pointers to wrf chem-array species
 !
-	call init_data_mosaic2_ptr( id, config_flags%chem_opt, is_aerosol )
+	call init_data_mosaic2_ptr( id, config_flags%chem_opt, is_aerosol, is_cw_aerosol )
 
 
 !
@@ -680,7 +681,7 @@ main_it_loop: &
 
 
 !-----------------------------------------------------------------------
-	subroutine init_data_mosaic2_ptr( id, chem_opt, is_aerosol )
+	subroutine init_data_mosaic2_ptr( id, chem_opt, is_aerosol, is_cw_aerosol )
 !
 !   major refactoring in jun-2015 to clean up this very old code
 !   before implementing external mixing
@@ -698,6 +699,7 @@ main_it_loop: &
 !   subr arguments
         integer, intent(in)  :: id, chem_opt
         logical, intent(out) :: is_aerosol(num_chem)
+        logical, intent(out) :: is_cw_aerosol(num_chem)
 
 !   local variables
 	integer l, ll, n
@@ -757,7 +759,7 @@ main_it_loop: &
 !	is_aerosol()
 !	name_rbox() for aerosol species
 !
-	call mosaic2_set_otheraa( chem_opt, is_aerosol )
+	call mosaic2_set_otheraa( chem_opt, is_aerosol, is_cw_aerosol )
 
 
 	return
@@ -1573,7 +1575,7 @@ main_it_loop: &
         
 
 !-----------------------------------------------------------------------
-	subroutine mosaic2_set_otheraa( chem_opt, is_aerosol )
+	subroutine mosaic2_set_otheraa( chem_opt, is_aerosol, is_cw_aerosol )
 !
 !   set is_aerosol(), name_rbox()
 !
@@ -1589,6 +1591,7 @@ main_it_loop: &
 !   subr arguments
         integer, intent(in)  :: chem_opt
         logical, intent(inout) :: is_aerosol(num_chem)
+        logical, intent(inout) :: is_cw_aerosol(num_chem)
 
 !   local variables
 	integer i, j, l, ll, n
@@ -1604,6 +1607,7 @@ main_it_loop: &
 	call peg_message( lunout, trim(msg) )
 
 	is_aerosol(1:num_chem) = .false.
+	is_cw_aerosol(1:num_chem) = .false.
 
 	do iphase = 1, nphase_aer
 	do itype  = 1, ntype_aer
@@ -1614,6 +1618,9 @@ main_it_loop: &
 	    if (l >= p1st .and. l <= num_chem) then
 		is_aerosol(l) = .true.
 		name_rbox(l) = chem_dname_table(1,l)
+                if(iphase == cw_phase) then
+                  is_cw_aerosol(l)= .true.
+                endif
 	    end if
 	end do ! icomp
 
@@ -1621,6 +1628,9 @@ main_it_loop: &
 	    if (l >= p1st .and. l <= num_chem) then
 		is_aerosol(l) = .true.
 		name_rbox(l) = chem_dname_table(1,l)
+                if(iphase == cw_phase) then
+                  is_cw_aerosol(l)= .true.
+                endif
 	    end if
 
 	    if (iphase == ai_phase) then

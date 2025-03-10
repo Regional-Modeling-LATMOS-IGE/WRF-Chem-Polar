@@ -743,11 +743,18 @@ CONTAINS
               MOZART_MOSAIC_4BIN_AQ_KPP, RACM_SOA_VBS_AQCHEM_KPP,                          &
               SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,                                             &
               CB05_SORG_AQ_KPP, CB05_SORG_VBS_AQ_KPP)
-            if(.not.is_aerosol(nv))then ! mix gases not aerosol
-               call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
-                           zzfull,zz,ddvel(i,j,nv),kts,kte)
-
-            endif
+            IF(config_flags%mp_physics == THOMPSONAERO .AND. config_flags%aci_wrfchem_opt > 0) THEN
+              !TODO QC/QN etc. mixed in BL driver, should use the same setup for mixing cw aerosols
+              if(.not.is_cw_aerosol(nv))then
+                call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
+                            zzfull,zz,ddvel(i,j,nv),kts,kte)
+              endif
+            ELSE
+              if(.not.is_aerosol(nv))then ! mix gases not aerosol
+                 call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
+                             zzfull,zz,ddvel(i,j,nv),kts,kte)
+              endif
+            ENDIF
 !The default case below does turbulent mixing for all gas and aerosol species
 !If aqueous phase is not activated
 !It requires ddvel array as a boundary condition near surface for flux of species 
@@ -1099,20 +1106,26 @@ CONTAINS
                 its,ite, jts,jte, kts,kte                         )
       ! Mixactivate called only for _AQ packages below MS 12/28/2013
    CASE (CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ, &
-   			CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
-   			MOZART_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP)!BSINGH(12/03/2013): Added SAPRC 8 bin)
-      CALL wrf_debug(15,'call mixactivate for mosaic aerosol')
-      call mosaic_mixactivate (                        &
-		id, ktau, dtstep, config_flags, idrydep_onoff,   &
-		dryrho_phy, t_phy, w, cldfra, cldfra_old, &
-		ddvel, z, dz8w, p8w, t8w, exch_h,         &
-		moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
-        scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,   &
-        ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,      &
-        qsrflx,                                           &
-		ids,ide, jds,jde, kds,kde,                        &
-		ims,ime, jms,jme, kms,kme,                        &
-		its,ite, jts,jte, kts,kte                         )
+         CRI_MOSAIC_8BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP, &
+         MOZART_MOSAIC_4BIN_AQ_KPP,SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP)!BSINGH(12/03/2013): Added SAPRC 8 bin)
+      IF( config_flags%mp_physics == THOMPSONAERO .AND. &
+          (config_flags%aci_wrfchem_opt > 0) ) THEN
+        CALL wrf_debug(15,'do not call mixactivate for mosaic aerosol +&
+            & thompsonaero ACI')
+      ELSE
+        CALL wrf_debug(15,'call mixactivate for mosaic aerosol')
+        call mosaic_mixactivate (                        &
+          id, ktau, dtstep, config_flags, idrydep_onoff,   &
+          dryrho_phy, t_phy, w, cldfra, cldfra_old, &
+          ddvel, z, dz8w, p8w, t8w, exch_h,         &
+          moist(ims,kms,jms,P_QV), moist(ims,kms,jms,P_QC), moist(ims,kms,jms,P_QI), &
+          scalar(ims,kms,jms,P_QNDROP), f_qc, f_qi, chem,   &
+          ccn1, ccn2, ccn3, ccn4, ccn5, ccn6, nsource,      &
+          qsrflx,                                           &
+          ids,ide, jds,jde, kds,kde,                        &
+          ims,ime, jms,jme, kms,kme,                        &
+          its,ite, jts,jte, kts,kte                         )
+      ENDIF
 
       if( config_flags%diagnostic_chem == DEPVEL1 .and. &
           config_flags%chem_opt == CB05_SORG_VBS_AQ_KPP ) then

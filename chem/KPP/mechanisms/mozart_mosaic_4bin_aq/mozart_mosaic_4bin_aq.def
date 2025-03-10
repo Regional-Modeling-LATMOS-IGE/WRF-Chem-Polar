@@ -123,7 +123,7 @@ REAL(KIND=dp) FUNCTION usr23( temp, c_m )
     fc    = 3.e-31_dp * (300._dp/temp) ** 3.3_dp
     wrk   = fc * c_m
     k0    = wrk / (1._dp + wrk/1.5e-12_dp)
-    usr23 = k0 * .6_dp ** (1._dp/(1._dp + (log10( wrk/1.5e-12_dp ))**2._dp))
+    usr23 = k0 * .6_dp ** (1._dp/(1._dp+(log10(wrk/1.5e-12_dp))**2._dp))
 
 END FUNCTION usr23
 
@@ -253,17 +253,16 @@ END FUNCTION usr26
     !
     ! --------------------------------------------------------------------------
 
-	real(kind=dp) function iupac_ch3sch3(a2,b2,a3,b3,cin_o2,temp)
-		!rate calculation for CH3SCH3 + OH = CH3SCH3OO + H2O
-		! from IUPAC report (www.iupac-kinetic.ch.cam.ac.uk)
-		real(kind=dp) :: cin_o2, tr, temp
-		real(kind=dp) :: a2, b2, a3, b3
-	
-		tr = 1._dp + ARR2(a3,b3,temp)*cin_o2
-		iupac_ch3sch3 = ARR2(a2,b2,temp)*cin_o2/tr
+    REAL(KIND=dp) function iupac_ch3sch3(a2,b2,a3,b3,cin_o2,temp)
+      ! Rate calculation for CH3SCH3 + OH = CH3SCH3OO + H2O
+      ! from IUPAC report (www.iupac-kinetic.ch.cam.ac.uk)
+      real(kind=dp) :: cin_o2, tr, temp
+      real(kind=dp) :: a2, b2, a3, b3
 
-	end function iupac_ch3sch3
-    
+      tr = 1._dp + ARR2(a3,b3,temp)*cin_o2
+      iupac_ch3sch3 = ARR2(a2,b2,temp)*cin_o2/tr
+
+    END function iupac_ch3sch3
 
 
 #ENDINLINE 

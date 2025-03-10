@@ -330,6 +330,8 @@
 #endif
 
 	gas_aqfrac_box(:) = 0.0
+        yaq_beg(:) = 0.0
+        yaq_end(:) = 0.0
 
 
 !   make call to interface_to_aqoperator1
@@ -717,7 +719,9 @@
 	end do
 	do i = 1, ngas
 	    gas_aqfrac_cmu_dp(i) = 0.0d0
-	    if (gas_aqfrac_cmu(i) .ne. 0.0) gas_aqfrac_cmu_dp(i) = gas_aqfrac_cmu(i)
+            !LMarelle - Disable, gas_aqfrac_cmu is not an input of this
+            ! subroutine and was not yet calculated
+	    ! if (gas_aqfrac_cmu(i) .ne. 0.0) gas_aqfrac_cmu_dp(i) = gas_aqfrac_cmu(i)
 	end do
 	do i = 1, meqn1max
 	    yaq_beg_dp(i) = 0.0d0
@@ -1034,6 +1038,7 @@
 	jdone_numb = 0
 	jpos_mass = 0
 	jpos_numb = 0
+        fmass(:,:) = 0.0
 	do itype = 1, ntype_aer
 	do isize = 1, nsize_aer(itype)
 	    fmass(isize,itype) = 0.0
@@ -1364,7 +1369,11 @@
 	end if
 
 !   rescale fr_cur for next iteration
-	fr_cur(:,:) = fr_cur(:,:)/frsum_cur
+        if(frsum_cur .EQ. 0.0) then
+          fr_cur(:,:) = 0.0
+        else
+	  fr_cur(:,:) = fr_cur(:,:)/frsum_cur
+        end if
 
 	end do	! while (icount .le. ncount)
 

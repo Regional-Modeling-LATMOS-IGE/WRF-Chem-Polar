@@ -11,7 +11,7 @@ IMPLICIT NONE
 CONTAINS
 
 SUBROUTINE aerosols_sorgam_init_aercld_ptrs(   &
-         num_chem, is_aerosol, config_flags )
+         num_chem, is_aerosol, is_cw_aerosol, config_flags )
 !
 ! initialize pointers used by aerosol-cloud-interaction routines
 !
@@ -22,6 +22,7 @@ SUBROUTINE aerosols_sorgam_init_aercld_ptrs(   &
     implicit none
     INTEGER, INTENT(IN) :: num_chem
     LOGICAL, INTENT(OUT) :: is_aerosol(num_chem)
+    LOGICAL, INTENT(OUT) :: is_cw_aerosol(num_chem)
     TYPE (grid_config_rec_type) , INTENT (in) :: config_flags
 
 
@@ -410,13 +411,20 @@ SUBROUTINE aerosols_sorgam_init_aercld_ptrs(   &
 	end do
 
 	is_aerosol(:) = .false.
+	is_cw_aerosol(:) = .false.
 	do iphase=1,nphase_aer
 	do itype=1,ntype_aer
 	do n = 1, nsize_aer(itype)
 	    do ll = 1, ncomp_aer(itype)
 	      is_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+              if(iphase == cw_phase) then
+                is_cw_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+              endif
 	    end do
 	    is_aerosol(numptr_aer(n,itype,iphase))=.true.
+            if(iphase == cw_phase) then
+	      is_cw_aerosol(numptr_aer(n,itype,iphase))=.true.
+            endif
 	end do ! size
 	end do ! type
 	end do ! phase
@@ -486,7 +494,7 @@ SUBROUTINE aerosols_sorgam_init_aercld_ptrs(   &
 END SUBROUTINE aerosols_sorgam_init_aercld_ptrs
 
 SUBROUTINE aerosols_soa_vbs_init_aercld_ptrs(   &
-         num_chem, is_aerosol, config_flags )
+         num_chem, is_aerosol, is_cw_aerosol, config_flags )
 !
 ! initialize pointers used by aerosol-cloud-interaction routines
 !
@@ -497,6 +505,7 @@ SUBROUTINE aerosols_soa_vbs_init_aercld_ptrs(   &
     implicit none
     INTEGER, INTENT(IN) :: num_chem
     LOGICAL, INTENT(OUT) :: is_aerosol(num_chem)
+    LOGICAL, INTENT(OUT) :: is_cw_aerosol(num_chem)
     TYPE (grid_config_rec_type) , INTENT (in) :: config_flags
 
 
@@ -884,13 +893,20 @@ SUBROUTINE aerosols_soa_vbs_init_aercld_ptrs(   &
         end do
 
         is_aerosol(:) = .false.
+        is_cw_aerosol(:) = .false.
         do iphase=1,nphase_aer
         do itype=1,ntype_aer
         do n = 1, nsize_aer(itype)
             do ll = 1, ncomp_aer(itype)
               is_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+              if(iphase == cw_phase) then
+                is_cw_aerosol(massptr_aer(ll,n,itype,iphase))=.true.
+              endif
             end do
         is_aerosol(numptr_aer(n,itype,iphase))=.true.
+        if(iphase == cw_phase) then
+	  is_cw_aerosol(numptr_aer(n,itype,iphase))=.true.
+        endif
         end do ! size
         end do ! type
         end do ! phase

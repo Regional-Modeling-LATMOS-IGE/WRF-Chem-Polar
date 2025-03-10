@@ -65,6 +65,7 @@
     PRIVATE :: HL_init
 
     logical, allocatable :: is_aerosol(:) ! true if field is aerosol (any phase)
+    logical, allocatable :: is_cw_aerosol(:) ! true if field is aerosol (cloud (cw) phase)
 
     CONTAINS
 
@@ -560,9 +561,9 @@ tile_lon_loop : &
                  ddvel(i,j,p_xylolooh) = ddvel(i,j,p_h2o2)
                  ddvel(i,j,p_xyleno2)  = 0.
                  ddvel(i,j,p_xylenooh) = ddvel(i,j,p_h2o2)
-                 ddvel(i,j,p_dmso) = 0. 
-                 ddvel(i,j,p_msa)         = ddvel(i,j,p_hno3)
-                 ddvel(i,j,p_ch3s) = 0. 
+                 ddvel(i,j,p_dmso) = 0.
+                 ddvel(i,j,p_msa) = ddvel(i,j,p_hno3)
+                 ddvel(i,j,p_ch3s) = 0.
                  ddvel(i,j,p_ch3so) = 0.
                  ddvel(i,j,p_ch3so3) = 0.
                  ddvel(i,j,p_msia) = 0.

@@ -634,7 +634,9 @@ module_microphysics_driver.o: \
 		../frame/module_configure.o \
 		../frame/module_comm_dm.o \
 		../frame/module_dm.o \
-		../share/module_model_constants.o 
+		../share/module_model_constants.o \
+                ../chem/module_data_gocart_seas.o \
+                ../chem/module_data_mosaic_asect.o
 
 module_shallowcu_driver.o: \
 		module_shcu_camuwshcu_driver.o \
@@ -920,7 +922,8 @@ module_mp_wdm6.o :\
 		module_mp_radar.o
 
 module_mp_morr_two_moment.o :\
-		module_mp_radar.o
+		module_mp_radar.o \
+                module_data_gocart_dust.o
 
 module_mp_wsm3.o :\
 		module_mp_wsm3_accel.F

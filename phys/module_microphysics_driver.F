@@ -11,8 +11,10 @@ SUBROUTINE microphysics_driver(                                          &
                       ,specified, channel_switch                         &
                       ,warm_rain                                         &
                       ,t8w                                               &
-                      ,chem_opt, progn                                   &
-                      ,cldfra, cldfra_old, exch_h, nsource               &
+                      ,chem_opt, progn, aci_wrfchem_opt                  &
+                      ,cldfra, cldfra_old, exch_h, cldfral_phys &
+                      ,cldfral_phys_old, nsource               &
+                      ,aci_wrf_opt                                       &
                       ,qlsink, precr, preci, precs, precg                &
                       ,xland,snowh,itimestep                             &
                       ,f_ice_phy,f_rain_phy,f_rimef_phy                  &
@@ -51,6 +53,8 @@ SUBROUTINE microphysics_driver(                                          &
                       ,qns_curr,qnr_curr,qng_curr,qnn_curr,qnc_curr      &
                       ,qnwfa_curr,qnifa_curr                             & ! for water/ice-friendly aerosols
                       ,f_qnwfa,f_qnifa                                   & ! for water/ice-friendly aerosols
+                      ,qnwfa_ext,qnifa_ext                       &
+                      ,current_month &
                       ,qvolg_curr,qvolh_curr                             &
                       ,qdcn_curr,qtcn_curr,qccn_curr,qrcn_curr           & ! for ntu3m
                       ,qnin_curr,fi_curr,fs_curr,vi_curr,vs_curr         & ! for ntu3m
@@ -104,6 +108,14 @@ SUBROUTINE microphysics_driver(                                          &
 #if ( WRF_CHEM == 1 )
                       ,rainprod, evapprod                                &
                       ,qv_b4mp, qc_b4mp, qi_b4mp, qs_b4mp                &
+                      ,thompson_aernum1, thompson_aernum2 &
+                      ,thompson_aernum3, thompson_aernum4 &
+                      ,thompson_aerra1, thompson_aerra2 &
+                      ,thompson_aerra3, thompson_aerra4 &
+                      ,thompson_aerkappa1, thompson_aerkappa2 &
+                      ,thompson_aerkappa3, thompson_aerkappa4 &
+                      ,thompson_aeractfrac1, thompson_aeractfrac2 &
+                      ,thompson_aeractfrac3, thompson_aeractfrac4 &
 #endif
                       ,qnwfa2d, qnifa2d                                  & ! for water/ice-friendly aerosols
                       ,refl_10cm                                         & ! HM, 9/22/09, add for refl
@@ -185,7 +197,13 @@ SUBROUTINE microphysics_driver(                                          &
                     ,p_dust_1, p_dust_2, p_dust_3                       & !inline gocart
                     ,p_dust_4, p_dust_5                                 & !inline gocart
                     ,p_sulf, p_seas_1, p_seas_2                         & !inline gocart
-                    ,p_seas_3, p_seas_4 
+                    ,p_seas_3, p_seas_4, p_num_a04, p_num_cw04          &
+                    ,MOZCART_KPP, T1_MOZCART_KPP, GOCART_SIMPLE &
+                    ,GOCARTRADM2, GOCARTRACM_KPP, CBMZ_MOSAIC_4BIN &
+                    ,CBMZ_MOSAIC_DMS_4BIN, CBMZ_MOSAIC_4BIN_AQ &
+                    ,CBMZ_MOSAIC_DMS_4BIN_AQ, MOZART_MOSAIC_4BIN_KPP &
+                    ,MOZART_MOSAIC_4BIN_AQ_KPP, CRI_MOSAIC_4BIN_AQ_KPP &
+                    ,SAPRC99_MOSAIC_4BIN_VBS2_KPP
 
 #endif
 
@@ -412,7 +430,8 @@ SUBROUTINE microphysics_driver(                                          &
    TYPE(grid_config_rec_type),  INTENT(IN   ) , OPTIONAL   :: config_flags
    INTEGER,    INTENT(IN   )    :: mp_physics
    LOGICAL,    INTENT(IN   )    :: specified
-   INTEGER, OPTIONAL, INTENT(IN   )    :: chem_opt, progn
+   INTEGER, OPTIONAL, INTENT(IN   )    :: chem_opt, progn, aci_wrfchem_opt
+   INTEGER, INTENT(IN) :: aci_wrf_opt
    INTEGER, OPTIONAL, INTENT(IN   )    :: hail, ice2 !, ccntype
 !
    INTEGER,      INTENT(IN   )    ::       ids,ide, jds,jde, kds,kde
@@ -441,6 +460,25 @@ SUBROUTINE microphysics_driver(                                          &
                                                                  p8w, &
                                                               pi_phy, &
                                                                    p
+#if ( WRF_CHEM == 1 )
+   ! Parameters for Abdul-Razzak and Ghan activation in Thompson Microphysics
+   ! in each aerosol size bin, for output to history
+   !TODO this is hardcoded for 4 bins for now
+   ! aerosol number concentration (kg-1)
+   ! aerosol radius (um)
+   ! aerosol kappa (0-1)
+   ! aerosol activation fraction (0-1)
+   REAL, DIMENSION( ims:ime , kms:kme , jms:jme ),                    &
+         INTENT(INOUT) ::                                             &
+                       thompson_aernum1, thompson_aernum2 &
+                      ,thompson_aernum3, thompson_aernum4 &
+                      ,thompson_aerra1, thompson_aerra2 &
+                      ,thompson_aerra3, thompson_aerra4 &
+                      ,thompson_aerkappa1, thompson_aerkappa2 &
+                      ,thompson_aerkappa3, thompson_aerkappa4 &
+                      ,thompson_aeractfrac1, thompson_aeractfrac2 &
+                      ,thompson_aeractfrac3, thompson_aeractfrac4
+#endif
 !NUWRF JJS 20101021   vvvvv
    REAL, DIMENSION( ims:ime , kms:kme , jms:jme ),                    &
          INTENT(INOUT), OPTIONAL ::                        phys_tot,  &
@@ -607,7 +645,8 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
          OPTIONAL,                                                &
          INTENT(INOUT ) ::                                        &
                   u,v,w, z, t8w                                       &
-                 ,cldfra, cldfra_old, exch_h                      &
+                 ,cldfra, cldfral_phys,cldfral_phys_old &
+                 ,cldfra_old, exch_h                      &
                  ,qv_curr,qc_curr,qr_curr,qi_curr,qs_curr,qg_curr &
                  ,qt_curr,qndrop_curr,qni_curr,qh_curr,qnh_curr   &
                  ,qns_curr,qnr_curr,qng_curr,qnn_curr,qnc_curr    &
@@ -628,6 +667,12 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  ,kext_ft_qs,kext_ft_qg                           &
                  ,qnwfa_curr,qnifa_curr                           & ! Added by G. Thompson
                  ,qvolg_curr,qvolh_curr, qrimef_curr
+
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),              &
+         OPTIONAL,                                                &
+         INTENT(INOUT) ::                                        &
+                 qnwfa_ext,qnifa_ext
+   INTEGER, INTENT(IN) :: current_month
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                  &
          OPTIONAL,                                                &
@@ -749,10 +794,32 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    LOGICAL :: channel
    LOGICAL :: nssl_progn = .false.
    REAL    :: z0, z1, z2, w1, w2
+   REAL :: nudging_coeff_thompson
+   INTEGER :: thompson_aer_from_chem
 
    integer, parameter :: ntot = 50
    real :: wmin, wmax
    integer :: ierr
+#if ( WRF_CHEM == 1 )
+   ! Number of aerosol size bins for MOSAIC
+   INTEGER, PARAMETER :: naerbins = 4
+   ! Parameters for Abdul-Razzak and Ghan activation in Thompson Microphysics
+   ! aerosol number concentration (kg-1)
+   ! aerosol radius (um)
+   ! aerosol kappa (0-1)
+   ! aerosol activation fraction (0-1)
+   REAL, DIMENSION(ims:ime, kms:kme, jms:jme, 1:naerbins) &
+         :: thompson_aernum, &
+            thompson_aerra, &
+            thompson_aerkappa, &
+            thompson_aeractfrac
+   ! = .true. if this is a GOCART chem_opt
+   LOGICAL :: aer_is_gocart
+   ! = .true. if this is a MOSAIC-4bin chem_opt
+   LOGICAL :: aer_is_mosaic4bin
+   ! = .true. if this is a MOSAIC-4bin-AQ chem_opt
+   LOGICAL :: aer_is_mosaic4binaq
+#endif
 ! IRRIGATION
 
    REAL, DIMENSION( ims:ime , jms:jme ), OPTIONAL, INTENT(IN):: IRRIGATION !ARI
@@ -777,6 +844,50 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      sz = spec_zone
    ELSE
      sz = 0
+   ENDIF
+
+   ! Set up aerosol-cloud interaction option for THOMPSONAERO microphysics
+   thompson_aer_from_chem = 0
+   IF(aci_wrf_opt > 0) THEN
+     !-- Thompson and Eidhammer ACI with external NWFA and NIFA aerosol climatology
+     ! This is different from option 0 which sets a pseudo emission flux and a
+     ! climatology based on internal values in the scheme
+     thompson_aer_from_chem = -1
+#if ( WRF_CHEM == 1 )
+   ELSEIF(aci_wrfchem_opt > 0) THEN
+     ! Initialize chem mechanism families IDs
+     aer_is_gocart = chem_opt == MOZCART_KPP .OR. &
+                     chem_opt == T1_MOZCART_KPP .OR. &
+                     chem_opt == GOCART_SIMPLE .OR. &
+                     chem_opt == GOCARTRADM2 .OR. &
+                     chem_opt == GOCARTRACM_KPP
+     aer_is_mosaic4bin = chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                         chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
+     aer_is_mosaic4binaq = chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == CRI_MOSAIC_4BIN_AQ_KPP
+     IF(aci_wrfchem_opt == 1 .AND. aer_is_mosaic4bin) THEN
+       !-- Abdul-Razzak & Ghan ACI with WRF-Chem aerosols
+       thompson_aer_from_chem = 1
+     ELSEIF(aci_wrfchem_opt == 2 .AND. aer_is_mosaic4bin) THEN
+       !-- Thompson and Eidhammer ACI with WRF-Chem aerosols (MOSAIC-4bin)
+       ! !!Warning!! this is only enabled for the microphysics, cw aerosols are
+       !             still set with ARG02
+       thompson_aer_from_chem = 2
+     ELSEIF(aci_wrfchem_opt == 2 .AND. aer_is_gocart) THEN
+       !-- Thompson and Eidhammer ACI with WRF-Chem aerosols (GOCART)
+       thompson_aer_from_chem = 3
+     ELSE
+       CALL wrf_error_fatal('microphysics_driver: aci_wrfchem_opt + chem_opt combination not supported')
+     ENDIF
+#endif
    ENDIF
 
 ! set this to true to print out the global max/min for W on each time step.
@@ -908,9 +1019,11 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  mp_physics==NSSL_2MOM .or. mp_physics==NSSL_2MOMG)) THEN
 !          Do nothing here for the moment. Use activation of CCN within the NSSL_2MOM scheme instead, based on nssl_cccn namelist value.
        ELSEIF ( progn==1 .AND. mp_physics/=LINSCHEME .AND. mp_physics/=MORR_TWO_MOMENT &
-                .AND. mp_physics/=NSSL_2MOM .AND. mp_physics/=NSSL_2MOMCCN .AND. mp_physics/=NSSL_2MOMG ) THEN
+                .AND. mp_physics/=NSSL_2MOM .AND. mp_physics/=NSSL_2MOMCCN .AND. mp_physics/=NSSL_2MOMG &
+               ) THEN
              call wrf_error_fatal( &
-             "SETTINGS ERROR: Prognostic cloud droplet number can only be used with the mp_physics=LINSCHEME or MORRISON or NSSL_2MOM.")
+             "SETTINGS ERROR: Prognostic cloud droplet number can only be used with the mp_physics=LINSCHEME or MORRISON or &
+             &NSSL_2MOM")
        END IF
        END IF
 
@@ -1017,8 +1130,57 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  qc_b4mp(its:ite,kts:kte,jts:jte) = qc_curr(its:ite,kts:kte,jts:jte)
                  qi_b4mp(its:ite,kts:kte,jts:jte) = qi_curr(its:ite,kts:kte,jts:jte)
                  qs_b4mp(its:ite,kts:kte,jts:jte) = qs_curr(its:ite,kts:kte,jts:jte)
+                 ! Set up THOMPSONAERO aerosols based on WRF-Chem aerosols
+                 !TODO Should this be moved to chem/? Careful, call order is advection-MP-chem
+                 IF(aci_wrfchem_opt > 0) THEN
+                   IF(aer_is_mosaic4bin) THEN
+                     ! Calculate aerosol properties for ARG02 activation (number, radius, kappa, NIFA)
+                     CALL calc_chem_thompsonaer(THOMPSON_AERNUM=thompson_aernum, &
+                            THOMPSON_AERRA=thompson_aerra, &
+                            THOMPSON_AERKAPPA=thompson_aerkappa, &
+                            CHEM=chem,      &
+                            RHO=rho, CHEM_OPT=chem_opt, &
+                            NAERBINS=naerbins, &
+                            IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde,  &
+                            IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme,  &
+                            ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+                     thompson_aeractfrac(its:ite,kts:kte,jts:jte,1:naerbins) = 0.0
+                     ! Aerosol properties output to registry variables for
+                     ! diagnostics (can be written to wrfout)
+                     !TODO should not be hardcoded to naerbins=4
+                     thompson_aernum1(its:ite,kts:kte,jts:jte) = thompson_aernum(its:ite,kts:kte,jts:jte,1)
+                     thompson_aernum2(its:ite,kts:kte,jts:jte) = thompson_aernum(its:ite,kts:kte,jts:jte,2)
+                     thompson_aernum3(its:ite,kts:kte,jts:jte) = thompson_aernum(its:ite,kts:kte,jts:jte,3)
+                     thompson_aernum4(its:ite,kts:kte,jts:jte) = thompson_aernum(its:ite,kts:kte,jts:jte,4)
+                     thompson_aerra1(its:ite,kts:kte,jts:jte) = thompson_aerra(its:ite,kts:kte,jts:jte,1)
+                     thompson_aerra2(its:ite,kts:kte,jts:jte) = thompson_aerra(its:ite,kts:kte,jts:jte,2)
+                     thompson_aerra3(its:ite,kts:kte,jts:jte) = thompson_aerra(its:ite,kts:kte,jts:jte,3)
+                     thompson_aerra4(its:ite,kts:kte,jts:jte) = thompson_aerra(its:ite,kts:kte,jts:jte,4)
+                     thompson_aerkappa1(its:ite,kts:kte,jts:jte) = thompson_aerkappa(its:ite,kts:kte,jts:jte,1)
+                     thompson_aerkappa2(its:ite,kts:kte,jts:jte) = thompson_aerkappa(its:ite,kts:kte,jts:jte,2)
+                     thompson_aerkappa3(its:ite,kts:kte,jts:jte) = thompson_aerkappa(its:ite,kts:kte,jts:jte,3)
+                     thompson_aerkappa4(its:ite,kts:kte,jts:jte) = thompson_aerkappa(its:ite,kts:kte,jts:jte,4)
+                   ENDIF
+                   ! Calculate aerosol properties for TE14 activation (NWFA, NIFA)
+                   CALL calc_chem_nwfa_nifa(NWFA=qnwfa_curr, NIFA=qnifa_curr, &
+                          NWFA_2D=qnwfa2d, NIFA_2D=qnifa2d, &
+                          CHEM=chem,      &
+                          RHO=rho, CHEM_OPT=chem_opt, &
+                          IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde,  &
+                          IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme,  &
+                          ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+                 ENDIF
+
 #endif
-             CALL mp_gt_driver(                          &
+                 IF(aci_wrf_opt > 0) THEN
+                   ! Set up NWFA and NIFA based on external climatology
+                   nudging_coeff_thompson = 1. ! overwrite qnwfa by ext value
+                   ! nudging_coeff_thompson = dt/(6*3600.) ! nudge with 6h timescale
+                   qnwfa_curr = qnwfa_curr + nudging_coeff_thompson * (qnwfa_ext - qnwfa_curr)
+                   qnifa_curr = qnifa_curr + nudging_coeff_thompson * (qnifa_ext - qnifa_curr)
+                 ENDIF
+
+                 CALL mp_gt_driver(                      &
                      QV=qv_curr,                         &
                      QC=qc_curr,                         &
                      QR=qr_curr,                         &
@@ -1050,7 +1212,15 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      WETSCAV_ON=config_flags%wetscav_onoff == 1, &
                      RAINPROD=rainprod,                  &
                      EVAPPROD=evapprod,                  &
+                     QLSINK=qlsink,                      &
+                     THOMPSON_AERNUM=thompson_aernum, &
+                     THOMPSON_AERRA=thompson_aerra, &
+                     THOMPSON_AERKAPPA=thompson_aerkappa, &
+                     THOMPSON_AERACTFRAC=thompson_aeractfrac, &
+                     THOMPSON_AER_FROM_CHEM = thompson_aer_from_chem, &
+                     NAERBINS=naerbins, &
 #endif
+                     EXCH_H=exch_h,                         &
                      REFL_10CM=refl_10cm,                &
                      diagflag=diagflag,                  &
                      ke_diag = ke_diag,                  &
@@ -1064,6 +1234,31 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde, &
                  IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
                  ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+
+#if ( WRF_CHEM == 1 )
+                 IF(aci_wrfchem_opt > 0 .AND. aer_is_mosaic4binaq) THEN
+                   ! Activate WRF-Chem aerosols from ai phase to cw phase
+                   ! based on predicted actfrac
+                   !TODO should not be hardcoded to naerbins=4
+                   thompson_aeractfrac1(its:ite,kts:kte,jts:jte) = thompson_aeractfrac(its:ite,kts:kte,jts:jte,1)
+                   thompson_aeractfrac2(its:ite,kts:kte,jts:jte) = thompson_aeractfrac(its:ite,kts:kte,jts:jte,2)
+                   thompson_aeractfrac3(its:ite,kts:kte,jts:jte) = thompson_aeractfrac(its:ite,kts:kte,jts:jte,3)
+                   thompson_aeractfrac4(its:ite,kts:kte,jts:jte) = thompson_aeractfrac(its:ite,kts:kte,jts:jte,4)
+                   CALL cal_cldfral4(cldfral_phys, qv_curr, qc_curr,     &
+                            p, t_phy, rho,       &
+                            ids,ide, jds,jde, kds,kde,                   &
+                            ims,ime, jms,jme, kms,kme,                   &
+                            its,ite, jts,jte, kts,kte)
+                   CALL wrf_debug ( 200 , 'microphysics_driver: calling activate_mosaic_aer' )
+                   CALL activate_mosaic_aer(CHEM=chem, THOMPSON_AERACTFRAC=thompson_aeractfrac, &
+                            CLDFRAL=cldfral_phys, CLDFRAL_OLD=cldfral_phys_old, &
+                            NAERBINS=naerbins, &
+                            IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde, &
+                            IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
+                            ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+                   cldfral_phys_old(its:ite,kts:kte,jts:jte) = cldfral_phys(its:ite,kts:kte,jts:jte)
+                 ENDIF
+#endif
              ELSE
                 CALL wrf_error_fatal ( 'arguments not present for calling thompson_et_al' )
              ENDIF
@@ -1110,6 +1305,14 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      WETSCAV_ON=config_flags%wetscav_onoff == 1, &
                      RAINPROD=rainprod,                  &
                      EVAPPROD=evapprod,                  &
+                     QLSINK=qlsink,                      &
+                     THOMPSON_AERNUM=thompson_aernum, &
+                     THOMPSON_AERRA=thompson_aerra, &
+                     THOMPSON_AERKAPPA=thompson_aerkappa, &
+                     THOMPSON_AERACTFRAC=thompson_aeractfrac, &
+                     EXCH_H=exch_h,                         &
+                     THOMPSON_AER_FROM_CHEM = thompson_aer_from_chem, &
+                     NAERBINS=naerbins, &
 #endif
                      REFL_10CM=refl_10cm,                &
                      diagflag=diagflag,                  &
@@ -1381,6 +1584,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  ,ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte &
                  ,QLSINK=qlsink                                     & ! jdf for wrf-chem
 #if ( WRF_CHEM == 1 )
+                 ,CHEM=chem                                         &
                  ,WETSCAV_ON=config_flags%wetscav_onoff == 1 &
                  ,EVAPPROD=evapprod,RAINPROD=rainprod          &
 #endif
@@ -2893,5 +3097,744 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    RETURN
 
    END SUBROUTINE microphysics_driver
+
+#if ( WRF_CHEM == 1 )
+   SUBROUTINE activate_mosaic_aer(chem, thompson_aeractfrac, &
+                            cldfral, cldfral_old, &
+                            naerbins, &
+                            ids, ide, jds, jde, kds, kde,  &
+                            ims, ime, jms, jme, kms, kme,  &
+                            its, ite, jts, jte, kts, kte)
+     !
+     ! 2023/05/10, Louis Marelle, LATMOS
+     !
+     ! Purpose:
+     !  - Transfer MOSAIC aerosols between ai (interstitial) and cw
+     !    (cloudborne) phases, based on the cloud fractions and activation
+     !    fractions calculated in THOMPSONAERO microphysics.
+     !
+     ! Arguments:
+     !  Input/Output:
+     !   - chem: chem tracers (ppm for gases, ug/kg dry air for aerosols)
+     !  Input:
+     !    - thompson_aeractfrac: Size resolved (4D) number activation fraction of
+     !      aerosols from grid-scale (MP) clouds (0-1)
+     !    - cldfral: Grid-scale 3D liquid cloud fraction after call to MP model (0-1)
+     !    - cldfral_old: Grid-scale 3D liquid cloud fraction from previous time step
+     !      (before call to MP model) (0-1)
+     !    - ids,ims,its, etc.: domain/memory/tile index limits in i,j,k
+     !
+     ! Remarks:
+     !  - TODO compare to implementation in mixactivate
+     !  - TODO: Make sure that the resuspension from decaying clouds done here is not
+     !    redone elsewhere e.g. in wetscav
+     !  - TODO Better to use massactfrac not numactfrac for activating aerosol mass
+     !    and water mass, see Abdul-Razzak & Ghan (2002) for example (eqs. 13-14)
+
+     ! This is used for p_chem pointers and chem_opt values
+     USE module_state_description
+     ! This is for MOSAIC aerosol parameters: aerosol volume at center
+     ! diameter volumcen_sect in cm3, aerosol densities in g/cm3
+     USE module_data_mosaic_asect, only:volumcen_sect, &
+                                        ncomp_aer,massptr_aer,dens_aer,waterptr_aer,hyswptr_aer,numptr_aer,ai_phase,cw_phase
+     IMPLICIT NONE
+
+     ! Arguments
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, 1:naerbins), &
+         INTENT(IN) :: thompson_aeractfrac
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN) :: cldfral, cldfral_old
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), &
+         INTENT(INOUT) :: chem
+     INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
+                            ims,ime, jms,jme, kms,kme,    &
+                            its,ite, jts,jte, kts,kte, naerbins
+     ! Local variables
+     INTEGER :: isize,icomp,iphase,itype,i,k,j
+     ! chem array pointers (indices)
+     INTEGER :: p_chem_ai,p_chem_cw,p_chem_water,p_chem_hyswater
+     ! aerosol mass mixing ratio (ug/kg)
+     REAL :: aerconc
+     ! aerosol activation fraction (0-1), non-activated fraction (0-1),
+     ! aerosol activation fraction at previous time step
+     REAL :: actfrac,nonactfrac,actfrac_old
+     ! Cloud fraction relative change since last time step (unitless, ratio);
+     ! cloudborne aerosol reset switch (0 or 1)
+     REAL :: cld_decay_fac, cld_cw_reset_fac
+     ! Min values for cldfra (unitless, 0-1) and aerosol (ug/kg)
+     REAL, PARAMETER :: CLDFRA_MINVAL = 1.E-6, AER_MINVAL = 1.E-16
+
+     !TODO this should loop on ntypes
+     itype = 1
+
+     DO i = its,ite
+     DO k = kts,kte
+     DO j = jts,jte
+       DO isize = 1,naerbins
+         !TODO Better to use a different actfrac for mass and number, see ARG2000
+         actfrac = thompson_aeractfrac(i,k,j,isize)
+
+         !---- Resuspend aerosols from decaying grid-scale clouds
+         cld_decay_fac = 1.0
+         cld_cw_reset_fac = 1.0
+         IF(cldfral_old(i,k,j) > CLDFRA_MINVAL) THEN
+           IF(cldfral(i,k,j) < cldfral_old(i,k,j)) THEN
+             cld_decay_fac =  cldfral(i,k,j) / cldfral_old(i,k,j)
+           ENDIF
+         ELSE
+           ! If cldfral was already 0.0 before the mp call, no cw aerosol
+           ! should be there, and actfrac_old would be 0.0
+           ! This is unfortunately not always the case, because subgrid mixing
+           ! and cumulus mixing in chem can bring cw out of clouds. Ideally,
+           ! these processes should either not mix cw aerosols or should also
+           ! redistribute qcloud,qncloud,etc.
+           ! cld_cw_reset_fac is here to reset actfrac_old to 0.0 in case this
+           ! issue happens
+           cld_cw_reset_fac = 0.0
+         ENDIF
+         IF(cldfral(i,k,j) <= CLDFRA_MINVAL) THEN
+           cld_decay_fac = 0.0
+         ENDIF
+         actfrac = actfrac * cld_decay_fac
+         nonactfrac = MIN(1.0, MAX(0.0, 1.0 - actfrac))
+
+         !---- Activate/deactivate aerosol mass concentrations
+         DO icomp = 1, ncomp_aer(itype)
+           !TODO This should use ai_phase, cw_phase instead of hardcoded
+           !values 1 and 2, but since this is called before chem, it is not
+           !clear if ai_phase and cw_phase are set when mp_driver is first called.
+           iphase = 1
+           p_chem_ai = massptr_aer(icomp,isize,itype,iphase)
+           iphase = 2
+           p_chem_cw = massptr_aer(icomp,isize,itype,iphase)
+           IF(p_chem_ai > param_first_scalar .AND. p_chem_cw > param_first_scalar) THEN
+             aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
+             IF(cldfral(i,k,j) > CLDFRA_MINVAL) THEN
+               !-- Aerosol mass concentrations - activate aerosol mass
+               IF(aerconc > AER_MINVAL) THEN
+                 ! Move new cw aerosol mass to cloud-phase
+                 ! Existing cw aerosols can only be removed by evaporating
+                 ! droplets or wet removal, so they stay activated even if
+                 ! actfrac < actfrac_old
+                 actfrac_old = cld_cw_reset_fac * cld_decay_fac * chem(i,k,j,p_chem_cw) / aerconc
+                 IF(actfrac > actfrac_old) THEN
+                   chem(i,k,j,p_chem_cw) = actfrac * aerconc
+                   chem(i,k,j,p_chem_ai) = nonactfrac * aerconc
+                 ENDIF
+               ENDIF
+             ELSE
+               !-- Aerosol mass concentrations - remove cloud-borne aerosol
+               ! mass out of clouds
+               chem(i,k,j,p_chem_ai) = aerconc
+               chem(i,k,j,p_chem_cw) = 0.0
+             ENDIF ! cldfral
+           ENDIF ! p_chem_ai
+         ENDDO ! icomp
+
+         !---- Activate/deactivate aerosol number and water
+         IF(cldfral(i,k,j) > CLDFRA_MINVAL) THEN
+           !-- Activate aerosol number and water
+           iphase = 1
+           p_chem_ai = numptr_aer(isize,itype,iphase)
+           iphase = 2
+           p_chem_cw = numptr_aer(isize,itype,iphase)
+           IF(p_chem_ai > param_first_scalar .AND. p_chem_cw > param_first_scalar) THEN
+             aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
+             IF(aerconc > AER_MINVAL) THEN
+               actfrac_old = cld_decay_fac * chem(i,k,j,p_chem_cw) / aerconc
+               IF(actfrac > actfrac_old) THEN
+                 !-- Aerosol number and water - Move activated aerosol number to
+                 ! cloud phase
+                 chem(i,k,j,p_chem_cw) = actfrac * aerconc
+                 chem(i,k,j,p_chem_ai) = nonactfrac * chem(i,k,j,p_chem_cw)
+                 !-- Aerosol number and water - Remove activated aerosol water
+                 ! (There is no aerosol water or hyswater in cloud phase)
+                 p_chem_water = waterptr_aer(isize,itype)
+                 chem(i,k,j,p_chem_water) = nonactfrac * chem(i,k,j,p_chem_water)
+                 p_chem_hyswater = hyswptr_aer(isize,itype)
+                 chem(i,k,j,p_chem_hyswater) = nonactfrac * chem(i,k,j,p_chem_hyswater)
+               ENDIF ! actfrac > actfrac_old
+             ENDIF ! aerconc > minval
+           ENDIF ! p_chem_ai
+         ELSE ! IF cldfral > CLDFRA_MINVAL
+           !-- Deactivate aerosol number and water
+           ! Remove cloud-borne aerosol number out of clouds
+           iphase = 1
+           p_chem_ai = numptr_aer(isize,itype,iphase)
+           iphase = 2
+           p_chem_cw = numptr_aer(isize,itype,iphase)
+           IF(p_chem_ai > param_first_scalar .AND. p_chem_cw > param_first_scalar) THEN
+             chem(i,k,j,p_chem_ai) = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
+             chem(i,k,j,p_chem_cw) = 0.0
+             !TODO -- This is not modifying aerosol and water - Should this
+             !recreate aerosol water when resuspending cloudborne aerosols to
+             !interstitial phase?  What is the proper approach for water when
+             !resuspending? Hysw should be on the wet branch and aerosol
+             !should be very hydrated?
+           ENDIF ! p_chem_ai
+         ENDIF ! IF cldfral > CLDFRA_MINVAL
+       ENDDO ! isize
+     ENDDO ! i
+     ENDDO ! k
+     ENDDO ! j
+   END SUBROUTINE activate_mosaic_aer
+
+!----------------------------------------
+
+   SUBROUTINE calc_chem_nwfa_nifa(nwfa, nifa, nwfa_2d, nifa_2d, &
+                            chem, rho, chem_opt, &
+                            ids, ide, jds, jde, kds, kde,  &
+                            ims, ime, jms, jme, kms, kme,  &
+                            its, ite, jts, jte, kts, kte)
+     ! 2022/12/19, Louis Marelle, LATMOS
+     !
+     ! Purpose:
+     !  Calculate NWFA and NIFA from WRF-Chem aerosols. NWFA and NIFA are the
+     !  numbers of water-friendly and ice-friendly aerosols used in the
+     !  THOMPSONAERO microphysics (Thompson and Eidhammer, 2014)
+     !
+     ! Arguments:
+     ! Input:
+     !  - chem: chem tracers (ppm for gases, ug/kg dry air for aerosols)
+     !  - rho: air density (kg/m3)
+     !  - chem_opt: chem mechanism option (values in module_state_description)
+     ! Input/Output:
+     !  - nwfa: number concentration of water-friendly aerosols (#/kg air)
+     !  - nifa: number concentration of ice-friendly aerosols (#/kg/air))
+     !  - nwfa_2d (unused for now) - equivalent wfa emission rate at surface
+     !  - nifa_2d (unused for now) - equivalent ifa emission rate at surface
+     !
+     ! Remarks:
+     !  - TODO this is hardcoded for MOSAIC 4 bins: this should instead loop
+     !    on naersizes and use MOSAIC pointer arrays
+     !  - TODO not clear if this can be moved to the chem/code: call order is
+     !    advection-MP-chem, meaning that clouds were advected since chem code
+     !    was called. This could work since nwfa/nifa are also advected.
+     !  - This is only used with GOCART and MOSAIC-4bin aerosols for now, but could also
+     !    compute nwfa and nifa for any aerosol mechanism in WRF-Chem
+     !  - This is producing very high NIFA from dust with GOCART - but this
+     !    might be expected over desert regions
+     !  - Only dust larger than 500 nm should be used for NIFA, as in
+     !    Thompson and Eidhammer 2014. For GOCART all bins are included
+     !    because DUST1 center diameter is already > 500 nm.
+     !  - 4./3.*PICONST*r_dust1**3*den_dust1 could be initialized once for each
+     !    species to save time - i.e. calculating dust_1_nb_mass_ratio only
+     !    once
+
+     USE module_data_gocart_seas, only: den_seas
+     USE module_data_gocart_dust, only: den_dust
+     USE module_model_constants, only: PICONST
+     ! This is used for p_chem pointers and chem_opt values
+     USE module_state_description
+     ! This is for MOSAIC aerosol parameters: aerosol volume at center
+     ! diameter volumcen_sect in cm3, aerosol densities in g/cm3
+     USE module_data_mosaic_asect, only:volumcen_sect,dens_so4_aer,dens_no3_aer, &
+                                        dens_nh4_aer,dens_na_aer,dens_cl_aer, &
+                                        ncomp_aer,massptr_aer,dens_aer
+
+     IMPLICIT NONE
+
+     ! Arguments
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
+         INTENT(INOUT) :: nwfa, nifa
+     REAL, DIMENSION(ims:ime, jms:jme), &
+         INTENT(INOUT) :: nwfa_2d, nifa_2d
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), &
+         INTENT(IN) :: chem
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
+         INTENT(IN) :: rho
+     INTEGER, INTENT(IN) :: chem_opt
+     INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
+                            ims,ime, jms,jme, kms,kme,    &
+                            its,ite, jts,jte, kts,kte
+
+     ! Local variables
+     INTEGER :: i,j,k
+     REAL :: mass_sulf !kg/kg dry air
+     INTEGER :: isize,itype,icomp,iphase,p_chem ! For MOSAIC aerosols
+     ! Aerosol volume mixing ratio (cm3/kg dry air)
+     REAL :: dryvol_ai_tot, dryvol_cw_tot, dryvol_ai_soluble, dryvol_cw_soluble
+     ! Aerosol total number to hygrophilic number scaling factor (unitless, 0-1)
+     REAL :: scale_num
+     ! Conversion factors for GOCART dust and seas (ug to nb)
+     REAL :: conv_seas(4)
+     REAL :: conv_dust(5)
+     ! Sulfate mass to sulfate number, calculated from parameters in Chin et
+     ! al., 2002 (#/kg)
+     REAL, PARAMETER :: SULF_NB_MASS_RATIO = 5.857D16
+     ! Ammonium sulfate / sulfate ratio, from module_data_gocartchem (kg/kg)
+     ! Not clear if this should be applied here or not - both approaches are reasonable
+     REAL, PARAMETER :: NH4_MFAC = 1.375
+     ! Constant INP concentration from module_mp_thompson (#/m3)
+     REAL, PARAMETER :: NAIN1 = 0.5E6
+     ! Seasalt and dust log-center diameters for GOCART bins (m)
+     REAL, PARAMETER :: rcen_seas(4) = (/ 0.2236E-6, 0.8660E-6, 2.739E-6, 7.071E-6 /)
+     REAL, PARAMETER :: rcen_dust(5) = (/ 0.3162E-6,  1.342E-6,  2.324E-6,  4.243E-6, 7.746E-6 /)
+     ! = .true. if this is a GOCART chem_opt
+     LOGICAL :: aer_is_gocart
+     ! = .true. if this is a MOSAIC-4bin chem_opt
+     LOGICAL :: aer_is_mosaic4bin
+
+     ! Initialize chem mechanism families IDs
+     aer_is_gocart = chem_opt == MOZCART_KPP .OR. &
+                     chem_opt == T1_MOZCART_KPP .OR. &
+                     chem_opt == GOCART_SIMPLE .OR. &
+                     chem_opt == GOCARTRADM2 .OR. &
+                     chem_opt == GOCARTRACM_KPP
+
+     aer_is_mosaic4bin = chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                         chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
+
+     ! Pre-calculate conversion factors (TODO in init)
+     IF (aer_is_gocart) THEN
+       conv_dust(1) = 1.0D9 * 4./3.*PICONST * den_dust(1) * rcen_dust(1)**3.0
+       conv_dust(2) = 1.0D9 * 4./3.*PICONST * den_dust(2) * rcen_dust(2)**3.0
+       conv_dust(3) = 1.0D9 * 4./3.*PICONST * den_dust(3) * rcen_dust(3)**3.0
+       conv_dust(4) = 1.0D9 * 4./3.*PICONST * den_dust(4) * rcen_dust(4)**3.0
+       conv_dust(5) = 1.0D9 * 4./3.*PICONST * den_dust(5) * rcen_dust(5)**3.0
+       conv_seas(1) = 1.0D9 * 4./3.*PICONST * den_seas(1) * rcen_seas(1)**3.0
+       conv_seas(2) = 1.0D9 * 4./3.*PICONST * den_seas(2) * rcen_seas(2)**3.0
+       conv_seas(3) = 1.0D9 * 4./3.*PICONST * den_seas(3) * rcen_seas(3)**3.0
+       conv_seas(4) = 1.0D9 * 4./3.*PICONST * den_seas(4) * rcen_seas(4)**3.0
+     ENDIF
+
+     DO i = its,ite
+     DO k = kts,kte
+     DO j = jts,jte
+       IF (aer_is_gocart) THEN
+         ! Recalculate NWFA and NIFA using GOCART aerosol mixing ratios
+         nwfa(i,k,j) = 0.0
+         nifa(i,k,j) = 0.0
+         ! Ice-friendly aerosol from dust
+         nifa(i,k,j) = chem(i,k,j,p_dust_1) / conv_dust(1)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_2) / conv_dust(2)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_3) / conv_dust(3)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_4) / conv_dust(4)
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_dust_5) / conv_dust(5)
+         ! Water-friendly aerosol from sea salt
+         nwfa(i,k,j) = chem(i,k,j,p_seas_1) / conv_seas(1)
+         nwfa(i,k,j) = nwfa(i,k,j) + chem(i,k,j,p_seas_2) / conv_seas(2)
+         nwfa(i,k,j) = nwfa(i,k,j) + chem(i,k,j,p_seas_3) / conv_seas(3)
+         nwfa(i,k,j) = nwfa(i,k,j) + chem(i,k,j,p_seas_4) / conv_seas(4)
+         ! Water-friendly aerosol from ammonium sulfate - conversion from
+         ! sulfate ppm to ammonium sulfate #/kg assumes a lognormal size
+         ! distribution with parameters from Chin et al., 2002
+         mass_sulf = chem(i,k,j,p_sulf) * 1.0D-6 * 98.08/28.965
+         nwfa(i,k,j) = nwfa(i,k,j) + mass_sulf * SULF_NB_MASS_RATIO * NH4_MFAC
+
+       ELSEIF (aer_is_mosaic4bin) THEN
+         ! Calculate NWFA from MOSAIC-4bin, by scaling MOSAIC aerosol number
+         ! by soluble_aer_vol/total_vol to discard insoluble aerosol fraction
+         ! from NWFA
+         nwfa(i,k,j) = 0.0
+         nifa(i,k,j) = 0.0
+         itype =  1
+         ! Calculate soluble aerosol number from each of the 4 size bins
+         ! Bin 1
+         isize = 1
+         ! Calculate total dry volume of aerosol from individual components in
+         ! bin
+         dryvol_ai_tot = 0.0
+         dryvol_cw_tot = 0.0
+         do icomp = 1, ncomp_aer(itype)
+           iphase = 1
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_ai_tot = dryvol_ai_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+           iphase = 2
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_cw_tot = dryvol_cw_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+         end do
+         ! Calculate total dry volume of soluble aerosol components in bin
+         dryvol_ai_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_a01) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_a01) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_a01) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_a01) / dens_na_aer &
+                             + chem(i,k,j,p_cl_a01) / dens_cl_aer )
+         dryvol_cw_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_cw01) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_cw01) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_cw01) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_cw01) / dens_na_aer &
+                             + chem(i,k,j,p_cl_cw01) / dens_cl_aer )
+         IF(dryvol_ai_tot > 0.0) THEN
+           scale_num = dryvol_ai_soluble / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_a01) * scale_num
+         IF(dryvol_cw_tot > 0.0) THEN
+           scale_num = dryvol_cw_soluble / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw01) * scale_num
+         ! Bin 2
+         isize = 2
+         dryvol_ai_tot = 0.0
+         dryvol_cw_tot = 0.0
+         do icomp = 1, ncomp_aer(itype)
+           iphase = 1
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_ai_tot = dryvol_ai_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+           iphase = 2
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_cw_tot = dryvol_cw_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+         end do
+         dryvol_ai_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_a02) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_a02) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_a02) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_a02) / dens_na_aer &
+                             + chem(i,k,j,p_cl_a02) / dens_cl_aer )
+         dryvol_cw_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_cw02) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_cw02) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_cw02) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_cw02) / dens_na_aer &
+                             + chem(i,k,j,p_cl_cw02) / dens_cl_aer )
+         IF(dryvol_ai_tot > 0.0) THEN
+           scale_num = dryvol_ai_soluble / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_a02) * scale_num
+         IF(dryvol_cw_tot > 0.0) THEN
+           scale_num = dryvol_cw_soluble / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
+         ! Bin 3
+         isize = 3
+         dryvol_ai_tot = 0.0
+         dryvol_cw_tot = 0.0
+         do icomp = 1, ncomp_aer(itype)
+           iphase = 1
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_ai_tot = dryvol_ai_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+           iphase = 2
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_cw_tot = dryvol_cw_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+         end do
+         dryvol_ai_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_a03) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_a03) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_a03) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_a03) / dens_na_aer &
+                             + chem(i,k,j,p_cl_a03) / dens_cl_aer )
+         dryvol_cw_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_cw03) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_cw03) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_cw03) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_cw03) / dens_na_aer &
+                             + chem(i,k,j,p_cl_cw03) / dens_cl_aer )
+         IF(dryvol_ai_tot > 0.0) THEN
+           scale_num = dryvol_ai_soluble / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_a03) * scale_num
+         IF(dryvol_cw_tot > 0.0) THEN
+           scale_num = dryvol_cw_soluble / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw03) * scale_num
+         ! Bin 4
+         isize = 4
+         dryvol_ai_tot = 0.0
+         dryvol_cw_tot = 0.0
+         do icomp = 1, ncomp_aer(itype)
+           iphase = 1
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_ai_tot = dryvol_ai_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+           iphase = 2
+           p_chem = massptr_aer(icomp,isize,itype,iphase)
+           dryvol_cw_tot = dryvol_cw_tot + chem(i,k,j,p_chem) * 1.0E-6 / dens_aer(icomp,itype) ! cm3/kg air
+         end do
+         dryvol_ai_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_a04) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_a04) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_a04) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_a04) / dens_na_aer &
+                             + chem(i,k,j,p_cl_a04) / dens_cl_aer )
+         dryvol_cw_soluble = 1.0E-6 * ( chem(i,k,j,p_so4_cw04) / dens_so4_aer &
+                             + chem(i,k,j,p_no3_cw04) / dens_no3_aer &
+                             + chem(i,k,j,p_nh4_cw04) / dens_nh4_aer &
+                             + chem(i,k,j,p_na_cw04) / dens_na_aer &
+                             + chem(i,k,j,p_cl_cw04) / dens_cl_aer )
+         IF(dryvol_ai_tot > 0.0) THEN
+           scale_num = dryvol_ai_soluble / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_a04) * scale_num
+         IF(dryvol_cw_tot > 0.0) THEN
+           scale_num = dryvol_cw_soluble / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw04) * scale_num
+
+       ELSE
+         ! If chem_opt aerosol is not covered call fatal - but this should have
+         ! been caught in chemics_init
+         CALL wrf_error_fatal('microphysics_driver: calc_chem_nwfa_nifa is only compatible with GOCART and MOSAIC-4bin mechanisms for now')
+
+       ENDIF ! aer_is_gocart
+
+       ! Prevent NWFA and NIFA from dropping too low
+       nwfa(i,k,j) = MAX(nwfa(i,k,j), 11.1E6/rho(i,k,j))
+       nifa(i,k,j) = MAX(nifa(i,k,j), NAIN1*0.01/rho(i,k,j))
+
+     ENDDO ! j
+     ENDDO ! k
+     ENDDO ! i
+
+   END SUBROUTINE calc_chem_nwfa_nifa
+
+!----------------------------------------
+
+   SUBROUTINE calc_chem_thompsonaer(thompson_aernum, &
+                            thompson_aerra, &
+                            thompson_aerkappa, &
+                            chem, rho, chem_opt, &
+                            naerbins, &
+                            ids, ide, jds, jde, kds, kde,  &
+                            ims, ime, jms, jme, kms, kme,  &
+                            its, ite, jts, jte, kts, kte)
+     ! 2024/04/30, Louis Marelle, LATMOS
+     !
+     ! Purpose:
+     !  Calculate aerosol properties for use in THOMPSONAERO microphysics, from WRF-Chem aerosols.
+     !
+     ! Arguments:
+     ! Input:
+     !  - chem: chem tracers (ppm for gases, ug/kg dry air for aerosols)
+     !  - rho: air density (kg/m3)
+     !  - chem_opt: chem mechanism option (values in module_state_description)
+     ! Input/Output:
+     !  - thompson_aernum - aerosol number concentration (kg-1) for input to
+     !    Abdul-Razzak and Ghan activation in Thompson Microphysics
+     !  - thompson_aerra - aerosol radius (um) for input to Abdul-Razzak and
+     !    Ghan activation in Thompson Microphysics
+     !  - thompson_aerkappa aerosol kappa (0-1) for input to Abdul-Razzak and
+     !    Ghan activation in Thompson Microphysics
+     !
+     ! Remarks:
+     !  - Only dust larger than 500 nm should be used for NIFA, as in
+     !    Thompson and Eidhammer 2014.
+     !  -TODO this is hardcoded for MOSAIC-4bin for now
+     !  -TODO Might not be possible to move this to chem code, since advection
+     !  is called between chem and MP
+     !  -TODO 4./3.*PICONST*r_dust1**3*den_dust1 could be initialized once for each
+     !    species to save time - i.e. calculating dust_1_nb_mass_ratio only
+     !    once
+
+     USE module_data_gocart_seas, only: den_seas
+     USE module_data_gocart_dust, only: den_dust
+     USE module_model_constants, only: PICONST
+     ! This is used for p_chem pointers and chem_opt values, param_first_scalar
+     USE module_state_description
+     ! This is for MOSAIC aerosol parameters: aerosol volume at center
+     ! diameter volumcen_sect in cm3, aerosol densities in g/cm3
+     USE module_data_mosaic_asect, only:volumcen_sect,ncomp_aer,massptr_aer,&
+                                        dens_aer,dcen_sect,hygro_aer
+
+     IMPLICIT NONE
+
+     ! Arguments
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, 1:naerbins), &
+         INTENT(INOUT) :: thompson_aernum, &
+                          thompson_aerra, &
+                          thompson_aerkappa
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), &
+         INTENT(IN) :: chem
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), &
+         INTENT(IN) :: rho
+     INTEGER, INTENT(IN) :: chem_opt
+     INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
+                            ims,ime, jms,jme, kms,kme,    &
+                            its,ite, jts,jte, kts,kte, naerbins
+
+     ! Local variables
+     ! Aerosol volume mixing ratio (g/kg dry air)
+     REAL :: aervol, aervol_icomp
+     REAL :: dryvol_ai_tot, dryvol_cw_tot, dryvol_ai_soluble, dryvol_cw_soluble, scale_num
+     ! Aerosol kappa coefficient (0-1)
+     REAL :: aerkappa
+     ! Sulfate mass mixing ratio (kg/kg dry air)
+     REAL :: mass_sulf
+     INTEGER :: i,j,k
+     INTEGER :: isize,itype,icomp,iphase,p_chem ! For MOSAIC aerosols
+     CHARACTER (LEN=256) :: msg_error
+     ! Sulfate mass to sulfate number, calculated from parameters in Chin et
+     ! al., 2002 (#/kg)
+     REAL, PARAMETER :: SULF_NB_MASS_RATIO = 5.857D16
+     ! Ammonium sulfate / sulfate ratio, from module_data_gocartchem (kg/kg)
+     ! Not clear if this should be applied here or not - both approaches are reasonable
+     REAL, PARAMETER :: NH4_MFAC = 1.375
+     ! Constant INP concentration from module_mp_thompson (#/m3)
+     REAL, PARAMETER :: NAIN1 = 0.5E6
+     ! Seasalt and dust log-center diameters for GOCART bins (m)
+     REAL, PARAMETER :: rcen_seas(4) = (/ 0.2236E-6, 0.8660E-6, 2.739E-6, 7.071E-6 /)
+     REAL, PARAMETER :: rcen_dust(5) = (/ 0.3162E-6,  1.342E-6,  2.324E-6,  4.243E-6, 7.746E-6 /)
+     ! = .true. if this is a GOCART chem_opt
+     LOGICAL :: aer_is_gocart
+     ! = .true. if this is a MOSAIC-4bin chem_opt
+     LOGICAL :: aer_is_mosaic4bin
+     REAL, PARAMETER :: convaa = 1.0E-9 ! ug/kg to g/kg
+     REAL, PARAMETER :: aervol_minval = 1.0E-30 ! cm3_aer/kg
+
+     ! Initialize chem mechanism families IDs
+     aer_is_gocart = chem_opt == MOZCART_KPP .OR. &
+                     chem_opt == T1_MOZCART_KPP .OR. &
+                     chem_opt == GOCART_SIMPLE .OR. &
+                     chem_opt == GOCARTRADM2 .OR. &
+                     chem_opt == GOCARTRACM_KPP
+
+     aer_is_mosaic4bin = chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                         chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                         chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                         chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                         chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
+
+     DO i = its,ite
+     DO k = kts,kte
+     DO j = jts,jte
+       IF (aer_is_gocart) THEN
+         !TODO
+         CALL wrf_error_fatal('microphysics_driver: calc_chem_thompsonaer is only compatible MOSAIC-4bin mechanisms for now')
+
+       ELSEIF (aer_is_mosaic4bin) THEN
+         !TODO exclude when very insoluble
+         thompson_aernum(i,k,j,:) = 0.0
+         thompson_aerra(i,k,j,:) = 0.0
+         thompson_aerkappa(i,k,j,:) = 0.0
+         itype =  1
+         ! Calculate number and radius for bins 1-4 !TODO should loop on bins
+         isize = 1
+         thompson_aernum(i,k,j,isize) = chem(i,k,j,p_num_a01) + chem(i,k,j,p_num_cw01)
+         thompson_aerra(i,k,j,isize) = dcen_sect(isize,itype) / 2.0 * 1.0E4
+         isize = 2
+         thompson_aernum(i,k,j,isize) = chem(i,k,j,p_num_a02) + chem(i,k,j,p_num_cw02)
+         thompson_aerra(i,k,j,isize) = dcen_sect(isize,itype) / 2.0 * 1.0E4
+         isize = 3
+         thompson_aernum(i,k,j,isize) = chem(i,k,j,p_num_a03) + chem(i,k,j,p_num_cw03)
+         thompson_aerra(i,k,j,isize) = dcen_sect(isize,itype) / 2.0 * 1.0E4
+         isize = 4
+         thompson_aernum(i,k,j,isize) = chem(i,k,j,p_num_a04) + chem(i,k,j,p_num_cw04)
+         thompson_aerra(i,k,j,isize) = dcen_sect(isize,itype) / 2.0 * 1.0E4
+         ! calculate kappa
+         DO isize = 1,naerbins
+           aervol = 0.0
+           aerkappa = 0.0
+           DO icomp = 1, ncomp_aer(itype)
+            aervol_icomp = 0.0
+            p_chem = massptr_aer(icomp,isize,itype,1) !TODO should use aiphase = 1
+            if(p_chem .GT. param_first_scalar) THEN
+              aervol_icomp = aervol_icomp + max( 0.0, chem(i,k,j,p_chem) ) * convaa / dens_aer(icomp,itype)
+              p_chem = massptr_aer(icomp,isize,itype,2) !TODO should use cwphase = 2
+              aervol_icomp = aervol_icomp + max( 0.0, chem(i,k,j,p_chem) ) * convaa / dens_aer(icomp,itype)
+              aerkappa = aerkappa + aervol_icomp*hygro_aer(icomp,itype)
+              aervol = aervol + aervol_icomp
+              ! IF(hygro_aer(icomp,itype) .GT. 1.0) THEN
+              !   WRITE(msg_error,*) 'aerkappa .GT. 1.0,aerkappa,aervol_icomp,p_chem,hygro_aer(icomp,itype)',aerkappa,aervol_icomp,p_chem,hygro_aer(icomp,itype),icomp,itype
+              !   ! CALL wrf_error_fatal('1: aerkappa > 0.0')
+              !   CALL wrf_error_fatal(msg_error)
+              ! ENDIF
+            ENDIF
+           ENDDO
+           IF(aervol  > aervol_minval) THEN
+             ! IF(aerkappa/aervol .GT. 1.0) THEN
+             !   WRITE(msg_error,*) '2: aerkappa .GT. 1.0,aerkappa,aervol,isize',aerkappa,aervol,isize
+             !   CALL wrf_error_fatal(msg_error)
+             ! ELSE
+               thompson_aerkappa(i,k,j,isize) = aerkappa / aervol
+             ! ENDIF
+           ELSE
+             thompson_aerkappa(i,k,j,isize) = 0.3
+           ENDIF
+         ENDDO
+
+       ELSE
+         ! If chem_opt aerosol is not covered call fatal - but this should have
+         ! been caught in chemics_init
+         CALL wrf_error_fatal('microphysics_driver: calc_chem_thompsonaer is only compatible with GOCART and MOSAIC-4bin mechanisms for now')
+
+       ENDIF ! aer_is_gocart
+
+     ENDDO ! j
+     ENDDO ! k
+     ENDDO ! i
+
+   END SUBROUTINE calc_chem_thompsonaer
+
+!----------------------------------------
+
+   SUBROUTINE cal_cldfral4(cldfra, qv, qc, p, t, rho,  &
+                          ids,ide, jds,jde, kds,kde,           &
+                          ims,ime, jms,jme, kms,kme,           &
+                          its,ite, jts,jte, kts,kte)
+
+   ! Calculate grid-scale liquid cloud fraction
+   !
+   ! LMarelle - from module_convtrans_prep.F
+   !
+   ! Siebesma et al., JAS, Vol. 60, no. 10, 1201-1219, 2003 (based on LES
+   ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of liquid
+   ! water and saturation vapor pressure must be in g/kg within the Siebesma et
+   ! al. cloud fraction scheme
+   ! Originally from Xu and Randall 1996 -
+   ! https://doi.org/10.1175/1520-0469(1996)053<3084:ASCPFU>2.0.CO;2
+
+   IMPLICIT NONE
+
+   INTEGER, INTENT(IN):: ids,ide, jds,jde, kds,kde,                  &
+                         ims,ime, jms,jme, kms,kme,                  &
+                         its,ite, jts,jte, kts,kte
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qv,p,t,rho
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN):: qc
+
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: cldfra
+
+   INTEGER :: i,j,k
+   REAL :: satvp,rhgrid,h2oliq
+   REAL, PARAMETER  ::  coef_p = 0.25, coef_gamm = 0.49, coef_alph = 100.
+
+   DO j = jts,jte
+      DO k = kts,kte
+         DO i = its,ite
+           cldfra(i,k,j) = 0.
+           satvp = 3.80*EXP(17.27*(t(i,k,j)-273.)/ &
+                   (t(i,k,j)-36.))/(.01*p(i,k,j))
+           rhgrid = MAX(.1, MIN( .95, qv(i,k,j) / satvp))
+           ! Only liquid clouds
+           h2oliq = 1000. * (qc(i,k,j))
+           satvp = 1000. * satvp
+           cldfra(i,k,j) = (1. - EXP(-coef_alph*h2oliq/((1.-rhgrid)*satvp)**coef_gamm))*(rhgrid**coef_p)
+           ! Set to 0 out of liquid clouds
+           IF(qc(i,k,j) <= 0.) cldfra(i,k,j) = 0.0
+           cldfra(i,k,j) = MAX(0., MIN(1., cldfra(i,k,j)))
+           IF(cldfra(i,k,j) > 0.) cldfra(i,k,j) = MAX(0.01, cldfra(i,k,j))
+         ENDDO
+      ENDDO
+   ENDDO
+
+   END SUBROUTINE cal_cldfral4
+
+!----------------------------------------
+
+#endif
 
 END MODULE module_microphysics_driver

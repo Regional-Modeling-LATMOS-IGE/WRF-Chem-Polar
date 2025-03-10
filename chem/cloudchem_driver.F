@@ -14,7 +14,7 @@
                id, ktau, ktauc, dtstep, dtstepc, config_flags,       &
                t_phy, p_phy, rho_phy, alt, dz8w,                           &
                p8w, prain3d,scalar,dvmrdt_sv13d,dvmrcwdt_sv13d,      & !Balwinder.Singh@pnnl.gov: Variables required for CAM-MAM cloud chemistry
-               f_ice_phy, f_rain_phy, cldfrai, cldfral, cldfra_ls,   &
+               f_ice_phy, f_rain_phy, cldfrai, cldfral, cldfral_chem,   &
 	       moist, cldfra, cldfra_mp_all, ph_no2,                 &
 	       chem, gas_aqfrac, numgas_aqfrac,                      &
                is_CAMMGMP_used,                                      &!BSINGH:01/31/2013: Added is_CAMMGMP_used for CAM_MAM_cloudchem
@@ -153,7 +153,7 @@
                                 alt,                                &
                                 dz8w,                               &
                                 cldfra,                             &
-                                cldfra_ls,                          &
+                                cldfral_chem,                          &
                                 ph_no2,                             &
                                 p8w,                                & !Balwinder.Singh@pnnl.gov: Variables required for CAM-MAM cloud chemistry
                                 prain3d,                            &
@@ -201,7 +201,7 @@
        call mosaic_cloudchem_driver(                  &
             id, ktau, ktauc, dtstepc, config_flags,   &
             p_phy, t_phy, rho_phy, alt,               &
-            cldfra_ls, ph_no2,                        &
+            cldfral_chem, ph_no2,                        &
             moist, chem,                              &
             gas_aqfrac, numgas_aqfrac,                &
             ids,ide, jds,jde, kds,kde,                &
@@ -215,7 +215,7 @@
        call sorgam_cloudchem_driver(                  &
             id, ktau, ktauc, dtstepc, config_flags,   &
             p_phy, t_phy, rho_phy, alt,               &
-            cldfra_ls, ph_no2,                        &
+            cldfral_chem, ph_no2,                        &
             moist, chem,                              &
             gas_aqfrac, numgas_aqfrac,                &
             ids,ide, jds,jde, kds,kde,                &

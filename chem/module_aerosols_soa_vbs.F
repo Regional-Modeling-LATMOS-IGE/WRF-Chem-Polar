@@ -6593,7 +6593,7 @@ END SUBROUTINE VDVG_2
 
 SUBROUTINE         aerosols_soa_vbs_init(chem,convfac,z_at_w,                   &
                    pm2_5_dry,pm2_5_water,pm2_5_dry_ec,                         &
-                   chem_in_opt,aer_ic_opt, is_aerosol,                         &
+                   chem_in_opt,aer_ic_opt, is_aerosol, is_cw_aerosol,          &
                    ids,ide, jds,jde, kds,kde,                                  &
                    ims,ime, jms,jme, kms,kme,                                  &
                    its,ite, jts,jte, kts,kte, config_flags                     )
@@ -6608,6 +6608,7 @@ SUBROUTINE         aerosols_soa_vbs_init(chem,convfac,z_at_w,                   
                                    ims,ime, jms,jme, kms,kme,    &
                                    its,ite, jts,jte, kts,kte
    LOGICAL, INTENT(OUT) :: is_aerosol(num_chem)
+   LOGICAL, INTENT(OUT) :: is_cw_aerosol(num_chem)
    REAL,  DIMENSION( ims:ime , kms:kme , jms:jme, num_chem ) ,     &
           INTENT(INOUT   ) ::                                      &
                               chem

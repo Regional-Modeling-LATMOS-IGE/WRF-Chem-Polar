@@ -85,6 +85,7 @@ CONTAINS
 #endif
               , cldfra_dp, cldfra_sh                                      &
               , re_cloud, re_ice, re_snow                                 &
+              , re_cloud_aci & ! LMarelle
               , has_reqc, has_reqi, has_reqs                              &
               , PB                                                        &
               , F_ICE_PHY,F_RAIN_PHY                                      &
@@ -129,6 +130,8 @@ CONTAINS
               ,ABSTOT, ABSNXT, EMSTOT                                     &
               ,ICLOUD_CU                                                  &
               ,CALC_CLEAN_ATM_DIAG                                        &
+              ,WRF_AER_SOLUBLE_EXT, WRF_AER_SO4_EXT                       &
+              ,aci_wrf_opt                                                &
               ,AER_RA_FEEDBACK                                            &
               ,QC_CU , QI_CU                                              &
               ,icloud_bl,qc_bl,qi_bl,cldfra_bl                            &
@@ -181,6 +184,7 @@ CONTAINS
               , ATOP2D_OUT                                                &
               ,chem_opt                                                   &
               ,gsfcrad_gocart_coupling                                    &
+              ,aci_wrfchem_opt                                            &
 #endif
                                                                           )
 
@@ -565,6 +569,19 @@ CONTAINS
 
 !jdfcz   INTEGER, OPTIONAL, INTENT(IN   )    :: progn,prescribe
    INTEGER, OPTIONAL, INTENT(IN   )    :: progn
+   ! Aerosol-cloud interactions method with aerosol climatology
+   ! 0=off
+   ! 1=Thompson and Eidhammer, 2014 forced with climatology (performed in Thompson MP code)
+   ! 2=Boucher and Lohmann, 1995, requires so4 MMR climatology
+   ! 3=LMDZ6, Madeleine et al.  2020, requires soluble aerosol climatology
+   INTEGER, INTENT(IN) :: aci_wrf_opt
+#if( WRF_CHEM == 1)
+   ! Aerosol-cloud interactions method with WRF-Chem aerosols
+   ! 0=off
+   ! 1=Abdul-Razzak & Ghan (2002) (performed in THOMPSONAERO MP code)
+   ! 2=Thompson and Eidhammer, 2014 (performed in THOMPSONAERO MP code)
+   INTEGER, INTENT(IN) :: aci_wrfchem_opt
+#endif
 !
 ! variables for aerosols (only if running with chemistry)
 !
@@ -572,6 +589,11 @@ CONTAINS
          INTENT(IN ) ::                                pm2_5_dry, &
                                                      pm2_5_water, &
                                                     pm2_5_dry_ec
+
+!LMarelle - Soluble aerosol MMR (ug/kg) climatology for aerosol-cloud
+! interactions
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), OPTIONAL ,       &
+         INTENT(IN ) :: WRF_AER_SOLUBLE_EXT, WRF_AER_SO4_EXT
 !
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                  &
          INTENT(INOUT)  ::                              RTHRATEN, &
@@ -781,6 +803,7 @@ CONTAINS
 
 !..G. Thompson
    REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: re_cloud, re_ice, re_snow
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT):: re_cloud_aci
    INTEGER, INTENT(INOUT):: has_reqc, has_reqi, has_reqs
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                     &
@@ -821,7 +844,7 @@ CONTAINS
      ! Solar diag
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(OUT), OPTIONAL  ::  qc_tot, qi_tot
 !shbaek
-   real, dimension ( ims:ime, kms:kme, jms:jme ), optional, intent(in) :: qnc_curr
+   real, dimension ( ims:ime, kms:kme, jms:jme ), optional, intent(inout) :: qnc_curr
    LOGICAL, OPTIONAL :: f_qnc
 !
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                  &
@@ -869,6 +892,8 @@ CONTAINS
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: qc_temp
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: qi_save,qc_save
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: qs_save
+   REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: re_cloud_save
+   REAL :: cdnc
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: qc_cu_weight
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme ) :: qi_cu_weight
@@ -916,6 +941,8 @@ CONTAINS
      INTEGER, PARAMETER:: taer_angexp_opt = 3                            !  input option for aerosol Angstrom exponent
      INTEGER, PARAMETER:: taer_ssa_opt = 3                               !  input option for aerosol ssa
      INTEGER, PARAMETER:: taer_asy_opt = 3                               !  input option for aerosol asy
+     INTEGER :: imaxloc,jmaxloc,kmaxloc
+     INTEGER, DIMENSION(3) :: maxlocvec
 
 
 #if ( HWRF == 1 )
@@ -1762,6 +1789,62 @@ CONTAINS
                               its , ite , jts , jte , kts , kte )
      ENDIF
      ENDIF
+
+     ! Modify cloud liquid radius for aerosol-cloud interactions
+     !TODO could be moved to MP code
+     IF(aci_wrf_opt == 1) THEN
+       re_cloud_aci(:,:,:) = re_cloud(:,:,:)
+     ENDIF
+     IF(PRESENT(WRF_AER_SOLUBLE_EXT) .OR. PRESENT(WRF_AER_SO4_EXT)) THEN
+       IF(aci_wrf_opt == 2 .OR. aci_wrf_opt == 3) THEN
+         ! Effective radius in m
+         re_cloud_aci(:,:,:) = re_cloud(:,:,:)
+         ! Recalculate the cloud effective radius from so4 or soluble aerosol
+         DO j=jts,jte
+         DO k=kts,kte
+         DO i=its,ite
+           re_cloud_save(i,k,j) = re_cloud(i,k,j)
+           cdnc = qnc_curr(i,k,j)
+           IF(cdnc >= 1.0) THEN
+             IF(aci_wrf_opt == 2) THEN
+               ! CDNC from Boucher and Lohmann (1995)
+               ! ug/kg to #/kg
+               cdnc =  (10. ** (2.21 + 0.41 * LOG10(WRF_AER_SO4_EXT(i,k,j)*rho(i,k,j))) * 1.0E6) / rho(i,k,j)
+             ELSEIF(aci_wrf_opt == 3) THEN
+               ! CDNC from LMDZ6A (Madeleine et al., 2020)
+               ! ug/kg to #/kg
+               cdnc =  (10. ** (1.3 + 0.2 * LOG10(WRF_AER_SOLUBLE_EXT(i,k,j)*rho(i,k,j))) * 1.0E6) / rho(i,k,j)
+             ENDIF
+           ENDIF
+           IF(QC(i,k,j) > 1.E-12 .AND. cdnc >= 1.) THEN
+             ! Apply scaling from Martin et al., JAS 51, 1830., x1.1
+             re_cloud_aci(i,k,j)=1.1 * (3./(4.*3.1416*1.E3)*QC(i,k,j)/cdnc)**(1./3) ! effective radius in m
+             re_cloud_aci(i,k,j)=max(re_cloud_aci(i,k,j),2.55E-6)
+             re_cloud_aci(i,k,j)=min(re_cloud_aci(i,k,j),50.E-6)
+             re_cloud(i,k,j)=re_cloud_aci(i,k,j)
+           ENDIF
+         ENDDO
+         ENDDO
+         ENDDO
+       !   WRITE(*,*) 'OFFLINE_ACI, ', aci_wrf_opt, MAXVAL(re_cloud_save), MAXVAL(re_cloud_aci)
+       !   WRITE(*,*) 'MAXVAL,MINVAL RE ', MAXVAL(re_cloud), MINVAL(re_cloud)
+       !   IF(MAXVAL(re_cloud) > 50.E-6) THEN
+       !     maxlocvec = MAXLOC(re_cloud)
+       !     imaxloc = maxlocvec(1)+ims-1
+       !     kmaxloc = maxlocvec(2)+kms-1
+       !     jmaxloc = maxlocvec(3)+jms-1
+       !     WRITE(*,*) 'HIGH RE, maxloc i,k,j: ', imaxloc,kmaxloc,jmaxloc
+       !     WRITE(*,*) 'HIGH RE - CLD DIAG: ', re_cloud(imaxloc,kmaxloc,jmaxloc), QC(imaxloc,kmaxloc,jmaxloc), QNDROP(imaxloc,kmaxloc,jmaxloc)
+       !     WRITE(*,*) 'HIGH RE - AER DIAG: ', QNWFA(imaxloc,kmaxloc,jmaxloc), QNIFA(imaxloc,kmaxloc,jmaxloc), WRF_AER_SOLUBLE_EXT(imaxloc,kmaxloc,jmaxloc)
+       !   ENDIF
+       ENDIF
+     ENDIF
+#if (WRF_CHEM == 1)
+     IF(aci_wrfchem_opt > 0 ) THEN
+       re_cloud_aci(:,:,:) = re_cloud(:,:,:)
+     ENDIF
+#endif
+
 
      lwrad_select: SELECT CASE(lw_physics)
 
@@ -2967,6 +3050,18 @@ CONTAINS
          ENDDO
       ENDIF
       END IF
+
+      IF(PRESENT(WRF_AER_SOLUBLE_EXT) .OR. PRESENT(WRF_AER_SO4_EXT)) THEN
+        IF(aci_wrf_opt .GE. 2) THEN
+          DO j=jts,jte
+          DO k=kts,kte
+          DO i=its,ite
+            re_cloud(i,k,j) = re_cloud_save(i,k,j)
+          ENDDO
+          ENDDO
+          ENDDO
+        ENDIF
+      ENDIF
     end do
  END IF
 
@@ -3995,9 +4090,11 @@ CONTAINS
       ! LMarelle - from module_convtrans_prep.F
       !
       ! Siebesma et al., JAS, Vol. 60, no. 10, 1201-1219, 2003 (based on LES
-      ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of liquid
-      ! water and saturation vapor pressure must be in g/kg within the Siebesma et
-      ! al. cloud fraction scheme
+      ! comparisons with trade-wind cumulus from BOMEX) SAM: Note units of
+      ! liquid water and saturation vapor pressure must be in g/kg within the
+      ! Siebesma et al. cloud fraction scheme
+      ! Originally from Xu and Randall 1996 -
+      ! https://doi.org/10.1175/1520-0469(1996)053<3084:ASCPFU>2.0.CO;2
 
       IMPLICIT NONE
 

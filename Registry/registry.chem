@@ -13,10 +13,21 @@ rconfig   integer    io_form_auxinput12  namelist,time_control   1  2
 
 
 state    real    CLDFRA2         ikj    misc        1         -      h        "CLDFRA2"             "CLOUD FRACTION"
+state    real    CLDFRAL_CHEM    ikj    misc        1         -      rh       "CLDFRAL_CHEM"        "LIQUID GRID-SCALE CLOUD FRAC. FROM CHEM STEP"
+state    real    CLDFRA_LS_CHEM  ikj    misc        1         -      rh       "CLDFRA_LS_CHEM"       "GRID-SCALE CLOUD FRAC. FROM CHEM STEP"
 state    real    QV_B4MP         ikj    misc        1         -      -        "QV_B4MP"             "WATER VAPOR BEFORE MICROPHYSICS"  "kg kg-1"
 state    real    QC_B4MP         ikj    misc        1         -      -        "QC_B4MP"             "CLOUD WATER BEFORE MICROPHYSICS"  "kg kg-1"
 state    real    QI_B4MP         ikj    misc        1         -      -        "QI_B4MP"             "CLOUD ICE BEFORE MICROPHYSICS"    "kg kg-1"
 state    real    QS_B4MP         ikj    misc        1         -      -        "QS_B4MP"             "SNOW BEFORE MICROPHYSICS"         "kg kg-1"
+
+state    real    ph_aer01        ikj    misc        1         -      -        "ph_aer01"            "pH of aerosol bin 1"           "Unitless"
+state    real    ph_aer02        ikj    misc        1         -      -        "ph_aer02"            "pH of aerosol bin 2"           "Unitless"
+state    real    ph_aer03        ikj    misc        1         -      -        "ph_aer03"            "pH of aerosol bin 3"           "Unitless"
+state    real    ph_aer04        ikj    misc        1         -      -        "ph_aer04"            "pH of aerosol bin 4"           "Unitless"
+state    real    ph_aer05        ikj    misc        1         -      -        "ph_aer05"            "pH of aerosol bin 1"           "Unitless"
+state    real    ph_aer06        ikj    misc        1         -      -        "ph_aer06"            "pH of aerosol bin 2"           "Unitless"
+state    real    ph_aer07        ikj    misc        1         -      -        "ph_aer07"            "pH of aerosol bin 3"           "Unitless"
+state    real    ph_aer08        ikj    misc        1         -      -        "ph_aer08"            "pH of aerosol bin 4"           "Unitless"
 
 state    real    ccn1            ikj    misc        1         -      r        "ccn1"                "CCN concentration at S=0.02%"  "#/cm3"
 state    real    ccn2            ikj    misc        1         -      r        "ccn2"                "CCN concentration at S=0.05%"  "#/cm3"
@@ -1362,6 +1373,24 @@ state    real  asmpsoa_a01      ikj     misc          1         -      -        
 state    real  asmpsoa_a02      ikj     misc          1         -      -         "asmpsoa_a02"             "asmpsoa_a02"                              "ug m^-3"
 state    real  asmpsoa_a03      ikj     misc          1         -      -         "asmpsoa_a03"             "asmpsoa_a03"                              "ug m^-3"
 state    real  asmpsoa_a04      ikj     misc          1         -      -         "asmpsoa_a04"             "asmpsoa_a04"                              "ug m^-3"
+
+# Parameters for THOMPSONAERO activation TODO mosaic-4bin only for now
+state    real  thompson_aernum1      ikj    misc     1      -      -          "thompson_aernum1"        "thompson_aernum1"        "kg-1"
+state    real  thompson_aernum2      ikj    misc     1      -      -          "thompson_aernum2"        "thompson_aernum2"        "kg-1"
+state    real  thompson_aernum3      ikj    misc     1      -      -          "thompson_aernum3"        "thompson_aernum3"        "kg-1"
+state    real  thompson_aernum4      ikj    misc     1      -      -          "thompson_aernum4"        "thompson_aernum4"        "kg-1"
+state    real  thompson_aerra1       ikj    misc     1      -      -          "thompson_aerra1"         "thompson_aerra1"         "um"
+state    real  thompson_aerra2       ikj    misc     1      -      -          "thompson_aerra2"         "thompson_aerra2"         "um"
+state    real  thompson_aerra3       ikj    misc     1      -      -          "thompson_aerra3"         "thompson_aerra3"         "um"
+state    real  thompson_aerra4       ikj    misc     1      -      -          "thompson_aerra4"         "thompson_aerra4"         "um"
+state    real  thompson_aerkappa1    ikj    misc     1      -      -          "thompson_aerkappa1"      "thompson_aerkappa1"      ""
+state    real  thompson_aerkappa2    ikj    misc     1      -      -          "thompson_aerkappa2"      "thompson_aerkappa2"      ""
+state    real  thompson_aerkappa3    ikj    misc     1      -      -          "thompson_aerkappa3"      "thompson_aerkappa3"      ""
+state    real  thompson_aerkappa4    ikj    misc     1      -      -          "thompson_aerkappa4"      "thompson_aerkappa4"      ""
+state    real  thompson_aeractfrac1    ikj    misc     1      -      -          "thompson_aeractfrac1"      "thompson_aeractfrac1"      ""
+state    real  thompson_aeractfrac2    ikj    misc     1      -      -          "thompson_aeractfrac2"      "thompson_aeractfrac2"      ""
+state    real  thompson_aeractfrac3    ikj    misc     1      -      -          "thompson_aeractfrac3"      "thompson_aeractfrac3"      ""
+state    real  thompson_aeractfrac4    ikj    misc     1      -      -          "thompson_aeractfrac4"      "thompson_aeractfrac4"      ""
 
 # photolysis rates
 state    real  ph_o31d         ikj     misc        1         -      rh       "PHOTR2"                "O31D Photolysis Rate" "min{-1}"
@@ -3859,6 +3888,7 @@ rconfig   integer     aerchem_onoff       namelist,chem          max_domains    
 rconfig   integer     wetscav_onoff       namelist,chem          max_domains    0       rh    "wetscav_onoff"       ""      ""
 rconfig   integer     dustwd_onoff        namelist,chem          max_domains    0       rh    "dustwd_onoff"        ""      ""
 rconfig   integer     cldchem_onoff       namelist,chem          max_domains    0       rh    "cldchem_onoff"       ""      ""
+rconfig   integer     mp_morr_icenuc_option namelist,chem        1              0       rh    "mp_morr_icenuc_option"       ""      ""
 # for TUV photolysis scheme
 rconfig   logical     is_full_tuv         namelist,chem          max_domains    .true.  rh    "is_full_tuv"         ""      ""
 rconfig   real        lambda_cutoff       namelist,chem          max_domains    250.    rh    "lambda_cutoff"       ""      ""
@@ -3872,6 +3902,7 @@ rconfig   integer     gas_drydep_opt      namelist,chem          max_domains    
 rconfig   integer     aer_drydep_opt      namelist,chem          max_domains    1       rh    "aer_drydep_opt"      ""      ""
 #LMarelle add an option for gravitational settling in MOSAIC
 rconfig   integer     mosaic_aer_settling_opt    namelist,chem          max_domains    0       rh    "mosaic_aer_settling_opt"    ""      ""
+rconfig   integer     aci_wrfchem_opt     namelist,chem          1              0       rh    "aci_wrfchem_opt"     ""      ""
 rconfig   integer     diagnostic_chem     namelist,chem          max_domains    1       rh    "diagnostic_chem"     ""      ""
 rconfig   integer     aero_diag_opt       namelist,chem          max_domains    0       rh    "diagnostic_aerosol"  ""      ""
 rconfig   integer     aero_cw_diag_opt    namelist,chem          max_domains    0       rh    "diagnostic_cw_aerosol"     ""      ""
@@ -4094,7 +4125,7 @@ package   mozem           emiss_opt==7                   -             emis_ant:
 package   mozcem          emiss_opt==8                   -             emis_ant:e_co,e_no,e_no2,e_bigalk,e_bigene,e_c2h4,e_c2h5oh,e_c2h6,e_c3h6,e_c3h8,e_ch2o,e_ch3cho,e_ch3coch3,e_ch3oh,e_mek,e_so2,e_toluene,e_nh3,e_isop,e_c10h16,e_dms_oc,e_pm_10,e_pm_25,e_bc,e_oc,e_sulf
 package   cammam          emiss_opt==9                   -             emis_ant:e_iso,e_so2,e_no,e_co,e_eth,e_hc3,e_hc5,e_hc8,e_xyl,e_ol2,e_olt,e_oli,e_tol,e_csl,e_hcho,e_ald,e_ket,e_ora2,e_nh3,e_dms,e_ecj,e_orgj,e_so4i,e_so4j,e_soag_bigene,e_soag_isoprene,e_soag_terpene,e_soag_toluene,e_dust_a1,e_dust_a3,e_ncl_a1,e_ncl_a2,e_ncl_a3,e_orgj_num,e_ecj_num,e_so4j_num,e_so4i_num
 
-package   mozmem           emiss_opt==10                   -             emis_ant:e_co,e_no,e_no2,e_bigalk,e_bigene,e_c2h4,e_c2h5oh,e_c2h6,e_c3h6,e_c3h8,e_ch2o,e_ch3cho,e_ch3coch3,e_ch3oh,e_mek,e_so2,e_toluene,e_benzene,e_xylene,e_nh3,e_isop,e_apin,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_nh4i,e_nh4j,e_nai,e_naj,e_cli,e_clj,e_co_a,e_orgi_a,e_orgj_a,e_co_bb,e_orgi_bb,e_orgj_bb,e_pm_10,e_c2h2,e_gly,e_sulf,e_macr,e_mgly,e_mvk,e_hcooh,e_hono,e_dms_oc
+package   mozmem           emiss_opt==10                   -             emis_ant:e_co,e_no,e_no2,e_bigalk,e_bigene,e_c2h4,e_c2h5oh,e_c2h6,e_c3h6,e_c3h8,e_ch2o,e_ch3cho,e_ch3coch3,e_ch3oh,e_mek,e_so2,e_toluene,e_benzene,e_xylene,e_nh3,e_isop,e_apin,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_nh4i,e_nh4j,e_nai,e_naj,e_cli,e_clj,e_co_a,e_orgi_a,e_orgj_a,e_co_bb,e_orgi_bb,e_orgj_bb,e_pm_10,e_c2h2,e_gly,e_sulf,e_macr,e_mgly,e_mvk,e_hcooh,e_hono,e_dms_oc,e_hcl
 package   mozc_t1_em      emiss_opt==11                  -             emis_ant:e_co,e_no,e_no2,e_bigalk,e_bigene,e_c2h4,e_c2h5oh,e_c2h6,e_c3h6,e_c3h8,e_ch2o,e_ch3cho,e_ch3coch3,e_ch3oh,e_mek,e_so2,e_toluene,e_nh3,e_isop,e_hcooh,e_ch3cn,e_ch3cooh,e_hcn,e_apin,e_mvk,e_mgly,e_benzene,e_xylene,e_sulf,e_c2h2,e_pm_10,e_pm_25,e_bc,e_oc
 #LMarelle: Add e_dms_oc, DMS oceanic content in mol/m3 (technically, this should not be in emis_ant)
 package   esaprcnov       emiss_opt==13                  -             emis_ant:e_so2,e_c2h6,e_c3h8,e_c2h2,e_alk3,e_alk4,e_alk5,e_ethene,e_c3h6,e_ole1,e_ole2,e_aro1,e_aro2,e_hcho,e_ccho,e_rcho,e_acet,e_mek,e_isoprene,e_terp,e_sesq,e_co,e_no,e_no2,e_phen,e_cres,e_meoh,e_gly,e_mgly,e_bacl,e_isoprod,e_methacro,e_mvk,e_prod2,e_ch4,e_bald,e_hcooh,e_cco_oh,e_rco_oh,e_nh3,e_pm25i,e_pm25j,e_eci,e_ecj,e_orgi,e_orgj,e_so4i,e_so4j,e_no3i,e_no3j,e_orgi_a,e_orgj_a,e_orgi_bb,e_orgj_bb,e_dms_oc
@@ -4169,6 +4200,7 @@ package   seasmosaic    seas_opt==2                  -              emis_seas2:e
 package   seasmonahan   seas_opt==5                  -                -
 package   seasioannidis seas_opt==6                  -                -
 package   seasgong      seas_opt==7                  -                -
+package   seassalter    seas_opt==8                  -                -
 package   dmsgocart    dmsemis_opt==1                  -              -
 package   dms_nightingale  dmsemis_opt==2               -             -
 package   volume_approx    aer_op_opt==1                -             -
