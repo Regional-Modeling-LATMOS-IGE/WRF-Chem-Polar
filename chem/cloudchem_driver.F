@@ -39,6 +39,7 @@
    USE module_cam_mam_cloudchem, only: cam_mam_cloudchem_driver
    USE module_sorgam_aqchem, only: sorgam_aqchem_driver
    USE module_sorgam_vbs_aqchem, only: sorgam_vbs_aqchem_driver
+   USE module_aer_aqchem_simple, only: aer_aqchem_simple
 
    !  This driver calls subroutines for wet scavenging.
    !
@@ -261,6 +262,22 @@
             gas_aqfrac, numgas_aqfrac,                &
             ids,ide, jds,jde, kds,kde,                &
             ims,ime, jms,jme, kms,kme,                &
+            its,ite, jts,jte, kts,kte )
+
+   CASE ( MOZCART_KPP )
+
+       ! MOZCART does not have aqueous chemistry - enable simple aqueous chemistry
+       ! for MOZCART
+       ! TODO also enable for MOSAIC and other GOCART schemes (existing GOCART
+       ! aqchem is wrong)
+       call wrf_debug(15, &
+       'cloudchem_driver calling aer_aqchem_simple')
+       call aer_aqchem_simple(                     &
+            id, dtstepc, config_flags,             &
+            p_phy, t_phy, rho_phy,                 &
+            moist, chem, cldfra_ls,                &
+            ids,ide, jds,jde, kds,kde,             &
+            ims,ime, jms,jme, kms,kme,             &
             its,ite, jts,jte, kts,kte )
 
    CASE DEFAULT
