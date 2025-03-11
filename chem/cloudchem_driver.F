@@ -275,7 +275,7 @@
        call aer_aqchem_simple(                     &
             id, dtstepc, config_flags,             &
             p_phy, t_phy, rho_phy,                 &
-            moist, chem, cldfra_ls,                &
+            moist, chem, cldfral_chem,             &
             ids,ide, jds,jde, kds,kde,             &
             ims,ime, jms,jme, kms,kme,             &
             its,ite, jts,jte, kts,kte )
