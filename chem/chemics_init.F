@@ -2078,10 +2078,10 @@ ENDIF ghg_block
              .AND. .NOT. aer_is_mosaic4bin ) THEN
        CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt==1 requires&
        & MOSAIC-4bin aerosols')
-     ELSEIF (config_flags%aci_wrf_opt == 2 &
+     ELSEIF (config_flags%aci_wrfchem_opt == 2 &
              .AND. .NOT. (aer_is_mosaic4bin .OR. aer_is_gocart) ) THEN
        CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt==2 requires&
-       & MOSAIC-4bin aerosols')
+       & MOSAIC-4bin or GOCART aerosols')
      ELSEIF(config_flags%aci_wrfchem_opt > 2) THEN
        CALL wrf_error_fatal('chemics_init: aci_wrfchem_opt should be&
        & either: 0 - disabled, 1 - enabled, Abdul-Razzak and Ghan aerosols&
@@ -2098,7 +2098,7 @@ ENDIF ghg_block
        ! 2 - WRF-Chem aerosols (MOSAIC-4bin or GOCART) are used to set NWFA
        !     in THOMPSONAERO and to calculate the droplet number in the
        !     microphysics code. Abdul-Razzak and Ghan is used to set cw
-       !     aerosols for cloud chemistry and wet scavenging
+       !     aerosols for cloud chemistry and wet scavenging for MOSAIC
      ELSEIF(config_flags%progn == 1) THEN
         call wrf_error_fatal("ERROR progn=1 should not be used with&
         & mp_physics=THOMPSONAERO, use aci_wrfchem_opt>0 instead")

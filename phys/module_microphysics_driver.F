@@ -1217,9 +1217,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      THOMPSON_AERRA=thompson_aerra, &
                      THOMPSON_AERKAPPA=thompson_aerkappa, &
                      THOMPSON_AERACTFRAC=thompson_aeractfrac, &
-                     THOMPSON_AER_FROM_CHEM = thompson_aer_from_chem, &
                      NAERBINS=naerbins, &
 #endif
+                     THOMPSON_AER_FROM_CHEM = thompson_aer_from_chem, &
                      EXCH_H=exch_h,                         &
                      REFL_10CM=refl_10cm,                &
                      diagflag=diagflag,                  &
@@ -1311,9 +1311,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      THOMPSON_AERKAPPA=thompson_aerkappa, &
                      THOMPSON_AERACTFRAC=thompson_aeractfrac, &
                      EXCH_H=exch_h,                         &
-                     THOMPSON_AER_FROM_CHEM = thompson_aer_from_chem, &
                      NAERBINS=naerbins, &
 #endif
+                     THOMPSON_AER_FROM_CHEM = thompson_aer_from_chem, &
                      REFL_10CM=refl_10cm,                &
                      diagflag=diagflag,                  &
                      ke_diag = ke_diag,                  &

@@ -990,9 +990,9 @@
                               thompson_aerra, &
                               thompson_aerkappa, &
                               thompson_aeractfrac, &
-                              thompson_aer_from_chem, &
                               naerbins, &
 #endif
+                              thompson_aer_from_chem, &
                               exch_h, &
                               refl_10cm, diagflag, ke_diag, do_radar_ref,      &
                               re_cloud, re_ice, re_snow,              &
@@ -1039,10 +1039,10 @@
       INTEGER, INTENT(IN):: itimestep
 #if ( WRF_CHEM == 1 )
       LOGICAL, INTENT(in) :: wetscav_on
+#endif
       ! Option for using WRF-Chem aerosols or external aerosol climatology for
       ! droplet activation in aerosol-aware scheme
       INTEGER, OPTIONAL, INTENT(IN) :: thompson_aer_from_chem
-#endif
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: &
@@ -1190,9 +1190,9 @@
 #if ( WRF_CHEM == 1 )
                       wetscav_on, rainprod1d, evapprod1d, c2prec, &
                       aernum1d,aerra1d,aerkappa1d,aeractfrac1d, &
-                      thompson_aer_from_chem, &
                       naerbins, &
 #endif
+                      thompson_aer_from_chem, &
                       exch_h_1d, &
                       kts, kte, dt, i, j)
 
@@ -1415,9 +1415,9 @@
 #if ( WRF_CHEM == 1 )
                           wetscav_on, rainprod, evapprod, c2prec, &
                           aernum1d,aerra1d,aerkappa1d,aeractfrac1d, &
-                          thompson_aer_from_chem, &
                           naerbins, &
 #endif
+                          thompson_aer_from_chem, &
                           exch_h_1d, &
                           kts, kte, dt, ii, jj)
 
@@ -1439,8 +1439,9 @@
                           aernum1d,aerra1d,aerkappa1d
       REAL, DIMENSION(kts:kte, naerbins), INTENT(INOUT) :: &
                           aeractfrac1d
-      INTEGER, INTENT(IN) :: thompson_aer_from_chem, naerbins
+      INTEGER, INTENT(IN) :: naerbins
 #endif
+      INTEGER, INTENT(IN) :: thompson_aer_from_chem
       REAL, DIMENSION(kts:kte), INTENT(INOUT):: exch_h_1d
 
 !..Local variables
@@ -1558,9 +1559,11 @@
       ! Activation fraction for size resolved aerosols (0-1)
       REAL, DIMENSION(naerbins) :: actfrac_arg02_tot, actfrac_arg02
       INTEGER :: isize
+      ! Bulk activated number of aerosols
+      REAL :: actnum_arg02_tot
 #endif
       ! Bulk activated number of aerosols
-      REAL :: actnum_te14_tot, actnum_te14, actnum_arg02_tot
+      REAL :: actnum_te14_tot, actnum_te14
       ! Parameters for subgrid vertical wind speed integration, from activate()
       REAL, PARAMETER :: ekdmax=100.0, ekdmin=0.01, sq2pi=2.506628, wtkemin=0.2
       INTEGER, PARAMETER :: n_w = 200
@@ -3086,13 +3089,6 @@
 !+---+-----------------------------------------------------------------+ !  DROPLET NUCLEATION
            if (clap .gt. eps) then
             if (is_aerosol_aware) then
-               IF(thompson_aer_from_chem == 0) THEN
-                 !---- Activate droplets for aerosol-aware scheme with
-                 !     thompson_aer_from_chem == 0 (default Thompson
-                 !     aerosol-aware scheme)
-                 xnc = MAX(2., activ_ncloud(temp(k), w1d(k), nwfa(k)))
-
-               ELSE ! IF thompson_aer_from_chem /= 0
                  !---- Activate droplets for aerosol-aware scheme with
                  !     thompson_aer_from_chem /= 0 (Thompson aerosol-aware
                  !     scheme with WRF-Chem aerosols or external climatology)
@@ -3135,7 +3131,9 @@
                    ! Calculate integration step dw
                    dw = (wmax-wmin)/float(n_w)
                    ! Loop over updrafts between wmin,wmax,number of steps n_w, step dw
+#if ( WRF_CHEM ==   1 )
                    actfrac_arg02_tot(:) = 0.0
+#endif
                    normal_integ_sum = 0.0
                    actnum_te14_tot = 0.0
                    DO i_w = 1, n_w
@@ -3183,10 +3181,10 @@
                    !   normal_integ_sum = normal_integ_sum + normal_integ_above
                    ! ENDIF
 
-                  else ! if ACI_SUBGRID_W_OPT
-                    CALL wrf_error_fatal("ACI_SUBGRID_W_OPT should be 0 or 1")
+                 else ! if ACI_SUBGRID_W_OPT
+                   CALL wrf_error_fatal("ACI_SUBGRID_W_OPT should be 0 or 1")
 
-                  endif ! if ACI_SUBGRID_W_OPT
+                 endif ! if ACI_SUBGRID_W_OPT
 
 #if ( WRF_CHEM == 1 )
                  IF(thompson_aer_from_chem == 1 .OR. thompson_aer_from_chem == 2) THEN
@@ -3205,8 +3203,8 @@
                  ! To stay consistent with the base THOMPSONAERO, define a minimum
                  ! activated droplet number using an NWFA of 11.1E6
                  xncmin =  MAX(2., activ_ncloud(temp(k), w1d(k), 11.1E6))
-                 IF(thompson_aer_from_chem == 1) THEN
 #if ( WRF_CHEM == 1 )
+                 IF(thompson_aer_from_chem == 1) THEN
                    ! Use Abdul-Razzak & Ghan activated aerosol number to form droplets in THOMPSON MP
                    actnum_arg02_tot = 0.0
                    DO isize=1,naerbins
@@ -3215,15 +3213,17 @@
                    actnum_arg02_tot = MAX(2., actnum_arg02_tot)
                    xnc = actnum_arg02_tot
                    xnc = MAX(xnc, xncmin)
-#endif
-                 ELSEIF(thompson_aer_from_chem == 2 .OR. thompson_aer_from_chem == -1 .OR. thompson_aer_from_chem == 3) THEN
+                 ELSEIF(thompson_aer_from_chem == 0 .OR. thompson_aer_from_chem == -1 &
+                        .OR. thompson_aer_from_chem == 2 .OR. thompson_aer_from_chem == 3) THEN
                    ! Use Thompson & Eidhammer activated aerosol number to form droplets in THOMPSON MP
                    xnc = actnum_te14_tot
                    xnc = MAX(xnc, xncmin)
 
                  ENDIF
-#if ( WRF_CHEM == 1 )
-               ENDIF
+#else
+                 ! Use Thompson & Eidhammer activated aerosol number to form droplets in THOMPSON MP
+                 xnc = actnum_te14_tot
+                 xnc = MAX(xnc, xncmin)
 #endif
             else !if is_aerosol_aware
                !---- Activate droplets for aerosol-unaware microphysics
