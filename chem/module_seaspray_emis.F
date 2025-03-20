@@ -1,14 +1,12 @@
-! Louis Marelle, Lefteris Ioannidis, 2023/06/12
+! Louis Marelle, Rémy Lapere, Lefteris Ioannidis, 2025/03
 !
 ! Purpose:
 !  Compute size-resolved sea spray aerosol emissions (mass and number) for the
 !  sectional 4-bin or 8-bin MOSAIC aerosols, or for the GOCART 4 sea salt bins.
+!  Includes marine organic and sea-salt sulfate emission options.
 !
 ! Remarks:
-!  - For now this only does sea-spray NaCl and sea-spray sulfate emissions
-!  - TODO Could include a namelist option for enabling ss_so4
-!  - TODO Could include ssorganics as size-resolved fraction of total sea spray
-!    (ssa_oa_frac, ssa_nacl_frac)
+!  -TODO Marine OA fraction should be size-dependent
 
 ! References:
 ! ==============================================================================
@@ -23,7 +21,9 @@
 ! (1) Jaegle et al., 2011: doi:10.5194/acp-11-3137-2011
 ! (2) Salisbury et al., 2013: doi:10.1002/2013JC008797
 ! Sea spray SO4 fraction:
-! (1) Calhoun et al., 1991, doi: https://doi.org/10.1029/91GL02304
+! (1) Calhoun et al., 1991, https://doi.org/10.1029/91GL02304
+! Sea spray organic fraction:
+! (1) Vignati et al., 2010, https://doi.org/10.1016/j.atmosenv.2009.11.013
 !
 
 MODULE module_seaspray_emis
@@ -51,9 +51,10 @@ MODULE module_seaspray_emis
 
 !------------------------------------------------------------------------------
 
- SUBROUTINE seaspray_emis( id, dtstep, dz8w, chem_opt, seas_opt,     &
+  SUBROUTINE seaspray_emis( id, dtstep, dz8w, chem_opt, seas_opt,    &
+         seas_so4_opt, seas_oa_opt,                                 &
          rho_phy, chem, e_nacl_ocean,                               &
-         u10, v10, xland, tsk, xice, lakemask,                      &
+         u10, v10, xland, tsk, xice, lakemask, chloroa,             &
          ids,ide, jds,jde, kds,kde,                                 &
          ims,ime, jms,jme, kms,kme,                                 &
          its,ite, jts,jte, kts,kte                                  )
@@ -68,6 +69,8 @@ MODULE module_seaspray_emis
     !  dz8w = 3D vertical level depth (m)
     !  chem_opt = chemical mechanism + aerosol mechanism option from config_flags
     !  seas_opt = sea spray emission option from config_flags
+    !  seas_so4_opt = sea salt-sulfate emission option from config_flags
+    !  seas_oa_opt = marine organic emission option from config_flags
     !  rho_phy = 3D air density (kg/m3)
     !  u10 = windpeed at 10m in x (positive west-east) direction (m/s)
     !  v10 = windpeed at 10m in y (positive south-north) direction (m/s)
@@ -75,24 +78,25 @@ MODULE module_seaspray_emis
     !  tsk = surface skin temperature (K)
     !  xice = sea ice or lake ice fraction (0-1)
     !  lakemask = lake mask (1 for lakes, 0 for rest)
+    !  chloroa = cholorphyll-a concentration at sea surface (mg m-3)
     !  ids,ims,its etc. = domain, memory, and tile start and end indices
     ! Input/output
     !  chem = advected chemical species (gases in ppm, aerosols in microg/kg)
-    !  e_nacl_ocean = accumulated NaCl emission flux from sea spray (microg/m2) !TODO mg/m2
+    !  e_nacl_ocean = accumulated NaCl emission flux from sea spray (microg/m2) !TODO should be mg/m2
 
     !TODO Should include all explicit ONLY: associations for module_state_description
-    ! chem_opt, seas_opt, param_first_scalar, num_chem, p_seas_1, p_seas_2, p_seas_3, p_seas_4
+    ! chem_opt, seas_opt, param_first_scalar, num_chem, p_seas_1, p_seas_2, p_seas_3, p_seas_4, p_oc1, p_sulf
     USE module_state_description
-    USE module_configure, ONLY : grid_config_rec_type
+    USE module_model_constants, ONLY: mwdry, piconst
     !TODO Is it possible to only include this for mosaic?
     USE module_data_mosaic_asect, ONLY: numptr_aer, lptr_cl_aer, &
-          lptr_na_aer, lptr_so4_aer, nsize_aer
+          lptr_na_aer, lptr_so4_aer, lptr_oc_aer, nsize_aer
 
     IMPLICIT NONE
 
-    !---- Dummy arguments
+    !---- Arguments
     ! Input
-    INTEGER, INTENT(IN) :: chem_opt, seas_opt
+    INTEGER, INTENT(IN) :: chem_opt, seas_opt, seas_so4_opt, seas_oa_opt
     INTEGER, INTENT(IN) :: id,                                      &
                            ids,ide, jds,jde, kds,kde,               &
                            ims,ime, jms,jme, kms,kme,               &
@@ -101,7 +105,7 @@ MODULE module_seaspray_emis
     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN) :: dz8w, &
                                                               rho_phy
     REAL, DIMENSION(ims:ime, jms:jme), INTENT(IN) :: u10, v10, xland, &
-                                                     tsk, xice, lakemask
+                                          tsk, xice, lakemask, chloroa
     ! Input/output
     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), &
         INTENT(INOUT) :: chem
@@ -126,28 +130,34 @@ MODULE module_seaspray_emis
     REAL :: dcen
     ! Conversion factor from 1/m2/s to 1/kg_dry_air
     REAL :: conv
+    ! Conversion factor from ug/m2/s to ppmv(sulf) for GOCART
+    REAL :: conv_sulf_ppmv
+    ! Volume fraction of NaCl, SO4, and OA in sea spray (0-1, m3_spec/m3_ssa)
+    REAL :: nacl_vol_frac,so4_vol_frac,org_vol_frac
     ! Conversion factor from sea spray volume to nacl mass (ug(nacl)/um3(seaspray))
     REAL :: nacl_mass_to_ss_vol_ratio
     ! Conversion factor from sea spray volume to sulfate mass (ug(so4)/um3(seaspray))
     REAL :: so4_mass_to_ss_vol_ratio
-    ! Sea-salt sulfate / nacl mass ratio (kg/kg)
-    ! Calhoun et al. (1991), https://doi.org/10.1029/91GL02304, converted from kg(so4)/kg(na) to kg(so4)/kg(nacl)
-    !TODO this should probably be size-resolved
-    REAL :: so4_nacl_ratio 
+    ! Conversion factor from sea spray volume to organic aerosol mass (ug(oa)/um3(seaspray))
+    REAL :: org_mass_to_ss_vol_ratio
+    ! Sea-salt-sulfate/NaCl mass ratio (kg/kg) and Marine-organics/NaCl mass ratio (kg/kg)
+    REAL :: so4_nacl_mass_ratio, org_nacl_mass_ratio
+    ! Vignati org/(org+nacl) mass ratio (kg/kg)
+    REAL :: org_mass_ratio
     ! Indices
     INTEGER :: i, j, isize, iphase
     INTEGER :: iaerbin
-    INTEGER :: l_na, l_cl, l_so4, l_num, l_seasalt
+    INTEGER :: l_na, l_cl, l_so4, l_num, l_seasalt, l_oc
 
     !---- Parameters
-    !TODO Read from model constants instead
-    REAL, PARAMETER :: PI = 3.14159
-    !TODO should be in init and/or data module
+    !TODO should be defined in init and/or data module
     ! REAL, PARAMETER :: NACL_AERDEN = 2.17 * 1.0E6 * 1.0E-12 ! g/cm3 -> microg/cm3 -> microg/um3
     ! REAL, PARAMETER :: SO4_AERDEN = 1.8 * 1.0E6 * 1.0E-12 ! g/cm3 -> microg/cm3 -> microg/um3, MOSAIC value
     REAL, PARAMETER :: NACL_AERDEN = 2.2E-6 ! microg/um3
     REAL, PARAMETER :: SO4_AERDEN = 1.8E-6 ! microg/um3, MOSAIC value
-    REAL, PARAMETER :: MW_NA = 22.99, MW_CL = 35.45, MW_SO4 = 96.06
+    REAL, PARAMETER :: ORG_AERDEN = 1.8E-6 ! microg/um3, MOSAIC value
+    REAL, PARAMETER :: MW_NA = 22.99, MW_CL = 35.45, MW_SO4 = 96.06, MW_ORG = 12.011
+    REAL, PARAMETER :: GOCART_OC_MFAC = 1.8 ! kg(OA)/kg(OC)
     ! Adjustment factor for Salter emissions mode 3
     ! The base Salter et al.(2015) parameterization overestimates SSA PM10
     ! by a significant amount (x3 to x5).
@@ -155,47 +165,41 @@ MODULE module_seaspray_emis
     ! 5b) so the issue is with coarse mode 3.
     ! The supermicron PM ratio between Salter and Gong goes between ~1.98 at
     ! low temperatures to ~5.28 at high temperatures, so we chose to adjust
-    ! by 1/2.5, which is the ratio in the 10C/20C range 
+    ! by 1/2.5, which is the ratio in the 10C/20C range
     REAL, PARAMETER :: salter_mode3_corr = 2.5
     ! Polynomial parameters for the Salter2015 emissions SST factors
     REAL, PARAMETER :: A1=-5.2168E5, B1=3.31725E7, C1=-6.95275E8, D1=1.0684E10
     REAL, PARAMETER :: A2=0.0, B2=7.374E5, C2=-2.4803E7, D2=7.7373E8
     REAL, PARAMETER :: A3=0.0, B3=1.4210E4, C3=1.4662E7, D3=1.7075E8
     ! Logicals
-    ! - TODO Could add namelist switch for ssso4 and marineorganics, only compatible with seas_opt
-    !   = 5,6,7,8
-    LOGICAL, PARAMETER :: DO_SEAS_SO4 = .true.
-
-    !-------- Initialize the mass fractions of so4 and nacl in sea spray --------
-    ! For convenience, we integrate the so4/nacl/oa fractioning into the
-    ! conversion factor from sea spray aerosol volume to sea spray aerosol
-    ! mass.
-    !TODO should be in init module
-    !TODO better to redefine as mass fractions and volume fractions for clarity (nacl_mass_frac, so4_mass_frac,
-    !org_mass_frac, nacl_vol_frac, so4_vol_frac, org_vol_frac)
-    IF(DO_SEAS_SO4) THEN
-      ! 0.252 = so4/na mass ratio, Ioannidis et al.( 2023)
-      so4_nacl_ratio = 0.252 * MW_NA / (MW_NA + MW_CL)
-      nacl_mass_to_ss_vol_ratio = 1. / (so4_nacl_ratio/(1.-so4_nacl_ratio)/SO4_AERDEN + 1./NACL_AERDEN)
-      so4_mass_to_ss_vol_ratio = 1. / ((1.-so4_nacl_ratio)/so4_nacl_ratio/NACL_AERDEN + 1./SO4_AERDEN)
-    ELSE
-      so4_nacl_ratio = 0.0
-      nacl_mass_to_ss_vol_ratio = NACL_AERDEN
-      so4_mass_to_ss_vol_ratio = 0.0
-    !TODO add case for OA emissions, and oa_mass_to_ss_vol_ratio. Careful that
-    !this will also change the nacl and so4 ratios, who will need to be
-    !redefined above
-    ENDIF
+    LOGICAL :: DO_SEAS_SO4
+    LOGICAL :: DO_SEAS_ORG
 
     !-------- Compute SSA emissions --------
-    iphase = 1 ! No emissions to cloud-phase !TODO Should be = aiphase but might not be initialized
+    ! Activate Marine sulfate emissions based on seas_so4_opt
+    IF(seas_so4_opt > 0.0) THEN
+       DO_SEAS_SO4 = .true.
+    ELSE
+       DO_SEAS_SO4 = .false.
+    ENDIF
+    ! Activate Marine organic emissions based on seas_oa_opt
+    IF(seas_oa_opt > 0.0) THEN
+       DO_SEAS_ORG = .true.
+    ELSE
+       DO_SEAS_ORG = .false.
+    ENDIF
+
+    ! No emissions to cloud-phase
+    !TODO Should be = aiphase but might not be initialized
+    iphase = 1
+
     DO i=its,ite
       DO j=jts,jte
 
         ! Only perform sea spray emissions over open sea water (xland>1.5,
         ! lakemask(i,j)<0.5)
         ! Sea ice is considered land, so include fractional sea ice points
-        ! explicitly. We cannot use xice(i,j) .LT. 1.0 on its own because this
+        ! explicitly. We cannot use xice(i,j) .LT. 0.0 on its own because this
         ! is true for all land points.
         IF ( (xland(i,j) .GT. 1.5 &
             .OR. (xice(i,j) .GT. 0.01 .AND. xice(i,j) .LT. 1.0)) &
@@ -204,6 +208,7 @@ MODULE module_seaspray_emis
           !-------- Initialize sea spray emission parameters --------
           nacl_mass_emiss = 0.0
           so4_mass_emiss = 0.0
+          org_mass_emiss = 0.0
           whitecap_frac = 0.0
           entrainment_factor = 0.0
           sst_dependence = 1.0
@@ -239,9 +244,29 @@ MODULE module_seaspray_emis
             salter_n2 = A2*sst_valid**3.0 + B2*sst_valid**2.0 + C2*sst_valid + D2
             salter_n3 = A3*sst_valid**3.0 + B3*sst_valid**2.0 + C3*sst_valid + D3
           ENDIF ! seas_opt
+          !---- Volume fractions of organics, so4 and nacl in sea spray
+          IF(DO_SEAS_SO4) THEN
+            ! so4/na mass ratio = 0.252, Ioannidis et al.( 2023)
+            so4_nacl_mass_ratio = 0.252 * MW_NA / (MW_NA + MW_CL)
+          ELSE
+            so4_nacl_mass_ratio = 0.0
+          ENDIF
+          IF(DO_SEAS_ORG) THEN
+            ! Organic mass fraction from Vignati et al. 2010
+            org_mass_ratio = MAX(2.0, MIN(43.5 * chloroa(i,j) + 13.805, 76.0)) / 100.0
+            ! Convert from organic mass fraction to organic/nacl mass fraction
+            org_nacl_mass_ratio = org_mass_ratio / (1. - org_mass_ratio)
+          ELSE
+            org_nacl_mass_ratio = 0.0
+          ENDIF
+          ! Calculate volume fractions (vol_spec/vol_ssa)
+          nacl_vol_frac = 1./(1 + so4_nacl_mass_ratio*NACL_AERDEN/SO4_AERDEN &
+                              + org_nacl_mass_ratio*NACL_AERDEN/ORG_AERDEN)
+          org_vol_frac = nacl_vol_frac*org_nacl_mass_ratio*NACL_AERDEN/ORG_AERDEN
+          so4_vol_frac = nacl_vol_frac*so4_nacl_mass_ratio*NACL_AERDEN/SO4_AERDEN
 
-
-          !-------- Compute sea-spray aerosol mass/num emissions for each aer size bin --------
+          !-------- Compute sea-spray aerosol mass/num emissions for each aer
+          !         size bin --------
           DO iaerbin = 1,naersizes
             !---- Compute sea-spray aerosol  mass and number emission fluxes
             ! Calculate the volume emission flux seaspray_vol_emiss(iaerbin)
@@ -266,15 +291,18 @@ MODULE module_seaspray_emis
             seaspray_vol_emiss = MAX(seaspray_vol_emiss, 0.0)
             !---- Convert sea spray aerosol volume emission flux (microm3/m2/s)
             !  to speciated aerosol mass emission flux (microg/m2/s)
-            nacl_mass_emiss = seaspray_vol_emiss * nacl_mass_to_ss_vol_ratio
+            nacl_mass_emiss = seaspray_vol_emiss * nacl_vol_frac * NACL_AERDEN
             IF(DO_SEAS_SO4) THEN
-              so4_mass_emiss = seaspray_vol_emiss * so4_mass_to_ss_vol_ratio
+              so4_mass_emiss = seaspray_vol_emiss * so4_vol_frac * SO4_AERDEN
+            ENDIF
+            IF(DO_SEAS_ORG) THEN
+               org_mass_emiss = seaspray_vol_emiss * org_vol_frac * ORG_AERDEN
             ENDIF
             !---- Convert sea spray aerosol volume emission flux to number
             ! emission flux (#/m2/s), assuming aerosol volume is the volume at
             ! bin log-center diameter dcen
             dcen = bin_diameters_cen(iaerbin)
-            seaspray_num_emiss = seaspray_vol_emiss / ((PI/6.0)*dcen**3.0)
+            seaspray_num_emiss = seaspray_vol_emiss / ((piconst/6.0)*dcen**3.0)
             seaspray_num_emiss = MAX(seaspray_num_emiss, 0.0)
             !---- Accumulate sea-spray nacl emissions from open ocean, output diagnosis
             e_nacl_ocean(i, j) = e_nacl_ocean(i, j) + nacl_mass_emiss * dtstep
@@ -300,6 +328,13 @@ MODULE module_seaspray_emis
                   chem(i,kts,j,l_so4) = chem(i,kts,j,l_so4) + so4_mass_emiss * conv
                 END IF
               ENDIF
+              ! MOSAIC oc aerosol
+              IF(DO_SEAS_ORG) THEN
+                l_oc = lptr_oc_aer(iaerbin,1,iphase)
+                IF (l_oc >= param_first_scalar) THEN
+                   chem(i,kts,j,l_oc) = chem(i,kts,j,l_oc) + org_mass_emiss * conv
+                END IF
+              END IF
               ! MOSAIC aerosol number
               l_num = numptr_aer(iaerbin,1,iphase)
               IF (l_num >= param_first_scalar) THEN
@@ -320,8 +355,23 @@ MODULE module_seaspray_emis
               IF (l_seasalt >= param_first_scalar) THEN
                 chem(i,kts,j,l_seasalt) = chem(i,kts,j,l_seasalt) + nacl_mass_emiss * conv
               ENDIF
-              !TODO include sulfate emissions for GOCART, only one size class,
-              !     either move out of iaerbin loop or do for iaerbin = 1
+              ! GOCART OC aerosol
+              IF(DO_SEAS_ORG) THEN
+                IF (p_oc1 >= param_first_scalar) THEN
+                  chem(i,kts,j,p_oc1) = chem(i,kts,j,p_oc1) + org_mass_emiss / GOCART_OC_MFAC * conv
+                ENDIF
+              ENDIF
+              ! GOCART sulf aerosol
+              IF(DO_SEAS_SO4) THEN
+                IF(iaerbin == 1 ) THEN ! Only do once - sulf is not size-resolved
+                  ! Convert ug/m2/s -> ug/kg -> mg/kg (1E-6 g/g) -> ppmv (1E-6
+                  ! mol/mol)
+                  conv_sulf_ppmv =  conv * 1E-3 * mwdry/MW_SO4
+                  IF (p_sulf >= param_first_scalar) THEN
+                    chem(i,kts,j,p_sulf) = chem(i,kts,j,p_sulf) + so4_mass_emiss * conv_sulf_ppmv
+                  ENDIF
+                ENDIF
+              ENDIF
             !---- Other chem_opt cases are not supported
             ELSE
               CALL wrf_error_fatal ('seaspray_emis: chem_opt not supported')
@@ -355,7 +405,6 @@ MODULE module_seaspray_emis
     !   - TODO If comparing to MOSAIC nsizes and dcen_sect, careful the MOSAIC top
     !     level initializations should have been done before.
     ! - TODO Allocatables here are never deallocated
-    ! - TODO some of this could be in a separate data module
     ! - aer_is and data declaration must be updated if a new mechanism is defined
 
     !TODO only use with only:, specify all variables here
@@ -363,12 +412,11 @@ MODULE module_seaspray_emis
 
     IMPLICIT NONE
 
-    ! Dummy arguments:
-    ! Input
+    ! Arguments:
+    !  Input
     INTEGER, INTENT(IN) :: chem_opt, seas_opt
 
     !---- Initialize chem mechanism families IDs
-    !TODO Could be automated by checking the presence of mechanism-specific pointers
     aer_is_gocart = chem_opt == MOZCART_KPP .OR. &
                     chem_opt == T1_MOZCART_KPP .OR. &
                     chem_opt == GOCART_SIMPLE .OR. &
@@ -441,8 +489,7 @@ MODULE module_seaspray_emis
         ! Monahan et al. (1986) SSA source function
         vol_emiss_dist = (/ 367221., 3534527., 2057189., 3732253. /)
       ELSEIF(seas_opt == SEASIOANNIDIS .OR. seas_opt == SEASGONG) THEN
-        ! Gong et al. (1997) SSA source function
-        ! vol_emiss_dist = (/ 553577., 1701853., 124828., 40680. /)
+        ! Gong et al. (1997) + O'Dowd et al. (1997) SSA source function
         ! Same as Monahan above 100 nm
         vol_emiss_dist = (/ 367221., 3534527., 2057189., 3732253. /)
       ELSEIF(seas_opt == SEASSALTER) THEN
@@ -465,9 +512,7 @@ MODULE module_seaspray_emis
         vol_emiss_dist = (/ 0., 10673., 29885., 72482., &
                             786274., 2695160., 977044., 1406417. /)
       ELSEIF(seas_opt == SEASIOANNIDIS .OR. seas_opt == SEASGONG) THEN
-        ! Gong et al. (1997) SSA source function
-        ! vol_emiss_dist = (/ 2.4470606E+02, 8.0060064E+03, 6.1196694E+04, 1.6120765E+05, &
-        !                     7.7027059E+05, 1.2101714E+06, 1.3779869E+05, 5.1837796E+04 /)
+        ! Gong et al. (1997) + O'Dowd et al. (1997) SSA source function
         vol_emiss_dist = (/ 5037., 14721., 29885., 72482., &
                             786274., 2695160., 977044., 1406417. /)
       ELSEIF(seas_opt == SEASSALTER) THEN
@@ -492,7 +537,6 @@ MODULE module_seaspray_emis
         vol_emiss_dist = (/ 10673., 102367., 3481434., 2383461. /)
       ELSEIF(seas_opt == SEASIOANNIDIS .OR. seas_opt == SEASGONG) THEN
         ! Gong et al. (1997) + O'Dowd et al. (1997) SSA source function
-        ! vol_emiss_dist = (/ 8251., 222404., 1980442., 189636. /)
         vol_emiss_dist = (/ 19757., 102367., 3481434., 2383461./)
       ELSEIF(seas_opt == SEASSALTER) THEN
         ! Salter et al. (2015) SSA source function (3 lognormal modes)

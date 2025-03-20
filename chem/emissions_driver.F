@@ -27,7 +27,7 @@ CONTAINS
          u10,v10,ivgtyp,isltyp,gsw,vegfra,rmol,ust,znt,dms_0,              &
          erup_beg,erup_end,                                                &
          xland,xlat,xlong,                                                 &
-         xice, meltedsnow, snowh_melt,                                     &
+         xice, chloroa, meltedsnow, snowh_melt,                            &
          z_at_w,z,smois,dustin,seasin,                                     &
          sebio_iso,sebio_oli,sebio_api,sebio_lim,sebio_xyl,                &
          sebio_hc3,sebio_ete,sebio_olt,sebio_ket,sebio_ald,                &   
@@ -200,6 +200,7 @@ CONTAINS
                                                      xlat,                 &
                                                      xlong,                &
                                                      xice,                 &
+                                                     chloroa,              &
                                                      znt,                  &
 
 ! Add for the GHG_tracer option
@@ -730,8 +731,10 @@ CONTAINS
         CALL wrf_debug(15, 'seaspray_emis sea-spray emissions')
         CALL seaspray_emis( id, dtstep, dz8w, config_flags%chem_opt, &
          config_flags%seas_opt,                                     &
+         config_flags%seas_so4_opt,                                 &
+         config_flags%seas_oa_opt,                                  &
          rho_phy, chem, e_nacl_ocean,                               &
-         u10, v10, xland, tsk, xice, lakemask,                      &
+         u10, v10, xland, tsk, xice, lakemask, chloroa,             &
          ids,ide, jds,jde, kds,kde,                                 &
          ims,ime, jms,jme, kms,kme,                                 &
          its,ite, jts,jte, kts,kte                                  )
@@ -820,8 +823,8 @@ CONTAINS
       CASE (DMS_NIGHTINGALE)
         CALL wrf_debug(15,'Nightingale dms emissions')
         call nightingale_dmsemis( id, dtstep, dz8w, config_flags,   &
-         u_phy, v_phy, rho_phy, chem,emis_ant,alt,                  &
-         u10, v10, xland, tsk,                                      &
+         u_phy, v_phy, rho_phy, chem,emis_ant, alt,                 &
+         u10, v10, xland, tsk, xice,                                &
          ids,ide, jds,jde, kds,kde,                                 &
          ims,ime, jms,jme, kms,kme,                                 &
          its,ite, jts,jte, kts,kte                                  )

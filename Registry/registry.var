@@ -764,6 +764,8 @@ typedef xb_type real    tsk                    ij       -         1        -    
 typedef xb_type real    smois                  ij       -         1        -       -
 typedef xb_type real    tslb                   ij       -         1        -       -
 typedef xb_type real    xice                   ij       -         1        -       -
+typedef xb_type real    dms_ocean              ij       -         1        -       -
+typedef xb_type real    chloroa                ij       -         1        -       -
 typedef xb_type integer ivgtyp                 ij       -         1        -       -
 typedef xb_type integer isltyp                 ij       -         1        -       -
 typedef xb_type real    vegfra                 ij       -         1        -       -

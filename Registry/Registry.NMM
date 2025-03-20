@@ -992,6 +992,8 @@ state    real   T2               ij     misc        1         -     ir        "T
 state    real   U10              ij     misc        1         -     irh0123d=(DownCopy)       "U10"                  "U at 10 M"         " "
 state    real   V10              ij     misc        1         -     irh0123d=(DownCopy)       "V10"                  "V at 10 M"         " "
 state    real   XICE             ij     misc        1         -     i01rd=(DownNear)      "XICE"                 "SEA ICE"         ""
+state    real   DMS_OCEAN        ij     misc        1         -     i0124rh023d=(DownNear)      "DMS_OCEAN"                 "DMS"         ""
+state    real   CHLOROA          ij     misc        1         -     i0124rh023d=(DownNear)      "CHLOROA"                 "CHLOROPHYLL A"         ""
 state    real   ICEDEPTH         ij     misc        1         -     i0124rhd=(DownNear)   "ICEDEPTH"        "SEA ICE THICKNESS"    "m"
 state    real   ALBSI            ij     misc        1         -     i0124rhd=(DownNear)   "ALBSI"        "SEA ICE ALBEDO"    " "
 state    real   SNOWSI           ij     misc        1         -     i0124rhd=(DownNear)   "SNOWSI"          "SNOW DEPTH ON SEA ICE" "m"

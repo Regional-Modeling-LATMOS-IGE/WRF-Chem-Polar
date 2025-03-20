@@ -1,21 +1,12 @@
-! 2018/10/04 Louis Marelle
+! 2025/03 Louis Marelle, Rémy lapere
 ! Compute DMS emissions and add them to chem(:,:,:,p_dms)
-! I developed this for CBMZ_MOSAIC with DMS and SAPRC_MOSAIC with DMS reactions
-! added to KPP, but this should work for any mechanism where DMS is defined in
-! chem. However, if someone tries to use this option with another mechanism I
-! included a call to WRF_FATAL in chemics_init.F.
+!
 ! This routines requires that e_dms_oc, the oceanic dms content, is
 ! present in emis_ant (read from the wrfchemi files). This is checked in
 ! chem_init.F
 !
-! This routine needs dms oceanic content as an input, read in wrfchemi files
-! (emis_ant) for now. This oceanic content can be overwritten by another
-! value here if needed (dms_ocean_sfc), see below.
-!
-! This module is based on module_cbmz_addemiss.F
-!
-! This code was developped for the following publication, also showing tests in
-! the Arctic:
+! This code was developped for the following publication, also showing
+! evaluation in the Arctic:
 ! Marelle, L., J.-C. Raut, K. S. Law, L. K. Berg, J. D. Fast, R. C. Easter, M.
 ! Shrivastava, and J. L. Thomas (2017), Improvements to the WRF-Chem 3.5.1 model
 ! for quasi- hemispheric simulations of aerosols and ozone in the Arctic,
@@ -29,7 +20,7 @@ CONTAINS
 !----------------------------------------------------------------------
    subroutine nightingale_dmsemis( id, dtstep, dz8w, config_flags,              &
                u_phy, v_phy, rho_phy, chem, emis_ant, alt,                &
-               u10, v10, xland, tsk,                                      &
+               u10, v10, xland, tsk, xice,                                &
                ids,ide, jds,jde, kds,kde,                                 &
                ims,ime, jms,jme, kms,kme,                                 &
                its,ite, jts,jte, kts,kte                                  )
@@ -69,13 +60,12 @@ CONTAINS
           INTENT(IN   ) ::   dz8w, rho_phy,alt, u_phy, v_phy
 
    REAL,  DIMENSION( ims:ime , jms:jme )         ,               &
-          INTENT(IN   ) ::   u10, v10, xland, tsk
+          INTENT(IN   ) ::   u10, v10, xland, tsk, xice
 
 ! local variables
    integer :: i,j,k
    real :: conv
 ! dms_ocean_sfc surface oceanic dms content in mol/m^3, e.g.  Lana et. al 2011
-! dms_ocean_sfc is overwritten by the value in the wrfchemi emission files
 ! sc_co2 schmidt number for co2 at 20°C = 600 (reference value)
    real :: w10, dms_emi, k_dms, dms_ocean_sfc = 0.0, sc_co2 = 600.0, sc_dms, &
                 sst_ij_cels
@@ -91,8 +81,9 @@ CONTAINS
 
          ! Nightingale et al., 2000 parameterization using a Schmidt number
          ! for DMS depending on the actual SST
-             ! only over open water (xland>1.5)
-             if (xland(i,j) .gt. 1.5) then
+             ! only over open water (xland>1.5, or fractional sea ice is present)
+             if (xland(i,j) .gt. 1.5 &
+                 .OR. (xice(i,j) .GT. 0.01 .AND. xice(i,j) .LT. 1.0)) then
 
                  ! Wind speed in m s-1
                  w10 = sqrt( u10(i,j) ** 2.0 + v10(i,j) ** 2.0 )
@@ -117,11 +108,11 @@ CONTAINS
                  ! Sea - air exchange coefficient from Nightingale et al. 2000,
                  ! and unit change from cm hr-1 to m s-1
                  k_dms = ( 0.222 * w10**2 + 0.333 * w10) * (sc_dms / sc_co2)**(-0.5) / 3600. / 100.
+                 ! Account for fractional sea ice
+                 ! Formula from Loose et al., 2009 - 10.1029/2008GL036318
+                 k_dms = k_dms*(1.0-xice(i,j))**0.4
 
-                 ! This can be commented in order to use a single
-                 ! (0D) hardcoded value of dms_ocean_sfc if needed
                  dms_ocean_sfc=emis_ant(i,1,j,p_e_dms_oc)
-
                  ! DMS emission flux in SI units (mol m-2 s-1)
                  dms_emi = k_dms * dms_ocean_sfc
                  ! Change to  WRF-Chem units (mol km-2 hr-1)
