@@ -3329,6 +3329,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      ! diameter volumcen_sect in cm3, aerosol densities in g/cm3
      USE module_data_mosaic_asect, only:volumcen_sect,dens_so4_aer,dens_no3_aer, &
                                         dens_nh4_aer,dens_na_aer,dens_cl_aer, &
+                                        dens_oin_aer, &
                                         ncomp_aer,massptr_aer,dens_aer
 
      IMPLICIT NONE
@@ -3352,7 +3353,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      REAL :: mass_sulf !kg/kg dry air
      INTEGER :: isize,itype,icomp,iphase,p_chem ! For MOSAIC aerosols
      ! Aerosol volume mixing ratio (cm3/kg dry air)
-     REAL :: dryvol_ai_tot, dryvol_cw_tot, dryvol_ai_soluble, dryvol_cw_soluble
+     REAL :: dryvol_ai_tot, dryvol_cw_tot, dryvol_ai_soluble, dryvol_cw_soluble, dryvol_ai_dust, dryvol_cw_dust
      ! Aerosol total number to hygrophilic number scaling factor (unitless, 0-1)
      REAL :: scale_num
      ! Conversion factors for GOCART dust and seas (ug to nb)
@@ -3428,9 +3429,13 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
          nwfa(i,k,j) = nwfa(i,k,j) + mass_sulf * SULF_NB_MASS_RATIO * NH4_MFAC
 
        ELSEIF (aer_is_mosaic4bin) THEN
+         !
          ! Calculate NWFA from MOSAIC-4bin, by scaling MOSAIC aerosol number
          ! by soluble_aer_vol/total_vol to discard insoluble aerosol fraction
          ! from NWFA
+         !
+         ! Calculate NIFA by scaling the total aerosol number by dust_aer_vol/total_vol
+         !
          nwfa(i,k,j) = 0.0
          nifa(i,k,j) = 0.0
          itype =  1
@@ -3474,6 +3479,23 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            scale_num = 0.0
          ENDIF
          nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw01) * scale_num
+         ! Calculate total dry volume of dust aerosol in bin
+         dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a01) / dens_oin_aer)
+         dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw01) / dens_oin_aer)
+         IF(dryvol_ai_dust> 0.0) THEN
+           scale_num = dryvol_ai_dust / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a01) * scale_num
+         IF(dryvol_cw_dust> 0.0) THEN
+           scale_num = dryvol_cw_dust / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw01) * scale_num
          ! Bin 2
          isize = 2
          dryvol_ai_tot = 0.0
@@ -3510,6 +3532,23 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            scale_num = 0.0
          ENDIF
          nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
+         ! Calculate total dry volume of dust aerosol in bin
+         dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a02) / dens_oin_aer)
+         dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw02) / dens_oin_aer)
+         IF(dryvol_ai_dust> 0.0) THEN
+           scale_num = dryvol_ai_dust / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a02) * scale_num
+         IF(dryvol_cw_dust> 0.0) THEN
+           scale_num = dryvol_cw_dust / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
          ! Bin 3
          isize = 3
          dryvol_ai_tot = 0.0
@@ -3546,6 +3585,23 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            scale_num = 0.0
          ENDIF
          nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw03) * scale_num
+         ! Calculate total dry volume of dust aerosol in bin
+         dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a02) / dens_oin_aer)
+         dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw02) / dens_oin_aer)
+         IF(dryvol_ai_dust> 0.0) THEN
+           scale_num = dryvol_ai_dust / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a02) * scale_num
+         IF(dryvol_cw_dust> 0.0) THEN
+           scale_num = dryvol_cw_dust / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
          ! Bin 4
          isize = 4
          dryvol_ai_tot = 0.0
@@ -3582,6 +3638,23 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            scale_num = 0.0
          ENDIF
          nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw04) * scale_num
+         ! Calculate total dry volume of dust aerosol in bin
+         dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a02) / dens_oin_aer)
+         dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw02) / dens_oin_aer)
+         IF(dryvol_ai_dust> 0.0) THEN
+           scale_num = dryvol_ai_dust / dryvol_ai_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a02) * scale_num
+         IF(dryvol_cw_dust> 0.0) THEN
+           scale_num = dryvol_cw_dust / dryvol_cw_tot
+           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ELSE
+           scale_num = 0.0
+         ENDIF
+         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
 
        ELSE
          ! If chem_opt aerosol is not covered call fatal - but this should have
