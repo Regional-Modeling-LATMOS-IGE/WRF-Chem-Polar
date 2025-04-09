@@ -3479,23 +3479,24 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            scale_num = 0.0
          ENDIF
          nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw01) * scale_num
-         ! Calculate total dry volume of dust aerosol in bin
-         dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a01) / dens_oin_aer)
-         dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw01) / dens_oin_aer)
-         IF(dryvol_ai_dust> 0.0) THEN
-           scale_num = dryvol_ai_dust / dryvol_ai_tot
-           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
-         ELSE
-           scale_num = 0.0
-         ENDIF
-         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a01) * scale_num
-         IF(dryvol_cw_dust> 0.0) THEN
-           scale_num = dryvol_cw_dust / dryvol_cw_tot
-           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
-         ELSE
-           scale_num = 0.0
-         ENDIF
-         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw01) * scale_num
+         ! Disable below 500 nm
+         ! ! Calculate total dry volume of dust aerosol in bin
+         ! dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a01) / dens_oin_aer)
+         ! dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw01) / dens_oin_aer)
+         ! IF(dryvol_ai_dust> 0.0) THEN
+         !   scale_num = dryvol_ai_dust / dryvol_ai_tot
+         !   scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ! ELSE
+         !   scale_num = 0.0
+         ! ENDIF
+         ! nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a01) * scale_num
+         ! IF(dryvol_cw_dust> 0.0) THEN
+         !   scale_num = dryvol_cw_dust / dryvol_cw_tot
+         !   scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ! ELSE
+         !   scale_num = 0.0
+         ! ENDIF
+         ! nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw01) * scale_num
          ! Bin 2
          isize = 2
          dryvol_ai_tot = 0.0
@@ -3532,23 +3533,24 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            scale_num = 0.0
          ENDIF
          nwfa(i,k,j)= nwfa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
-         ! Calculate total dry volume of dust aerosol in bin
-         dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a02) / dens_oin_aer)
-         dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw02) / dens_oin_aer)
-         IF(dryvol_ai_dust> 0.0) THEN
-           scale_num = dryvol_ai_dust / dryvol_ai_tot
-           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
-         ELSE
-           scale_num = 0.0
-         ENDIF
-         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a02) * scale_num
-         IF(dryvol_cw_dust> 0.0) THEN
-           scale_num = dryvol_cw_dust / dryvol_cw_tot
-           scale_num = MAX(MIN(scale_num, 1.0), 0.0)
-         ELSE
-           scale_num = 0.0
-         ENDIF
-         nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
+         ! Disable below 500 nm
+         ! ! Calculate total dry volume of dust aerosol in bin
+         ! dryvol_ai_dust = 1.0E-6 * ( chem(i,k,j,p_oin_a02) / dens_oin_aer)
+         ! dryvol_cw_dust = 1.0E-6 * ( chem(i,k,j,p_oin_cw02) / dens_oin_aer)
+         ! IF(dryvol_ai_dust> 0.0) THEN
+         !   scale_num = dryvol_ai_dust / dryvol_ai_tot
+         !   scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ! ELSE
+         !   scale_num = 0.0
+         ! ENDIF
+         ! nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_a02) * scale_num
+         ! IF(dryvol_cw_dust> 0.0) THEN
+         !   scale_num = dryvol_cw_dust / dryvol_cw_tot
+         !   scale_num = MAX(MIN(scale_num, 1.0), 0.0)
+         ! ELSE
+         !   scale_num = 0.0
+         ! ENDIF
+         ! nifa(i,k,j) = nifa(i,k,j) + chem(i,k,j,p_num_cw02) * scale_num
          ! Bin 3
          isize = 3
          dryvol_ai_tot = 0.0
