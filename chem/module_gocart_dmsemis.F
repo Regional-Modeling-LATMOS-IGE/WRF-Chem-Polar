@@ -1,4 +1,4 @@
-module module_dms_emis
+module module_gocart_dms_emis
   USE module_data_gocartchem
 contains
 
@@ -216,4 +216,4 @@ SUBROUTINE srcdms(imx, jmx, lmx, nmx, ndt1, tc,airmw, &
 
 END SUBROUTINE srcdms
 
-END module module_dms_emis
+END module module_gocart_dms_emis

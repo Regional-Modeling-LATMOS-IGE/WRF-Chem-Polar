@@ -79,11 +79,11 @@ module_wetdep_ls.o:
 
 module_gocart_dmsemis.o: module_data_gocartchem.o
 
-module_nightingale_dmsemis.o: module_data_radm2.o 
-
 module_seaspray_emis.o:
 
 module_blowing_snow_emis.o:
+
+module_dms_emis.o:
 
 module_data_cbmz.o: module_peg_util.o
 
@@ -364,7 +364,7 @@ mechanism_driver.o: module_data_radm2.o module_radm.o module_aerosols_sorgam.o m
 
 optical_driver.o: module_optical_averaging.o module_peg_util.o module_data_mosaic_therm.o
 
-emissions_driver.o: module_add_emiss_burn.o module_data_radm2.o module_radm.o module_bioemi_simple.o module_bioemi_beis314.o module_bioemi_megan2.o module_emissions_anthropogenics.o module_cbmz_addemiss.o module_cb05_addemiss.o module_mosaic_addemiss.o module_aerosols_sorgam.o module_aerosols_soa_vbs.o module_aerosols_sorgam_vbs.o module_plumerise1.o module_gocart_dust.o module_gocart_dust_afwa.o module_uoc_dust.o module_gocart_seasalt.o module_ghg_fluxes.o module_lightning_nox_driver.o module_cam_mam_addemiss.o module_nightingale_dmsemis.o module_seaspray_emis.o module_blowing_snow_emis.o
+emissions_driver.o: module_add_emiss_burn.o module_data_radm2.o module_radm.o module_bioemi_simple.o module_bioemi_beis314.o module_bioemi_megan2.o module_emissions_anthropogenics.o module_cbmz_addemiss.o module_cb05_addemiss.o module_mosaic_addemiss.o module_aerosols_sorgam.o module_aerosols_soa_vbs.o module_aerosols_sorgam_vbs.o module_plumerise1.o module_gocart_dust.o module_gocart_dust_afwa.o module_uoc_dust.o module_gocart_seasalt.o module_ghg_fluxes.o module_lightning_nox_driver.o module_cam_mam_addemiss.o module_dms_emis.o module_seaspray_emis.o module_blowing_snow_emis.o
 
 dry_dep_driver.o: module_data_radm2.o module_aer_drydep.o module_dep_simple.o module_aerosols_sorgam.o module_aerosols_soa_vbs.o module_aerosols_sorgam_vbs.o module_mosaic_drydep.o module_mixactivate_wrappers.o ../phys/module_mixactivate.o module_cam_mam_drydep.o ../phys/module_data_cam_mam_asect.o ../phys/module_data_cam_mam_aero.o ../phys/module_cam_support.o
 

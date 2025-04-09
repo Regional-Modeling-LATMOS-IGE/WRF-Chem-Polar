@@ -861,9 +861,9 @@
               grid%mean_fct_aggr,grid%firesize_agtf, &
               grid%firesize_agef,grid%firesize_agsv,grid%firesize_aggr,                    &
               grid%u10,grid%v10,grid%ivgtyp,grid%isltyp,grid%gsw,grid%vegfra,grid%rmol,    &
-              grid%ust,grid%znt,grid%dms_0,grid%erup_beg,grid%erup_end,                    &
+              grid%ust,grid%znt,grid%dms_0,grid%dms_ocean,grid%erup_beg,grid%erup_end,     &
               grid%xland,grid%xlat,grid%xlong,                                             &
-              grid%xice,grid%chloroa,grid%meltedsnow,grid%snowh_melt,                                   &
+              grid%xice,grid%chloroa,grid%meltedsnow,grid%snowh_melt,                      &
               z_at_w,zmid,grid%smois,dustin,seasin,                                        &
               grid%sebio_iso,grid%sebio_oli,grid%sebio_api,grid%sebio_lim,                 &
               grid%sebio_xyl,grid%sebio_hc3,grid%sebio_ete,grid%sebio_olt,                 &

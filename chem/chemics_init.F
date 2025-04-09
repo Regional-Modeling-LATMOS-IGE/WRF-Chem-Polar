@@ -479,16 +479,6 @@ call wrf_message("**************************************************************
       call wrf_error_fatal( trim(message_txt) )
    endif
 
-   !LMarelle: Add a condition on emiss_opt for Nightingale DMS emissions
-   if ( config_flags%dmsemis_opt == 2 .and. &
-        (config_flags%emiss_opt /= 4 &
-         .and. config_flags%emiss_opt /= 8 &
-         .and. config_flags%emiss_opt /= 10 &
-         .and. config_flags%emiss_opt /= 13) ) then
-      call wrf_error_fatal ('chemics_init: error, nightingale_dmsemis (dmsemis_opt = 2) &
-                            requires e_dms_oc to be defined in emis_ant (emiss_opt = 4,8,10,13)')
-   endif
-
    ! Checks for sea spray aerosol emissions option seas_opt = SEASMONAHAN,
    ! SEASIOANNIDIS, SEASGONG, SEASSALTER
    IF ( config_flags%seas_opt == SEASMONAHAN .OR. config_flags%seas_opt == SEASIOANNIDIS &

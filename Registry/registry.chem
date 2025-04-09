@@ -3913,6 +3913,7 @@ rconfig   integer     emiss_opt_vol       namelist,chem          max_domains    
 rconfig   integer     dust_opt            namelist,chem          1              0       rh    "dust_opt"            ""      ""
 rconfig   integer     dust_schme          namelist,chem          1              2       rh    "dust_schme"       ""      ""
 rconfig   integer     dmsemis_opt         namelist,chem          1              0       rh    "dmsemis_opt"         ""      ""
+rconfig   integer     dms_opt             namelist,chem          1              0       rh    "dms_opt"             ""      ""
 rconfig   integer     seas_opt            namelist,chem          1              0       rh    "seas_opt"            ""      ""
 rconfig   integer     blowing_snow_opt    namelist,chem          1              0       rh    "blowing_snow_opt"    ""      ""
 rconfig   integer     seas_so4_opt        namelist,chem          max_domains    0       rh    "seas_so4_opt"        ""      ""
@@ -4203,8 +4204,9 @@ package   seasmonahan   seas_opt==5                  -                -
 package   seasioannidis seas_opt==6                  -                -
 package   seasgong      seas_opt==7                  -                -
 package   seassalter    seas_opt==8                  -                -
-package   dmsgocart    dmsemis_opt==1                  -              -
-package   dms_nightingale  dmsemis_opt==2               -             -
+package   dmsgocart     dmsemis_opt==1               -                -
+package   dmsn2000_old  dmsemis_opt==2               -                -
+package   dmsnightingale   dms_opt==1                -                -
 package   volume_approx    aer_op_opt==1                -             -
 package   maxwell_approx   aer_op_opt==2                -             -
 package   volume_exact     aer_op_opt==3                -             -

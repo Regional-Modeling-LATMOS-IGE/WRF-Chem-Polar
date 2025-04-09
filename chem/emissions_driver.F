@@ -24,7 +24,7 @@ CONTAINS
          ebu, ebu_in,mean_fct_agtf,mean_fct_agef,                          &
          mean_fct_agsv,mean_fct_aggr,firesize_agtf,firesize_agef,          &
          firesize_agsv,firesize_aggr,                                      &
-         u10,v10,ivgtyp,isltyp,gsw,vegfra,rmol,ust,znt,dms_0,              &
+         u10,v10,ivgtyp,isltyp,gsw,vegfra,rmol,ust,znt,dms_0,dms_ocean,    &
          erup_beg,erup_end,                                                &
          xland,xlat,xlong,                                                 &
          xice, chloroa, meltedsnow, snowh_melt,                            &
@@ -96,11 +96,11 @@ CONTAINS
   USE gocart_dust
   USE gocart_dust_afwa
   USE gocart_seasalt
-  USE module_nightingale_dmsemis, only: nightingale_dmsemis
   USE module_seaspray_emis, only: seaspray_emis
+  USE module_dms_emis, only: dms_emis
   USE module_blowing_snow_emis, only: blowing_snow_emis
   USE uoc_dust  
-  USE module_dms_emis
+  USE module_gocart_dms_emis, only: gocart_dmsemis
   USE module_mosaic_addemiss
   USE module_add_emis_cptec
   USE module_add_emiss_burn
@@ -144,7 +144,7 @@ CONTAINS
          emis_vol
    REAL, DIMENSION( ims:ime, jms:jme),&
          INTENT(IN ) ::                                                 &
-         dms_0,tsk,erup_beg,erup_end
+         dms_0,dms_ocean,tsk,erup_beg,erup_end
    REAL, DIMENSION( ims:ime, jms:jme,3),&
          INTENT(IN ) ::                                                 &
          erod, erod_dri
@@ -811,26 +811,32 @@ CONTAINS
         end if
       END SELECT dust_select
 
-      dms_select:  SELECT CASE(config_flags%dmsemis_opt)
-      CASE (DMSGOCART)
-        CALL wrf_debug(15,'Gocart dms emissions')
-        call gocart_dmsemis(dtstep,config_flags,alt,t_phy,u_phy,  &
-         v_phy,chem,rho_phy,dz8w,u10,v10,p8w,dms_0,tsk,                  &
-         ivgtyp,isltyp,xland,dx,g, &
-         ids,ide, jds,jde, kds,kde,                                        &
-         ims,ime, jms,jme, kms,kme,                                        &
-         its,ite, jts,jte, kts,kte                                         )
-      CASE (DMS_NIGHTINGALE)
-        CALL wrf_debug(15,'Nightingale dms emissions')
-        call nightingale_dmsemis( id, dtstep, dz8w, config_flags,   &
-         u_phy, v_phy, rho_phy, chem,emis_ant, alt,                 &
-         u10, v10, xland, tsk, xice,                                &
+      dms_select:  SELECT CASE(config_flags%dms_opt)
+      CASE(DMSNIGHTINGALE)
+        CALL dms_emis( id, dtstep, dz8w, config_flags%dms_opt,      &
+         rho_phy, chem,                                             &
+         u10, v10, xland, tsk, xice, lakemask, dms_ocean,           &
          ids,ide, jds,jde, kds,kde,                                 &
          ims,ime, jms,jme, kms,kme,                                 &
          its,ite, jts,jte, kts,kte                                  )
-      CASE DEFAULT 
-        CALL wrf_debug(15,'no dms emissions')
+      CASE DEFAULT
+        ! Keeping support for the old option dmsemis_opt
+        IF(config_flags%dmsemis_opt == DMSGOCART) THEN
+          CALL wrf_debug(15,'Gocart dms emissions')
+          call gocart_dmsemis(dtstep,config_flags,alt,t_phy,u_phy,  &
+           v_phy,chem,rho_phy,dz8w,u10,v10,p8w,dms_0,tsk,                  &
+           ivgtyp,isltyp,xland,dx,g, &
+           ids,ide, jds,jde, kds,kde,                                        &
+           ims,ime, jms,jme, kms,kme,                                        &
+           its,ite, jts,jte, kts,kte                                         )
+        ELSEIF(config_flags%dmsemis_opt == DMSN2000_OLD) THEN
+          CALL wrf_error_fatal("emissions_driver: dmsemis_opt = 2 deactivated, &
+                 use instead dms_opt = 1 with DMS_OCEAN input in wrflowinp")
+        ELSE
+          CALL wrf_debug(15,'No dms emissions')
+        ENDIF
       END SELECT dms_select
+
 
     ksub=0
 !!! ***********   FIRE AND CHEM ****************************************
