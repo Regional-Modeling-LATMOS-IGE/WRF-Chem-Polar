@@ -209,8 +209,6 @@ SUBROUTINE solve_em ( grid , config_flags  &
    INTEGER                                    :: num, den
    TYPE(WRFU_TimeInterval)                    :: dtInterval, intervaltime,restartinterval
 
-   CHARACTER (LEN=256) :: current_date_char
-   INTEGER :: current_month
 #if (WRF_CMAQ == 1)
    interface
       SUBROUTINE CMAQ_DRIVER ( MODEL_STDATE, MODEL_STTIME, MODEL_TSTEP,  &
@@ -834,8 +832,7 @@ BENCH_START(calc_p_rho_tim)
                             )
 
 #ifdef DM_PARALLEL
-       IF ( config_flags%bl_pbl_physics == MYNNPBLSCHEME2 .OR. &
-            config_flags%bl_pbl_physics == MYNNPBLSCHEME3 ) THEN
+       IF ( config_flags%bl_pbl_physics == MYNNPBLSCHEME ) THEN
 #        include "HALO_EM_SCALAR_E_5.inc"
        ENDIF
 #endif
@@ -3691,10 +3688,6 @@ BENCH_END(moist_physics_prep_tim)
 
      CALL wrf_debug ( 200 , ' call microphysics_driver' )
 
-     ! For Thompsonaero
-     CALL domain_clock_get( grid, current_timestr=current_date_char )
-     read(current_date_char(6:7),FMT='(I2)') current_month
-
      grid%sr = 0.
      specified_bdy = config_flags%specified .OR. config_flags%nested
      channel_bdy = config_flags%specified .AND. config_flags%periodic_x
@@ -3868,7 +3861,6 @@ BENCH_START(micro_driver_tim)
       &        , QNWFA_CURR=scalar(ims,kms,jms,P_QNWFA), F_QNWFA=F_QNWFA  & ! for Thompson water-friendly aerosol
       &        , QNIFA_CURR=scalar(ims,kms,jms,P_QNIFA), F_QNIFA=F_QNIFA  & ! for Thompson ice-friendly aerosol
       &        , QNWFA_EXT=grid%qnwfa_ext, QNIFA_EXT=grid%qnifa_ext &
-      &        , current_month=current_month &
       &        , QNBCA_CURR=scalar(ims,kms,jms,P_QNBCA), F_QNBCA=F_QNBCA  & ! for Thompson black carbon aerosol
       &        , QNH_CURR=scalar(ims,kms,jms,P_QNH), F_QNH=F_QNH          & ! for milbrandt2mom and nssl_2mom
       &        , QNIC_CURR=scalar(ims,kms,jms,P_QNIC), F_QNIC=F_QNIC          &
@@ -4874,6 +4866,7 @@ BENCH_END(bc_2d_tim)
                cf            = config_flags,        &
                grid          = grid,                &
                fs_p_id       = grid%fs_p_id,        &
+               fs_p_src      = grid%fs_p_src,      &
                fs_p_dt       = grid%fs_p_dt,        &
                fs_p_x        = grid%fs_p_x,         &
                fs_p_y        = grid%fs_p_y,         &

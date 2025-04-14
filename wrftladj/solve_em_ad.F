@@ -691,8 +691,7 @@ BENCH_END(set_phys_bc_tim)
                             )
 
 #ifdef DM_PARALLEL
-       IF ( config_flags%bl_pbl_physics == MYNNPBLSCHEME2 .OR. &
-            config_flags%bl_pbl_physics == MYNNPBLSCHEME3 ) THEN
+       IF ( config_flags%bl_pbl_physics == MYNNPBLSCHEME ) THEN
 #        include "HALO_EM_SCALAR_E_5.inc"
        ENDIF
 #endif
@@ -3819,7 +3818,9 @@ BENCH_START(micro_driver_tim)
       &        ,refl_10cm=grid%refl_10cm                                  & ! hm, 9/22/09 for refl
       &        ,WARM_RAIN=grid%warm_rain                                  &
       &        ,T8W=t8w                                                   &
-      &        ,CLDFRA=grid%cldfra, CLDFRA2=grid%cldfra2, EXCH_H=grid%exch_h &
+      &        ,CLDFRA=grid%cldfra, EXCH_H=grid%exch_h &
+      &        ,CLDFRAL_PHYS=grid%cldfral_phys &
+      &        ,CLDFRAL_PHYS_OLD=grid%cldfral_phys_old &
       &        ,NSOURCE=grid%qndropsource                                 &
       &        ,ACI_WRF_OPT=config_flags%aci_wrf_opt                      &
 #if (WRF_CHEM==1)
@@ -3906,6 +3907,22 @@ BENCH_START(micro_driver_tim)
       &        , RAINPROD=grid%rainprod, EVAPPROD=grid%evapprod           &
       &        , QV_B4MP=grid%qv_b4mp,QC_B4MP=grid%qc_b4mp                &
       &        , QI_B4MP=grid%qi_b4mp, QS_B4MP=grid%qs_b4mp               &
+      &        , THOMPSON_AERNUM1=grid%thompson_aernum1 &
+      &        , THOMPSON_AERNUM2=grid%thompson_aernum2 &
+      &        , THOMPSON_AERNUM3=grid%thompson_aernum3 &
+      &        , THOMPSON_AERNUM4=grid%thompson_aernum4 &
+      &        , THOMPSON_AERRA1=grid%thompson_aerra1 &
+      &        , THOMPSON_AERRA2=grid%thompson_aerra2 &
+      &        , THOMPSON_AERRA3=grid%thompson_aerra3 &
+      &        , THOMPSON_AERRA4=grid%thompson_aerra4 &
+      &        , THOMPSON_AERKAPPA1=grid%thompson_aerkappa1 &
+      &        , THOMPSON_AERKAPPA2=grid%thompson_aerkappa2 &
+      &        , THOMPSON_AERKAPPA3=grid%thompson_aerkappa3 &
+      &        , THOMPSON_AERKAPPA4=grid%thompson_aerkappa4 &
+      &        , THOMPSON_AERACTFRAC1=grid%thompson_aeractfrac1 &
+      &        , THOMPSON_AERACTFRAC2=grid%thompson_aeractfrac2 &
+      &        , THOMPSON_AERACTFRAC3=grid%thompson_aeractfrac3 &
+      &        , THOMPSON_AERACTFRAC4=grid%thompson_aeractfrac4 &
 #endif
       &        , QT_CURR=scalar(ims,kms,jms,P_QT), F_QT=F_QT              &
       &        , QNN_CURR=scalar(ims,kms,jms,P_QNN), F_QNN=F_QNN          &
@@ -5475,9 +5492,9 @@ BENCH_START(adj_micro_driver_tim)
       &        , QV_CURR=moist(ims,kms,jms,P_QV),QV_CURRB=a_moist(ims,kms,jms,P_QV), F_QV=F_QV               &
       &        , QC_CURR=moist(ims,kms,jms,P_QC),QC_CURRB=a_moist(ims,kms,jms,P_QC), F_QC=F_QC               &
       &        , QR_CURR=moist(ims,kms,jms,P_QR),QR_CURRB=a_moist(ims,kms,jms,P_QR), F_QR=F_QR               &
-      &        , QI_CURR=moist(ims,kms,jms,P_QI), F_QI=F_QI               &
-      &        , QS_CURR=moist(ims,kms,jms,P_QS), F_QS=F_QS               &
-      &        , QG_CURR=moist(ims,kms,jms,P_QG), F_QG=F_QG               &
+      &        , QI_CURR=moist(ims,kms,jms,P_QI),QI_CURRB=a_moist(ims,kms,jms,P_QI), F_QI=F_QI               &
+      &        , QS_CURR=moist(ims,kms,jms,P_QS),QS_CURRB=a_moist(ims,kms,jms,P_QS), F_QS=F_QS               &
+      &        , QG_CURR=moist(ims,kms,jms,P_QG),QG_CURRB=a_moist(ims,kms,jms,P_QG), F_QG=F_QG               &
       &        , QH_CURR=moist(ims,kms,jms,P_QH), F_QH=F_QH               & ! for milbrandt2mom
       &        , QNDROP_CURR=scalar(ims,kms,jms,P_QNDROP), F_QNDROP=F_QNDROP &
 #if (WRF_CHEM==1)

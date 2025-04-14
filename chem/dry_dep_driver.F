@@ -41,8 +41,8 @@ CONTAINS
   USE module_domain_type, only : domain
   USE module_dep_simple
   USE module_vertmx_wrf
-  USE module_data_sorgam
-  USE module_aerosols_sorgam
+  USE module_data_sorgam, only: epsilc !actually from data_radm2
+  USE module_aerosols_sorgam, only: sorgam_depdriver
   USE module_gocart_settling
   USE module_vash_settling
 !LMarelle Add a module for aerosol sedimentation aloft in MOSAIC
@@ -53,6 +53,7 @@ CONTAINS
                                          sorgam_vbs_mixactivate, soa_vbs_mixactivate
   USE module_aer_drydep
   USE module_aerosols_soa_vbs, only: soa_vbs_depdriver
+  USE module_aerosols_soa_vbs_het, only: soa_vbs_het_depdriver
 
   USE module_cam_mam_drydep, only:  cam_mam_drydep_driver
   
@@ -62,6 +63,7 @@ CONTAINS
   USE module_cam_mam_drydep, only:  cam_mam_drydep_driver
   use module_scalar_tables,     only: chem_dname_table !Balwinder.Singh@pnnl.gov:Added for MAM aerosols dry deposition
   USE module_aerosols_sorgam_vbs, only: sorgam_vbs_depdriver
+  USE module_data_mosaic_asect, only:  ncomp_aer,massptr_aer,nsize_aer
   
   IMPLICIT NONE
 
@@ -206,6 +208,11 @@ CONTAINS
 
    integer :: k_a, k_c, kmax, m_mam
    real, dimension( its:ite, jts:jte ) :: frac_removed
+
+   ! For MOSAIC aerosols
+   INTEGER :: isize, icomp, iphase, p_chem_ai, p_chem_cw
+   REAL :: aerconc
+   INTEGER, PARAMETER :: itype = 1
 
 
 ! ..
@@ -573,9 +580,20 @@ CONTAINS
                ims,ime, jms,jme, kms,kme,                               &
                its,ite, jts,jte, kts,kte                                )
 !!! TUCCELLA
-     CASE ( RACM_SOA_VBS_KPP,RACM_SOA_VBS_AQCHEM_KPP,RACM_SOA_VBS_HET_KPP )
+     CASE ( RACM_SOA_VBS_KPP,RACM_SOA_VBS_AQCHEM_KPP )
        CALL wrf_debug(15,'DOING DRY DEP VELOCITIES FOR SOA_VBS AEROSOLS')
        call soa_vbs_depdriver (id,config_flags,ktau,dtstep,             &
+               ust,t_phy,moist,p8w,t8w,rmol,znt,pbl,                    &
+               alt,p_phy,chem,rho_phy,dz8w,rh,z,z_at_w,                 &
+               h2oaj,h2oai,nu3,ac3,cor3,asulf,ahno3,anh3,               &
+               aer_res,ddvel(:,:,numgas+1:num_chem),                    &
+               num_chem-numgas,                                         &
+               ids,ide, jds,jde, kds,kde,                               &
+               ims,ime, jms,jme, kms,kme,                               &
+               its,ite, jts,jte, kts,kte                                )
+     CASE ( RACM_SOA_VBS_HET_KPP )
+       CALL wrf_debug(15,'DOING DRY DEP VELOCITIES FOR SOA_VBS_HET AEROSOLS')
+       call soa_vbs_het_depdriver (id,config_flags,ktau,dtstep,             &
                ust,t_phy,moist,p8w,t8w,rmol,znt,pbl,                    &
                alt,p_phy,chem,rho_phy,dz8w,rh,z,z_at_w,                 &
                h2oaj,h2oai,nu3,ac3,cor3,asulf,ahno3,anh3,               &
@@ -743,16 +761,18 @@ CONTAINS
               MOZART_MOSAIC_4BIN_AQ_KPP, RACM_SOA_VBS_AQCHEM_KPP,                          &
               SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP,                                             &
               CB05_SORG_AQ_KPP, CB05_SORG_VBS_AQ_KPP)
-            IF(config_flags%mp_physics == THOMPSONAERO .AND. config_flags%aci_wrfchem_opt > 0) THEN
-              !TODO QC/QN etc. mixed in BL driver, should use the same setup for mixing cw aerosols
-              if(.not.is_cw_aerosol(nv))then
-                call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
-                            zzfull,zz,ddvel(i,j,nv),kts,kte)
+            IF(config_flags%mp_physics == THOMPSONAERO &
+               .AND. config_flags%aci_wrfchem_opt > 0) THEN
+              if (.not.config_flags%mynn_chem_vertmx) then
+                  call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
+                              zzfull,zz,ddvel(i,j,nv),kts,kte)
               endif
             ELSE
               if(.not.is_aerosol(nv))then ! mix gases not aerosol
-                 call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
+                 if (.not.config_flags%mynn_chem_vertmx) then
+                    call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
                              zzfull,zz,ddvel(i,j,nv),kts,kte)
+                 endif
               endif
             ENDIF
 !The default case below does turbulent mixing for all gas and aerosol species
@@ -760,9 +780,10 @@ CONTAINS
 !It requires ddvel array as a boundary condition near surface for flux of species 
 !The top boundary condition for eddy diffusivity is zero
          CASE DEFAULT
-            call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
+            if (.not.config_flags%mynn_chem_vertmx) then
+               call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
                         zzfull,zz,ddvel(i,j,nv),kts,kte)
-
+            endif
          END SELECT mix_select
 
          ! chem is in ppmv
@@ -799,6 +820,42 @@ CONTAINS
             chem(i,k,j,nv)=max(epsilc,pblst(k))
          enddo
       enddo
+
+      ! Make sure cloudborne (cw) aerosols are not present out of clouds after
+      ! mixing
+      IF(config_flags%mp_physics == THOMPSONAERO &
+         .AND. config_flags%aci_wrfchem_opt > 0 &
+         .AND. (config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP &
+                .OR. config_flags%chem_opt == CBMZ_MOSAIC_4BIN_AQ &
+                .OR. config_flags%chem_opt == CBMZ_MOSAIC_8BIN_AQ &
+                .OR. config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN &
+                .OR. config_flags%chem_opt == CBMZ_MOSAIC_DMS_8BIN &
+                .OR. config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ &
+                .OR. config_flags%chem_opt == CBMZ_MOSAIC_DMS_8BIN_AQ &
+                .OR. config_flags%chem_opt == CRI_MOSAIC_8BIN_AQ_KPP &
+                .OR. config_flags%chem_opt == CRI_MOSAIC_4BIN_AQ_KPP &
+                .OR. config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP &
+                ) ) THEN
+        DO isize = 1,nsize_aer(itype)
+          DO icomp = 1, ncomp_aer(itype)
+            iphase = 1
+            p_chem_ai = massptr_aer(icomp,isize,itype,iphase)
+            iphase = 2
+            p_chem_cw = massptr_aer(icomp,isize,itype,iphase)
+            IF(p_chem_ai > param_first_scalar &
+               .AND. p_chem_cw > param_first_scalar) THEN
+              DO k=kts,kte
+                aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
+                IF(cldfra(i,k,j) <= 1.E-4) THEN
+                  ! Move cw aerosols to interstitial phase
+                  chem(i,k,j,p_chem_ai) = aerconc
+                  chem(i,k,j,p_chem_cw) = 0.0
+                ENDIF ! cldfral
+              ENDDO
+           ENDIF ! p_chem_ai and p_chem_cw
+        ENDDO ! isize
+        ENDDO ! icomp
+      ENDIF !THOMPSONAERO and aci_wrfchem_opt and MOSAIC
 
       if( config_flags%diagnostic_chem == DEPVEL1 .and. &
           (config_flags%chem_opt == CB05_SORG_VBS_AQ_KPP) ) then
@@ -1037,17 +1094,18 @@ CONTAINS
 !
        CASE (TRACER_SMOKE,TRACER_TEST1,TRACER_TEST2)
         CALL wrf_debug(15,'DOING TRACER MIXING, 1 SPECIE ONLY')
-        do nv=2,num_tracer
-         do k=kts,kte
-            pblst(k)=max(epsilc,tracer(i,k,j,nv))
-         enddo
-
+         do nv=2,num_tracer
+            do k=kts,kte
+               pblst(k)=max(epsilc,tracer(i,k,j,nv))
+            enddo
+            if (.not.config_flags%mynn_chem_vertmx) then
                call vertmx(dtstep,pblst,ekmfull,dryrho_1d, &
                            zzfull,zz,0.,kts,kte)
-         do k=kts,kte-1
-            tracer(i,k,j,nv)=max(epsilc,pblst(k))
+            endif
+            do k=kts,kte-1
+               tracer(i,k,j,nv)=max(epsilc,pblst(k))
+            enddo
          enddo
-        enddo
        CASE DEFAULT
 !        CALL wrf_debug(15,'NOT YET DEFINED')
        END SELECT tracer_select

@@ -94,7 +94,7 @@
                                dtchem_sngl, idiagaa,vbs_nbin,            &
                                ph_aer1, ph_aer2, ph_aer3, ph_aer4, &
                                ph_aer5, ph_aer6, ph_aer7, ph_aer8, &
-                               kms,kme )
+                               kms,kme,do_ph )
 
       use module_data_mosaic_asect
       use module_data_mosaic_other
@@ -109,6 +109,7 @@
       integer iclm, jclm, kclm_calcbgn, kclm_calcend, idiagaa,vbs_nbin(1)
       real dtchem_sngl
       integer kms, kme
+      integer, intent(in) :: do_ph
       real, intent(out), dimension(kms:kme) ::                       &
             ph_aer1, ph_aer2, ph_aer3, ph_aer4,  &
             ph_aer5, ph_aer6, ph_aer7, ph_aer8       ! pH of the aerosols
@@ -163,32 +164,34 @@
           call move_sections( 1, iclm, jclm, k, m)
           call specialoutaa( iclm, jclm, k, m, 'after_movesect' )
 
+          if ( do_ph .eq. 1 ) then
           ! LMarelle - calculate pH for 8 bins if available
-          do isize = 1,nbin_a
-            if(mc(1,isize) .gt. 0.0) then
-              aerosol_ph  = MIN(14.0D0, MAX(0.0D0, -log10(mc(1,isize)) ))
-            else
-              ! Set to invalid value
-              aerosol_ph = -999.999
-            endif
-            if (isize == 1) then
-              ph_aer1(k) = aerosol_ph
-            elseif (isize == 2) then
-              ph_aer2(k) = aerosol_ph
-            elseif (isize == 3) then
-              ph_aer3(k) = aerosol_ph
-            elseif (isize == 4) then
-              ph_aer4(k) = aerosol_ph
-            elseif (isize == 5) then
-              ph_aer5(k) = aerosol_ph
-            elseif (isize == 6) then
-              ph_aer6(k) = aerosol_ph
-            elseif (isize == 7) then
-              ph_aer7(k) = aerosol_ph
-            elseif (isize == 8) then
-              ph_aer8(k) = aerosol_ph
-            endif
-          end do
+            do isize = 1,nbin_a
+              if(mc(1,isize) .gt. 0.0) then
+                aerosol_ph  = MIN(14.0D0, MAX(0.0D0, -log10(mc(1,isize)) ))
+              else
+                ! Set to invalid value
+                aerosol_ph = -999.999
+              endif
+              if (isize == 1) then
+                ph_aer1(k) = aerosol_ph
+              elseif (isize == 2) then
+                ph_aer2(k) = aerosol_ph
+              elseif (isize == 3) then
+                ph_aer3(k) = aerosol_ph
+              elseif (isize == 4) then
+                ph_aer4(k) = aerosol_ph
+              elseif (isize == 5) then
+                ph_aer5(k) = aerosol_ph
+              elseif (isize == 6) then
+                ph_aer6(k) = aerosol_ph
+              elseif (isize == 7) then
+                ph_aer7(k) = aerosol_ph
+              elseif (isize == 8) then
+                ph_aer8(k) = aerosol_ph
+              endif
+            end do
+          end if
 
 100     continue	! k levels
 

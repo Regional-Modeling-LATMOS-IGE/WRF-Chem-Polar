@@ -238,6 +238,7 @@
 !	(ug/kg for mass species, #/kg for number species)
 
         real, intent(out),   &
+                optional,    &
                 dimension( ims:ime, kms:kme, jms:jme ) :: &
                 ph_aer01, ph_aer02, ph_aer03, ph_aer04, &
                 ph_aer05, ph_aer06, ph_aer07, ph_aer08
@@ -461,7 +462,7 @@
                            ph_aer03(it,kms:kme,jt), ph_aer04(it,kms:kme,jt), &
                            ph_aer05(it,kms:kme,jt), ph_aer06(it,kms:kme,jt), &
                            ph_aer07(it,kms:kme,jt), ph_aer08(it,kms:kme,jt), &
-                           kms,kme  )
+                           kms,kme,config_flags%mozart_ph_diag  )
 
 !  note units for aerosol is now ug/m3
 

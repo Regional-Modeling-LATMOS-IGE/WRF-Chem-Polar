@@ -1024,6 +1024,7 @@
               grid%bscoef1,grid%bscoef2,grid%bscoef3,grid%bscoef4,                    &
               grid%l2aer,grid%l3aer,grid%l4aer,grid%l5aer,grid%l6aer,grid%l7aer,      &
               grid%pm2_5_dry,grid%pm2_5_water,grid%uvrad,grid%ivgtyp,                 &
+              grid%o3_gfs_du,                                                         &
               ids,ide, jds,jde, kds,kde,                                              &
               ims,ime, jms,jme, kms,kme,                                              &
               its,ite,jts,jte,kts,kte)
@@ -1584,6 +1585,7 @@ if ( cam_mam_aerosols ) &
                grid%cldfral_chem,      &
                moist, grid%cldfra, grid%cldfra_mp_all, grid%ph_no2,                   &
                chem, gas_aqfrac, numgas_mam,grid%is_CAMMGMP_used,                     &
+               grid%ph_cw,                                                            &
                ids,ide, jds,jde, kds,kde,                                             &
                ims,ime, jms,jme, kms,kme,                                             &
                its,ite, jts,jte, kts,kte                                              )
