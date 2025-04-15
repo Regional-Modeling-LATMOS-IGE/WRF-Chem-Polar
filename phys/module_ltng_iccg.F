@@ -8,8 +8,6 @@
 !
 ! See comments preceeding each method for details
 !
-! Contact: J. Wong <johnwong@ucar.edu>
-!
 !**********************************************************************
 !
 !lm Louis Marelle 2016/5/17: Add lightning parameterization for KF-CuP cumuli
