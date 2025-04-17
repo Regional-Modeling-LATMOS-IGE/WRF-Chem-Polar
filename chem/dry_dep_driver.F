@@ -63,7 +63,7 @@ CONTAINS
   USE module_cam_mam_drydep, only:  cam_mam_drydep_driver
   use module_scalar_tables,     only: chem_dname_table !Balwinder.Singh@pnnl.gov:Added for MAM aerosols dry deposition
   USE module_aerosols_sorgam_vbs, only: sorgam_vbs_depdriver
-  USE module_data_mosaic_asect, only:  ncomp_aer,massptr_aer,nsize_aer
+  USE module_data_mosaic_asect, only:  ncomp_aer,massptr_aer,nsize_aer,numptr_aer,waterptr_aer,hyswptr_aer
   
   IMPLICIT NONE
 
@@ -210,8 +210,9 @@ CONTAINS
    real, dimension( its:ite, jts:jte ) :: frac_removed
 
    ! For MOSAIC aerosols
-   INTEGER :: isize, icomp, iphase, p_chem_ai, p_chem_cw
-   REAL :: aerconc
+   INTEGER :: isize, icomp, iphase
+   INTEGER :: p_chem_ai, p_chem_cw, p_chem_water, p_chem_hyswater
+   REAL :: aerconc, aernum, aerwater, aerhyswater, aerconctot_old, aerconctot_new
    INTEGER, PARAMETER :: itype = 1
 
 
@@ -837,24 +838,62 @@ CONTAINS
                 .OR. config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP &
                 ) ) THEN
         DO isize = 1,nsize_aer(itype)
-          DO icomp = 1, ncomp_aer(itype)
-            iphase = 1
-            p_chem_ai = massptr_aer(icomp,isize,itype,iphase)
-            iphase = 2
-            p_chem_cw = massptr_aer(icomp,isize,itype,iphase)
-            IF(p_chem_ai > param_first_scalar &
+          DO k=kts,kte
+            ! Aerosol water
+            p_chem_water = waterptr_aer(isize,itype)
+            p_chem_hyswater = hyswptr_aer(isize,itype)
+            aerwater = 0.0
+            aerhyswater = 0.0
+            IF(p_chem_water > param_first_scalar &
+               .AND. p_chem_hyswater > param_first_scalar) THEN
+              aerwater = chem(i,k,j,p_chem_water)
+              aerhyswater = chem(i,k,j,p_chem_hyswater)
+            ENDIF
+            ! Aerosol mass
+            aerconctot_old = 0.0
+            aerconctot_new = 0.0
+            DO icomp = 1, ncomp_aer(itype)
+              iphase = 1
+              p_chem_ai = massptr_aer(icomp,isize,itype,iphase)
+              iphase = 2
+              p_chem_cw = massptr_aer(icomp,isize,itype,iphase)
+              IF(p_chem_ai > param_first_scalar &
                .AND. p_chem_cw > param_first_scalar) THEN
-              DO k=kts,kte
-                aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
                 IF(cldfra(i,k,j) <= 1.E-4) THEN
+                  aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
+                  aerconctot_old = aerconctot_old + chem(i,k,j,p_chem_ai)
                   ! Move cw aerosols to interstitial phase
                   chem(i,k,j,p_chem_ai) = aerconc
                   chem(i,k,j,p_chem_cw) = 0.0
+                  aerconctot_new = aerconctot_new + aerconc
                 ENDIF ! cldfral
-              ENDDO
-           ENDIF ! p_chem_ai and p_chem_cw
+              ENDIF ! p_chem_ai and p_chem_cw
+            ENDDO ! icomp
+            ! Conserve aerosol water proportion in each bin
+            IF(aerconctot_old > 1E-8) THEN
+              p_chem_water = waterptr_aer(isize,itype)
+              p_chem_hyswater = hyswptr_aer(isize,itype)
+              IF(p_chem_water > param_first_scalar &
+                 .AND. p_chem_hyswater > param_first_scalar) THEN
+                chem(i,k,j,p_chem_water) = aerwater * aerconctot_new/aerconctot_old
+                chem(i,k,j,p_chem_hyswater) = aerhyswater * aerconctot_new/aerconctot_old
+              ENDIF
+            ENDIF
+            ! Aerosol number
+            iphase = 1
+            p_chem_ai = numptr_aer(isize,itype,iphase)
+            iphase = 2
+            p_chem_cw = numptr_aer(isize,itype,iphase)
+            IF(p_chem_ai > param_first_scalar &
+               .AND. p_chem_cw > param_first_scalar) THEN
+              IF(cldfra(i,k,j) <= 1.E-4) THEN
+                aernum = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
+                chem(i,k,j,p_chem_ai) = aernum
+                chem(i,k,j,p_chem_cw) = 0.0
+              ENDIF
+            ENDIF ! p_chem_ai
+          ENDDO ! k
         ENDDO ! isize
-        ENDDO ! icomp
       ENDIF !THOMPSONAERO and aci_wrfchem_opt and MOSAIC
 
       if( config_flags%diagnostic_chem == DEPVEL1 .and. &
