@@ -1291,7 +1291,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                             its,ite, jts,jte, kts,kte)
                    CALL wrf_debug ( 200 , 'microphysics_driver: calling activate_mosaic_aer' )
                    CALL activate_mosaic_aer(CHEM=chem, THOMPSON_AERACTFRAC=thompson_aeractfrac, &
-                            CLDFRAL=cldfral_phys, CLDFRAL_OLD=cldfral_phys_old, &
+                            CLDFRA_NEW=cldfral_phys, CLDFRA_OLD=cldfral_phys_old, &
                             NAERBINS=naerbins, &
                             IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde, &
                             IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
@@ -3000,13 +3000,12 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 
 #if ( WRF_CHEM == 1 )
    SUBROUTINE activate_mosaic_aer(chem, thompson_aeractfrac, &
-                            cldfral, cldfral_old, &
+                            cldfra_new, cldfra_old, &
                             naerbins, &
                             ids, ide, jds, jde, kds, kde,  &
                             ims, ime, jms, jme, kms, kme,  &
                             its, ite, jts, jte, kts, kte)
-     !
-     ! 2023/05/10, Louis Marelle, LATMOS
+     ! 2025/04, Louis Marelle, LATMOS
      !
      ! Purpose:
      !  - Transfer MOSAIC aerosols between ai (interstitial) and cw
@@ -3019,17 +3018,15 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      !  Input:
      !    - thompson_aeractfrac: Size resolved (4D) number activation fraction of
      !      aerosols from grid-scale (MP) clouds (0-1)
-     !    - cldfral: Grid-scale 3D liquid cloud fraction after call to MP model (0-1)
-     !    - cldfral_old: Grid-scale 3D liquid cloud fraction from previous time step
+     !    - cldfra_new: Grid-scale 3D liquid cloud fraction after call to MP model (0-1)
+     !    - cldfra_old: Grid-scale 3D liquid cloud fraction from previous time step
      !      (before call to MP model) (0-1)
      !    - ids,ims,its, etc.: domain/memory/tile index limits in i,j,k
      !
      ! Remarks:
-     !  - TODO compare to implementation in mixactivate
-     !  - TODO: Make sure that the resuspension from decaying clouds done here is not
-     !    redone elsewhere e.g. in wetscav
      !  - TODO Better to use massactfrac not numactfrac for activating aerosol mass
      !    and water mass, see Abdul-Razzak & Ghan (2002) for example (eqs. 13-14)
+     !  - TODO this could be more consistent with the activation in THOMPSONAERO
 
      ! This is used for p_chem pointers and chem_opt values
      USE module_state_description
@@ -3042,7 +3039,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      ! Arguments
      REAL, DIMENSION(ims:ime, kms:kme, jms:jme, 1:naerbins), &
          INTENT(IN) :: thompson_aeractfrac
-     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN) :: cldfral, cldfral_old
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN) :: cldfra_new, cldfra_old
      REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), &
          INTENT(INOUT) :: chem
      INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,    &
@@ -3051,19 +3048,26 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      ! Local variables
      INTEGER :: isize,icomp,iphase,itype,i,k,j
      ! chem array pointers (indices)
-     INTEGER :: p_chem_ai,p_chem_cw,p_chem_water,p_chem_hyswater
+     INTEGER :: p_chem_ai,p_chem_cw,p_num_ai,p_num_cw,p_chem_water,p_chem_hyswater
      ! aerosol mass mixing ratio (ug/kg)
-     REAL :: aerconc
+     REAL :: aerconc, aerwater, aerhyswater
+     ! aerosol total mass mixing ratio (all compositions) in interstial phase
+     REAL :: aerconctot_a_old, aerconctot_a_new
+     ! aerosol number concentration (/kg)
+     REAL :: aernum
      ! aerosol activation fraction (0-1), non-activated fraction (0-1),
-     ! aerosol activation fraction at previous time step
-     REAL :: actfrac,nonactfrac,actfrac_old
+     REAL :: actfrac, actfrac_new, nonactfrac_new
+     ! aerosol activation fraction at previous time step (0-1)
+     REAL :: actfrac_old
+     ! Initial aerosol water / aerosol mass in intestitial phase (ug/ug)
+     REAL :: water_ratio, hyswater_ratio
      ! Cloud fraction relative change since last time step (unitless, ratio);
-     ! cloudborne aerosol reset switch (0 or 1)
-     REAL :: cld_decay_fac, cld_cw_reset_fac
+     REAL :: cld_decay_fac
+     ! = .true. if aerosol number activation already performed
+     LOGICAL :: num_is_activated
      ! Min values for cldfra (unitless, 0-1) and aerosol (ug/kg)
-     REAL, PARAMETER :: CLDFRA_MINVAL = 1.E-6, AER_MINVAL = 1.E-16
+     REAL, PARAMETER :: CLDFRA_MINVAL = 1.E-4, AER_MINVAL = 1.E-16
 
-     !TODO this should loop on ntypes
      itype = 1
 
      DO i = its,ite
@@ -3073,109 +3077,133 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
          !TODO Better to use a different actfrac for mass and number, see ARG2000
          actfrac = thompson_aeractfrac(i,k,j,isize)
 
-         !---- Resuspend aerosols from decaying grid-scale clouds
-         cld_decay_fac = 1.0
-         cld_cw_reset_fac = 1.0
-         IF(cldfral_old(i,k,j) > CLDFRA_MINVAL) THEN
-           IF(cldfral(i,k,j) < cldfral_old(i,k,j)) THEN
-             cld_decay_fac =  cldfral(i,k,j) / cldfral_old(i,k,j)
+         !---- Calculate cloud decay factor and activation fractions
+         cld_decay_fac = 0.0
+         actfrac_new = MIN(1.0, MAX(0.0, actfrac))
+         nonactfrac_new = MIN(1.0, MAX(0.0, 1.0 - actfrac_new))
+         IF(cldfra_old(i,k,j) > CLDFRA_MINVAL) THEN
+           IF(cldfra_new(i,k,j) < cldfra_old(i,k,j)) THEN
+             ! If cldfra decreases and activation fraction decreases,
+             ! resuspend aerosols proportionately
+             cld_decay_fac =  cldfra_new(i,k,j) / cldfra_old(i,k,j)
+           ELSE
+             ! If cldfra does not change or if it increases, assume cloud
+             ! changes do not influence activation directly
+             cld_decay_fac = 1.0
            ENDIF
-         ELSE
-           ! If cldfral was already 0.0 before the mp call, no cw aerosol
-           ! should be there, and actfrac_old would be 0.0
-           ! This is unfortunately not always the case, because subgrid mixing
-           ! and cumulus mixing in chem can bring cw out of clouds. Ideally,
-           ! these processes should either not mix cw aerosols or should also
-           ! redistribute qcloud,qncloud,etc.
-           ! cld_cw_reset_fac is here to reset actfrac_old to 0.0 in case this
-           ! issue happens
-           cld_cw_reset_fac = 0.0
          ENDIF
-         IF(cldfral(i,k,j) <= CLDFRA_MINVAL) THEN
-           cld_decay_fac = 0.0
+         IF(cldfra_new(i,k,j) < CLDFRA_MINVAL) THEN
+           ! If clouds are not present, deactivate all aerosols
+           actfrac_new = 0.0
+           nonactfrac_new = 1.0
          ENDIF
-         actfrac = actfrac * cld_decay_fac
-         nonactfrac = MIN(1.0, MAX(0.0, 1.0 - actfrac))
 
-         !---- Activate/deactivate aerosol mass concentrations
+         !---- Calculate initial aerosol water
+         p_chem_water = waterptr_aer(isize,itype)
+         p_chem_hyswater = hyswptr_aer(isize,itype)
+         aerwater = 0.0
+         aerhyswater = 0.0
+         IF(p_chem_water > param_first_scalar &
+            .AND. p_chem_hyswater > param_first_scalar) THEN
+           aerwater = chem(i,k,j,p_chem_water)
+           aerhyswater = chem(i,k,j,p_chem_hyswater)
+         ENDIF
+
+         !---- Calculate initial aerosol number and activation fraction
+         num_is_activated = .false.
+         actfrac_old = 0.
+         iphase = 1
+         p_num_ai = numptr_aer(isize,itype,iphase)
+         iphase = 2
+         p_num_cw = numptr_aer(isize,itype,iphase)
+         IF(p_num_ai > param_first_scalar .AND. p_num_cw > param_first_scalar) THEN
+           aernum = chem(i,k,j,p_num_ai) + chem(i,k,j,p_num_cw)
+           ! Simplifying assumption - the activation fraction for number and
+           ! mass are assumed to be the same.
+           ! In order to change this, we would need to also make sure to avoid
+           ! situations where aerosol mass is activated but not number or the
+           ! opposite.
+           IF(aernum > AER_MINVAL) THEN
+             actfrac_old = chem(i,k,j,p_num_cw)/aernum
+           ENDIF
+         ENDIF
+
+         !---- Activate/deactivate aerosol mass and number
+         aerconctot_a_old = 0.0
+         aerconctot_a_new = 0.0
          DO icomp = 1, ncomp_aer(itype)
-           !TODO This should use ai_phase, cw_phase instead of hardcoded
-           !values 1 and 2, but since this is called before chem, it is not
-           !clear if ai_phase and cw_phase are set when mp_driver is first called.
            iphase = 1
            p_chem_ai = massptr_aer(icomp,isize,itype,iphase)
            iphase = 2
            p_chem_cw = massptr_aer(icomp,isize,itype,iphase)
-           IF(p_chem_ai > param_first_scalar .AND. p_chem_cw > param_first_scalar) THEN
+           IF(p_chem_ai > param_first_scalar &
+              .AND. p_chem_cw > param_first_scalar &
+              .AND. p_num_ai > param_first_scalar &
+              .AND. p_num_cw > param_first_scalar &
+              .AND. p_chem_water > param_first_scalar &
+              .AND. p_chem_hyswater > param_first_scalar) THEN
              aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
-             IF(cldfral(i,k,j) > CLDFRA_MINVAL) THEN
-               !-- Aerosol mass concentrations - activate aerosol mass
-               IF(aerconc > AER_MINVAL) THEN
-                 ! Move new cw aerosol mass to cloud-phase
-                 ! Existing cw aerosols can only be removed by evaporating
-                 ! droplets or wet removal, so they stay activated even if
-                 ! actfrac < actfrac_old
-                 actfrac_old = cld_cw_reset_fac * cld_decay_fac * chem(i,k,j,p_chem_cw) / aerconc
-                 IF(actfrac > actfrac_old) THEN
-                   chem(i,k,j,p_chem_cw) = actfrac * aerconc
-                   chem(i,k,j,p_chem_ai) = nonactfrac * aerconc
+             aerconctot_a_old = aerconctot_a_old + chem(i,k,j,p_chem_ai)
+             IF(aerconc > AER_MINVAL .AND. aernum > AER_MINVAL) THEN
+
+               !-- If activated fraction increases, apply new fraction
+               IF(actfrac_new > actfrac_old .AND. cld_decay_fac > 0.) THEN
+                 chem(i,k,j,p_chem_ai) = nonactfrac_new * aerconc
+                 chem(i,k,j,p_chem_cw) = actfrac_new * aerconc
+                 ! Only perform number activation once
+                 IF(.NOT. num_is_activated) THEN
+                   chem(i,k,j,p_num_ai) = nonactfrac_new * aernum
+                   chem(i,k,j,p_num_cw) = actfrac_new * aernum
+                   num_is_activated = .true.
                  ENDIF
-               ENDIF
-             ELSE
-               !-- Aerosol mass concentrations - remove cloud-borne aerosol
-               ! mass out of clouds
-               chem(i,k,j,p_chem_ai) = aerconc
-               chem(i,k,j,p_chem_cw) = 0.0
-             ENDIF ! cldfral
+
+               !-- If activated fraction decreases, do not change the number of
+               !  activated aerosols unless the cloud also decays
+               ELSE ! IF actfrac_new
+                 chem(i,k,j,p_chem_ai) = chem(i,k,j,p_chem_ai) + (1.-cld_decay_fac)*chem(i,k,j,p_chem_cw)
+                 chem(i,k,j,p_chem_cw) = cld_decay_fac*chem(i,k,j,p_chem_cw)
+                 ! Only perform number deactivation once
+                 IF(.NOT. num_is_activated) THEN
+                   chem(i,k,j,p_num_ai) = chem(i,k,j,p_num_ai) + (1.-cld_decay_fac)*chem(i,k,j,p_num_cw)
+                   chem(i,k,j,p_num_cw) = cld_decay_fac*chem(i,k,j,p_num_cw)
+                   num_is_activated = .true.
+                 ENDIF
+               ENDIF ! actfrac_new
+
+               !-- Final checks
+               chem(i,k,j,p_chem_ai) = MAX(0., MIN(aerconc, chem(i,k,j,p_chem_ai)))
+               chem(i,k,j,p_chem_cw) = MAX(0., MIN(aerconc, chem(i,k,j,p_chem_cw)))
+               chem(i,k,j,p_num_ai) = MAX(0., MIN(aernum, chem(i,k,j,p_num_ai)))
+               chem(i,k,j,p_num_cw) = MAX(0., MIN(aernum, chem(i,k,j,p_num_cw)))
+               aerconctot_a_new = aerconctot_a_new + chem(i,k,j,p_chem_ai)
+
+             ENDIF ! aerconc
            ENDIF ! p_chem_ai
          ENDDO ! icomp
 
-         !---- Activate/deactivate aerosol number and water
-         IF(cldfral(i,k,j) > CLDFRA_MINVAL) THEN
-           !-- Activate aerosol number and water
-           iphase = 1
-           p_chem_ai = numptr_aer(isize,itype,iphase)
-           iphase = 2
-           p_chem_cw = numptr_aer(isize,itype,iphase)
-           IF(p_chem_ai > param_first_scalar .AND. p_chem_cw > param_first_scalar) THEN
-             aerconc = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
-             IF(aerconc > AER_MINVAL) THEN
-               actfrac_old = cld_decay_fac * chem(i,k,j,p_chem_cw) / aerconc
-               IF(actfrac > actfrac_old) THEN
-                 !-- Aerosol number and water - Move activated aerosol number to
-                 ! cloud phase
-                 chem(i,k,j,p_chem_cw) = actfrac * aerconc
-                 chem(i,k,j,p_chem_ai) = nonactfrac * chem(i,k,j,p_chem_cw)
-                 !-- Aerosol number and water - Remove activated aerosol water
-                 ! (There is no aerosol water or hyswater in cloud phase)
-                 p_chem_water = waterptr_aer(isize,itype)
-                 chem(i,k,j,p_chem_water) = nonactfrac * chem(i,k,j,p_chem_water)
-                 p_chem_hyswater = hyswptr_aer(isize,itype)
-                 chem(i,k,j,p_chem_hyswater) = nonactfrac * chem(i,k,j,p_chem_hyswater)
-               ENDIF ! actfrac > actfrac_old
-             ENDIF ! aerconc > minval
-           ENDIF ! p_chem_ai
-         ELSE ! IF cldfral > CLDFRA_MINVAL
-           !-- Deactivate aerosol number and water
-           ! Remove cloud-borne aerosol number out of clouds
-           iphase = 1
-           p_chem_ai = numptr_aer(isize,itype,iphase)
-           iphase = 2
-           p_chem_cw = numptr_aer(isize,itype,iphase)
-           IF(p_chem_ai > param_first_scalar .AND. p_chem_cw > param_first_scalar) THEN
-             chem(i,k,j,p_chem_ai) = chem(i,k,j,p_chem_ai) + chem(i,k,j,p_chem_cw)
-             chem(i,k,j,p_chem_cw) = 0.0
-             !TODO -- This is not modifying aerosol and water - Should this
-             !recreate aerosol water when resuspending cloudborne aerosols to
-             !interstitial phase?  What is the proper approach for water when
-             !resuspending? Hysw should be on the wet branch and aerosol
-             !should be very hydrated?
-           ENDIF ! p_chem_ai
-         ENDIF ! IF cldfral > CLDFRA_MINVAL
+         !---- Activate/deactivate aerosol water
+         IF(aerconctot_a_new /= aerconctot_a_old .AND. aerconctot_a_old > AER_MINVAL) THEN
+           IF(aerwater+aerhyswater > AER_MINVAL) THEN
+             water_ratio = aerwater/aerconctot_a_old
+             hyswater_ratio = aerhyswater/aerconctot_a_old
+             ! Conserve the initial proportion of aerosol water in interstitial
+             ! aerosols:
+             ! - Activated aerosols do not contain aerosol water
+             ! - Deactivated aerosols are resuspended from the cloud phase so they
+             !   must contain some water - calculate the amount from the initial
+             !   water proportion
+             chem(i,k,j,p_chem_water) = aerconctot_a_new * water_ratio
+             chem(i,k,j,p_chem_hyswater) = aerconctot_a_new * hyswater_ratio
+             chem(i,k,j,p_chem_water) = MAX(0., chem(i,k,j,p_chem_water))
+             chem(i,k,j,p_chem_hyswater) = MAX(0., chem(i,k,j,p_chem_hyswater))
+           ENDIF ! aerwater+aerhyswater
+         ENDIF ! aerconctot_a_new
+
        ENDDO ! isize
      ENDDO ! i
      ENDDO ! k
      ENDDO ! j
+
    END SUBROUTINE activate_mosaic_aer
 
 !----------------------------------------
