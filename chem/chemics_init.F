@@ -161,6 +161,8 @@
    LOGICAL :: aer_is_gocart
    ! = .true. if this is a MOSAIC-4bin chem_opt
    LOGICAL :: aer_is_mosaic4bin
+   ! = .true. if this is a MOSAIC-8bin chem_opt
+   LOGICAL :: aer_is_mosaic8bin
 
 #include "version_decl"
 #include "commit_decl"
@@ -300,6 +302,28 @@ call wrf_message("**************************************************************
                 config_flags%chem_opt == MOZART_KPP .or. &
                 config_flags%chem_opt == MOZART_MOSAIC_4BIN_KPP .or. &
                 config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP
+   ! Initialize aerosol mechanism families IDs
+   aer_is_gocart = config_flags%chem_opt == MOZCART_KPP .OR. &
+                   config_flags%chem_opt == T1_MOZCART_KPP .OR. &
+                   config_flags%chem_opt == GOCART_SIMPLE .OR. &
+                   config_flags%chem_opt == GOCARTRADM2 .OR. &
+                   config_flags%chem_opt == GOCARTRACM_KPP
+   aer_is_mosaic4bin = config_flags%chem_opt == CBMZ_MOSAIC_4BIN .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
+                       config_flags%chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
+                       config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
+                       config_flags%chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
+                       config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
+   aer_is_mosaic8bin = config_flags%chem_opt == CBMZ_MOSAIC_8BIN .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_8BIN .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_8BIN_AQ .OR. &
+                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_8BIN_AQ .OR. &
+                       config_flags%chem_opt == CRI_MOSAIC_8BIN_AQ_KPP .OR. &
+                       config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP .OR. &
+                       config_flags%chem_opt == SAPRC99_MOSAIC_8BIN_VBS2_KPP
+
 
    if( is_moz_chm ) then
        write(message_txt,*) 'chem_init: calling mozcart_lbc_init for domain ',id
@@ -344,14 +368,15 @@ call wrf_message("**************************************************************
             ( config_flags%chem_opt == 503 .OR. config_flags%chem_opt == 504) .OR. &
             ( config_flags%chem_opt == 203).OR.                                    & !BSINGH(12/17/2013): Added for SAPRC 8 bin vbs
             ( config_flags%chem_opt == 601 .OR. config_flags%chem_opt == 611) .OR. &
-              (config_flags%chem_opt == 109) ) then
+              (config_flags%chem_opt == 109) .OR. config_flags%chem_opt == GOCART_SIMPLE) then
          call wrf_debug( 15, 'Chemics_init: Wet scavenging turned on' )
        else
          call wrf_error_fatal("ERROR: wet scavenging option requires chem_opt = 8 through 13 or 31 to 36 or 41 to 42 or 109 or 503 or 504 or 601 or 611 to function.")
        endif
        if ( config_flags%mp_physics /= 2 .and. config_flags%mp_physics /= 10 .and. config_flags%mp_physics /= 11  &
+            .and. config_flags%mp_physics /= 22 .and. config_flags%mp_physics /= THOMPSONAERO &
             .and. .not. ( config_flags%mp_physics == 18 .and. config_flags%nssl_2moment_on == 1 ) ) then
-         call wrf_error_fatal("ERROR: wet scavenging option requires mp_phys = 2 (Lin et al.) or 10 (Morrison) or 11 (CAMMGMP) or 18 NSSL_2mom to function.")
+         call wrf_error_fatal("ERROR: wet scavenging option requires mp_phys = 2 (Lin et al.) or 8,28 (Thompson) or 10 (Morrison) or 11 (CAMMGMP) or 18 NSSL_2mom to function.")
        endif
      ! MOZART options and domain id = 1
      elseif( id == 1 ) then
@@ -363,19 +388,30 @@ call wrf_message("**************************************************************
          write(message_txt,*) 'chem_init: calling wetscav_mozcart_init for domain ',id
          call wrf_message( trim(message_txt) )
          call wetscav_mozcart_init( id, numgas, config_flags )
-         ! Simple aerosol wet scavenging for MOZCART_KPP
-         ! - Can be enabled for any GOCART chem_opt as long as sulf scavenging is
-         !   removed from wetscav_mozcart_init to avoid double counting
-         ! - Can be enabled for other aerosol mechanisms if the proper mapping
-         !   for chem_opt is provided in aer_wetscav_simple_init and if
-         !   aerosol wetscav is not already done elsewhere for this chem_opt
-         if (config_flags%chem_opt == MOZCART_KPP) then
-           call wrf_debug( 15, 'Chemics_init: Calling aer_wetscav_simple_init' )
-           call aer_wetscav_simple_init(config_flags%chem_opt)
-         endif
        endif
      endif
    endif
+   ! Simple aerosol wet scavenging for GOCART aerosols
+   ! - Can be enabled for any GOCART chem_opt
+   ! - For MOZCART mechanisms sulf scavenging needs to be
+   !   removed from wetscav_mozcart_init to avoid double counting
+   ! - Can be enabled for other aerosol mechanisms if the proper mapping
+   !   for chem_opt is provided in aer_wetscav_simple_init and if
+   !   aerosol wetscav is not already done elsewhere for this chem_opt
+   IF (config_flags%wetscav_onoff == 1 .AND. aer_is_gocart) THEN
+     IF(config_flags%mp_physics == THOMPSON &
+        .OR. config_flags%mp_physics == THOMPSONAERO &
+        .OR. config_flags%mp_physics == WSM6SCHEME &
+        .OR. config_flags%mp_physics == CAMMGMPSCHEME &
+        .OR. config_flags%mp_physics == MORR_TWO_MOMENT) THEN
+       CALL wrf_debug( 15, 'Chemics_init: Calling aer_wetscav_simple_init' )
+       CALL aer_wetscav_simple_init(config_flags%chem_opt)
+     ELSE
+       CALL wrf_error_fatal("ERROR: wet scavenging option for GOCART &
+            & requires mp_phys = THOMPSON, THOMPSONAERO, WSM6SCHEME, &
+            & CAMMGMPSCHEME or MORR_TWO_MOMENT")
+     ENDIF
+   ENDIF
 
    ! LMarelle - WRF-Chem aerosol aware ice nucleation, only coupled for now with
    ! MOSAIC_4bin AQ schemes in Morrison 2-moment microphysics

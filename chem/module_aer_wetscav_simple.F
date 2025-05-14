@@ -455,7 +455,7 @@ CONTAINS
 
     !-------- Initialize aerosol tracer number for chem_opt --------
     ! This could be recovered from the aerosol scheme data directly
-    IF(chem_opt == MOZCART_KPP) THEN
+    IF(chem_opt == MOZCART_KPP .OR. chem_opt == GOCART_SIMPLE) THEN
       ! MOZCART
       naerspecies = 12
     ELSE
@@ -484,7 +484,7 @@ CONTAINS
 
     !---- Initialize aerosol mappings and parameters for wet scavenging
     deposition_flux(:) = 0.0
-    IF(chem_opt == MOZCART_KPP) THEN
+    IF(chem_opt == MOZCART_KPP .OR. chem_opt == GOCART_SIMPLE) THEN
       !-- MOZCART
       ! Species that experience wet scavenging (sulfate deposition needs to
       ! be disabled in mozcart_wetscav)
