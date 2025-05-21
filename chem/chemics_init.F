@@ -520,39 +520,25 @@ call wrf_message("**************************************************************
    ! SEASIOANNIDIS, SEASGONG, SEASSALTER
    IF ( config_flags%seas_opt == SEASMONAHAN .OR. config_flags%seas_opt == SEASIOANNIDIS &
         .OR. config_flags%seas_opt == SEASGONG .OR. config_flags%seas_opt == SEASSALTER) THEN
-     SELECT CASE(config_flags%chem_opt)
-     CASE (MOZCART_KPP, T1_MOZCART_KPP, &
-           GOCART_SIMPLE, GOCARTRADM2,GOCARTRACM_KPP, &
-           CBMZ_MOSAIC_4BIN, CBMZ_MOSAIC_DMS_4BIN, CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, &
-           CBMZ_MOSAIC_8BIN, CBMZ_MOSAIC_DMS_8BIN, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ, &
-           MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
-           CRI_MOSAIC_4BIN_AQ_KPP, CRI_MOSAIC_8BIN_AQ_KPP, &
-           SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)
+     IF(aer_is_mosaic4bin .OR. aer_is_gocart .OR. aer_is_mosaic8bin) THEN
        ! Initialize seaspray emissions for valid chem_opt
        CALL seaspray_emis_init(config_flags%chem_opt, config_flags%seas_opt)
-     CASE DEFAULT
+     ELSE
        CALL wrf_error_fatal ('chemics_init: error, sea salt emissions seas_opt &
          == SEASMONAHAN,SEASIOANNIDIS,SEASGONG,SEASSALTER, are only compatible &
          with GOCART, MOSAIC_4BIN and MOSAIC_8BIN.')
-     END SELECT
+     ENDIF
    ENDIF
    ! Checks for blowing snow aerosol emissions option
    IF ( config_flags%blowing_snow_opt == 1 ) THEN
-     SELECT CASE(config_flags%chem_opt)
-     CASE (MOZCART_KPP, T1_MOZCART_KPP, GOCART_SIMPLE, &
-           GOCARTRADM2, GOCARTRACM_KPP, &
-           CBMZ_MOSAIC_4BIN, CBMZ_MOSAIC_DMS_4BIN, CBMZ_MOSAIC_4BIN_AQ, CBMZ_MOSAIC_DMS_4BIN_AQ, &
-           CBMZ_MOSAIC_8BIN, CBMZ_MOSAIC_DMS_8BIN, CBMZ_MOSAIC_8BIN_AQ, CBMZ_MOSAIC_DMS_8BIN_AQ, &
-           MOZART_MOSAIC_4BIN_KPP, MOZART_MOSAIC_4BIN_AQ_KPP, &
-           CRI_MOSAIC_4BIN_AQ_KPP, CRI_MOSAIC_8BIN_AQ_KPP, &
-           SAPRC99_MOSAIC_4BIN_VBS2_KPP, SAPRC99_MOSAIC_8BIN_VBS2_AQ_KPP, SAPRC99_MOSAIC_8BIN_VBS2_KPP)
+     IF(aer_is_mosaic4bin .OR. aer_is_gocart .OR. aer_is_mosaic8bin) THEN
        ! Initialize blowing snow emissions for valid chem_opt
        CALL wrf_debug( 15, 'Calling blowing_snow_emis_init')
        CALL blowing_snow_emis_init(config_flags%chem_opt)
-     CASE DEFAULT
+     ELSE
        CALL wrf_error_fatal ('chemics_init: error, blowing snow emissions are &
-                              only compatible with GOCART, MOSAIC_4BIN and MOSAIC_8BIN.')
-     END SELECT
+           only compatible with GOCART, MOSAIC_4BIN and MOSAIC_8BIN.')
+     ENDIF
    ENDIF
 
    ! osipov check that ddflx & ddlen has correct dim size (chem_opt=106 and such)
@@ -2096,22 +2082,6 @@ ENDIF ghg_block
        endif
 
    END SELECT aer_select
-
-   ! Initialize chem mechanism families IDs
-   aer_is_gocart = config_flags%chem_opt == MOZCART_KPP .OR. &
-                   config_flags%chem_opt == T1_MOZCART_KPP .OR. &
-                   config_flags%chem_opt == GOCART_SIMPLE .OR. &
-                   config_flags%chem_opt == GOCARTRADM2 .OR. &
-                   config_flags%chem_opt == GOCARTRACM_KPP
-
-   aer_is_mosaic4bin = config_flags%chem_opt == CBMZ_MOSAIC_4BIN .OR. &
-                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN .OR. &
-                       config_flags%chem_opt == CBMZ_MOSAIC_4BIN_AQ .OR. &
-                       config_flags%chem_opt == CBMZ_MOSAIC_DMS_4BIN_AQ .OR. &
-                       config_flags%chem_opt == MOZART_MOSAIC_4BIN_KPP .OR. &
-                       config_flags%chem_opt == MOZART_MOSAIC_4BIN_AQ_KPP .OR. &
-                       config_flags%chem_opt == CRI_MOSAIC_4BIN_AQ_KPP .OR. &
-                       config_flags%chem_opt == SAPRC99_MOSAIC_4BIN_VBS2_KPP
 
 !!! TUCCELLA
    progn_sanity_check : SELECT CASE(config_flags%chem_opt)
