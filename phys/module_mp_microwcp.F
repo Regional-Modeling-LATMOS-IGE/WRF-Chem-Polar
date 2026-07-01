@@ -94,6 +94,13 @@ module module_mp_microwcp
   ! ice -> snow autoconversion (aggregation): size threshold + timescale
   real(rk), parameter :: D_I2S   = 150.0e-6_rk   ! mean-diam. ice->snow [m]
   real(rk), parameter :: TAU_AGG = 120.0_rk      ! aggregation timescale [s]
+  ! Robustness: max latent-heat T change a single process may apply per step [K].
+  ! If a process would heat/cool a cell by more than this, its WHOLE tendency
+  ! (mass + heat) is scaled back by the same factor -> conserving; the residual
+  ! super/subsaturation relaxes next step. Stops a phase-change spike (e.g.
+  ! depositing all vapour in one 180 s step) from shocking the host dynamics
+  ! into a CFL blow-up. Ordinary clouds (<< 1 K/step) are untouched.
+  real(rk), parameter :: DT_MAX = 2.0_rk
 
   ! Deposition ventilation mass-weighted Gamma ratio, matching the
   ! Only ice/snow/graupel deposit; cloud/rain entries unused.
@@ -482,7 +489,7 @@ contains
     real(rk) :: qsat,Nact,dNc,m_drop,dqc,C_cm3,weff,f_hf
     real(rk) :: na_cm3,Tsc,Ninp_L,Ninp,dNi,dqi
     real(rk) :: a_dm,b_dm,c_dm,d_dm
-    real(rk) :: Si,RHi_crit,N_hom
+    real(rk) :: Si,RHi_crit,N_hom,scal
     a_dm=0.0000594_rk; b_dm=3.33_rk; c_dm=0.0264_rk; d_dm=0.0827_rk
     m_drop = (4.0_rk/3.0_rk)*PI*(1.0e-6_rk)**3*1000.0_rk
     do k = 1, nz
@@ -547,6 +554,13 @@ contains
           ani=ani+dNi; aqi=aqi+dqi; aqv=aqv-dqi; aT=aT+L_SUB/CP*dqi
         end if
       end if
+      ! --- latent-heat limiter: scale the whole tendency (mass+heat) so this
+      !     process changes T by at most DT_MAX this step (conserving) ---
+      if (abs(aT)*dt > DT_MAX) then
+        scal=DT_MAX/(abs(aT)*dt)
+        aqv=aqv*scal; aqc=aqc*scal; aqi=aqi*scal
+        anc=anc*scal; ani=ani*scal; aT=aT*scal
+      end if
       ! --- apply once ---
       qc(k)=max(qc0+aqc*dt,0.0_rk); qv(k)=max(qv0+aqv*dt,0.0_rk)
       qi(k)=max(qi0+aqi*dt,0.0_rk)
@@ -573,7 +587,7 @@ contains
     real(rk) :: qv0,qc0,qr0,nc0,nr0
     real(rk) :: aqv,aqc,aqr,anc,anr,aT
     real(rk) :: Nc_cm3,dqr,D0,m_drop,dNr,Dc,n_coal
-    real(rk) :: qsat,sub,Cev,dqr_e
+    real(rk) :: qsat,sub,Cev,dqr_e,scal
     D0=50.0e-6_rk; Dc=15.0e-6_rk
     m_drop=(PI/6.0_rk)*RHO_W*D0**3; n_coal=(D0/Dc)**3
     do k = 1, nz
@@ -608,6 +622,12 @@ contains
       if (qr0 > QR_MIN) then
         anr = anr + min(1000.0_rk*max(Dm(k,IR)-0.9e-3_rk,0.0_rk)*nr0, nr0/dt)
       end if
+      ! --- latent-heat limiter (see DT_MAX): conserving scale-back ---
+      if (abs(aT)*dt > DT_MAX) then
+        scal=DT_MAX/(abs(aT)*dt)
+        aqv=aqv*scal; aqc=aqc*scal; aqr=aqr*scal
+        anc=anc*scal; anr=anr*scal; aT=aT*scal
+      end if
       ! --- apply once ---
       qc(k)=max(qc0+aqc*dt,0.0_rk); qr(k)=max(qr0+aqr*dt,0.0_rk)
       qv(k)=max(qv0+aqv*dt,0.0_rk)
@@ -638,7 +658,7 @@ contains
     real(rk) :: aqv,aqc,aqr,aqi,aqs,aqg,anr,ani,aT
     real(rk) :: dqi,dqs,dqg,dqr_f,dqs_a,dNi_h,dqi_h
     real(rk) :: fT,rim,coeff,rate_s,rate_g
-    real(rk) :: C_bigg, dTf, E_agg
+    real(rk) :: C_bigg, dTf, E_agg, scal
     ! Bigg immersion freezing of rain -> graupel, bulk-integrated over the
     ! rain PSD: dqr/dt = C_bigg*(exp(0.66*dT)-1)*nr*Dm^6.  The Dm^6 (6th moment)
     ! makes small drizzle drops freeze slowly so supercooled rain persists.
@@ -694,6 +714,12 @@ contains
         if (qg0 > QG_MIN) rate_g = min(coeff*(T0k-T_FREEZE)*Nb(k,IG)*Dm(k,IG)/(3.0_rk*rho(k)), qg0/dt)
         aqs=aqs-rate_s; aqg=aqg-rate_g; aqr=aqr+(rate_s+rate_g)
         aT=aT - L_FUS/CP*(rate_s+rate_g)
+      end if
+      ! --- latent-heat limiter (see DT_MAX): conserving scale-back ---
+      if (abs(aT)*dt > DT_MAX) then
+        scal=DT_MAX/(abs(aT)*dt)
+        aqv=aqv*scal; aqc=aqc*scal; aqr=aqr*scal; aqi=aqi*scal
+        aqs=aqs*scal; aqg=aqg*scal; anr=anr*scal; ani=ani*scal; aT=aT*scal
       end if
       ! --- apply once ---
       qv(k)=max(qv0+aqv*dt,0.0_rk); qc(k)=max(qc0+aqc*dt,0.0_rk)
@@ -757,7 +783,7 @@ contains
     integer  :: k
     real(rk) :: T0k,qc0,qr0,qi0,qs0,qg0,nc0,nr0,ni0
     real(rk) :: aqc,aqr,aqi,aqs,aqg,anc,anr,ani,aT
-    real(rk) :: Vrel,rate,rate_qi,rate_qr
+    real(rk) :: Vrel,rate,rate_qi,rate_qr,scal
     do k = 1, nz
       if (T(k) >= T_FREEZE) cycle
       T0k=T(k); qc0=qc(k); qr0=qr(k); qi0=qi(k); qs0=qs(k); qg0=qg(k)
@@ -803,6 +829,12 @@ contains
         anr=anr + nr0*(-rate_qr)/max(qr0,Q_MIN)
         aqr=aqr-rate_qr; aqg=aqg+rate_qr
         aT=aT+L_FUS/CP*rate_qr
+      end if
+      ! --- latent-heat limiter (see DT_MAX): conserving scale-back ---
+      if (abs(aT)*dt > DT_MAX) then
+        scal=DT_MAX/(abs(aT)*dt)
+        aqc=aqc*scal; aqr=aqr*scal; aqi=aqi*scal; aqs=aqs*scal; aqg=aqg*scal
+        anc=anc*scal; anr=anr*scal; ani=ani*scal; aT=aT*scal
       end if
       ! --- apply once ---
       qc(k)=max(qc0+aqc*dt,0.0_rk); qr(k)=max(qr0+aqr*dt,0.0_rk)
@@ -870,8 +902,10 @@ contains
     real(rk), intent(in)    :: P(nz)
     real(rk), intent(inout) :: T(nz),qv(nz),qc(nz),qi(nz),qs(nz),qg(nz),nc(nz)
     integer  :: k, it
-    real(rk) :: ql,excess,denom,dq,qc_old
+    real(rk) :: ql,excess,denom,dq,qc_old,dq_max,dq_cum
+    dq_max = DT_MAX*CP/L_VAP        ! max |cumulative| condensation for DT_MAX
     do k = 1, nz
+      dq_cum = 0.0_rk
       do it = 1, 3
         if (T(k) > T_HOM) then
           ql = qsat_liquid(T(k),P(k))
@@ -879,6 +913,10 @@ contains
           denom  = 1.0_rk + L_VAP**2*ql/(RV*CP*T(k)**2)
           dq = excess/denom
           dq = max(dq, -qc(k))
+          ! latent-heat limiter: cap cumulative condensation so the whole
+          ! adjustment changes T by at most DT_MAX (residual relaxes next step)
+          dq = min(max(dq, -dq_max-dq_cum), dq_max-dq_cum)
+          dq_cum = dq_cum + dq
           qc_old = qc(k)
           qc(k) = qc(k) + dq
           qv(k) = qv(k) - dq
