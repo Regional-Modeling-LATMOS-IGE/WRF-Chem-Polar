@@ -30,12 +30,12 @@
 ! ============================================================================
 ! !!! COEFFICIENT VERIFICATION REQUIRED BEFORE PRODUCTION RUNS !!!
 !   VERIFIED here (published coefficients):
-!     - Niemand et al. (2012)  desert-dust immersion n_s
-!     - DeMott et al. (2015)   dust, number-based (D15)
+!     - Niemand et al. (2012)   desert-dust immersion n_s
+!     - DeMott et al. (2015)    dust, number-based (D15)
+!     - McCluskey et al. (2018) sea-spray-aerosol immersion n_s (M18)
 !   PLACEHOLDERS — functional form coded, COEFFICIENTS MUST BE SET FROM THE
 !   PAPERS by the user (search for "TODO VERIFY"):
 !     - Tobo et al. (2019)      Icelandic/high-latitude dust immersion n_s
-!     - McCluskey et al. (2018) sea-spray-aerosol immersion n_s
 !     - Ullrich et al. (2017)   soot immersion n_s
 !     - Hummel et al. (2018)    bacteria / fungal-spore frozen fractions
 !   The namelist default dust parameterization is therefore Niemand-2012
@@ -298,8 +298,16 @@ CONTAINS
   END FUNCTION ns_dust
 
   REAL FUNCTION ns_marine(tc)
-    ! TODO VERIFY: McCluskey et al. (2018) sea-spray-aerosol immersion n_s.
-    ! Form n_s = exp(a*Tc + b) m-2; SET a,b FROM THE PAPER.
+    ! VERIFIED: McCluskey et al. (2018) marine sea-spray-aerosol immersion n_s
+    ! (the "M18" parameterization). The published marine INP fit is
+    !   n_INP[m-3] = exp(-0.545*Tc + 1.0125) * SSA[m2 m-3],
+    ! i.e. an ice-active surface-site density
+    !   n_s(Tc) = exp(-0.545*Tc + 1.0125)  [m-2],  Tc in deg C.
+    ! Derived from pristine North Atlantic air; evaluated against Southern Ocean
+    ! INP down to ~ -25 C. Represents the regularly-occurring marine INP class
+    ! only (heat-labile organic INP not included). Applied over its marine
+    ! mixed-phase range: warm bound -5 C (warmer INP is the biological tail),
+    ! cold extrapolation clamped at -30 C.
     IMPLICIT NONE
     REAL, INTENT(IN) :: tc
     REAL :: tcl
@@ -307,7 +315,7 @@ CONTAINS
       ns_marine = 0.0
     ELSE
       tcl = MAX(tc, -30.0)
-      ns_marine = EXP(-0.545*tcl - 1.2)               !!! TODO VERIFY coefficients
+      ns_marine = EXP(-0.545*tcl + 1.0125)            ! McCluskey et al. (2018), M18
     END IF
   END FUNCTION ns_marine
 
