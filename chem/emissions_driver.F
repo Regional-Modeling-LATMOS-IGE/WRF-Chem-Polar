@@ -832,7 +832,7 @@ real, save :: freq_industry(24)    = &
         ! PBAP emissions for GOCART aerosols
         CALL wrf_debug(15, 'PBAP emissions')
         CALL pbap_emis( id, dtstep, dz8w, &
-         config_flags%chem_opt, config_flags%pbap_opt, &
+         config_flags%chem_opt, config_flags%pbap_opt, config_flags%inp_diag_opt, &
          rho_phy, chem, e_bact, e_spore,                    &
          xland, ivgtyp, xice, snowh, lai, T2, Q2, &
          ids,ide, jds,jde, kds,kde,                                 &

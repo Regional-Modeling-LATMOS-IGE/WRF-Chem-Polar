@@ -66,7 +66,7 @@ MODULE module_pbap_emis
 !------------------------------------------------------------------------------
 
   SUBROUTINE pbap_emis( id, dtstep, dz8w, &
-         chem_opt, pbap_opt, &
+         chem_opt, pbap_opt, inp_diag_opt, &
          rho_phy, chem, e_bact, e_spore,                            &
          xland, ivgtyp, xice, snowh, lai, t2, q2, &
          ids,ide, jds,jde, kds,kde,                                 &
@@ -100,15 +100,17 @@ MODULE module_pbap_emis
 
     !TODO Should include all explicit ONLY: associations for module_state_description
     USE module_state_description, ONLY: NUM_CHEM, P_OC1, P_BACT1, P_SPORE1, &
-                                        PARAM_FIRST_SCALAR
+                                        PARAM_FIRST_SCALAR, &
+                                        P_INP_BIO1, P_INP_BIO2, P_INP_BIO3, P_INP_BIO4
     USE module_model_constants, ONLY: PICONST
     USE module_data_gocartchem, only: OC_MFAC
+    USE module_inp_emis, ONLY: inp_emit_bio
 
     IMPLICIT NONE
 
     !---- Arguments
     ! Input
-    INTEGER, INTENT(IN) :: chem_opt, pbap_opt
+    INTEGER, INTENT(IN) :: chem_opt, pbap_opt, inp_diag_opt
     INTEGER, INTENT(IN) :: id,                                      &
                            ids,ide, jds,jde, kds,kde,               &
                            ims,ime, jms,jme, kms,kme,               &
@@ -136,6 +138,8 @@ MODULE module_pbap_emis
     REAL :: air_dens
     ! Indices
     INTEGER :: i, j
+    ! INP emission (ADS): differential bio-INP bins for module_inp_emis
+    REAL :: bio_diff(4)
 
     !---- Parameters
     ! Aerosol diameter (um)
@@ -218,7 +222,7 @@ MODULE module_pbap_emis
               chem(i,kts,j,P_OC1) = chem(i,kts,j,P_OC1) &
                                      + spore_mass_emiss * conv / OC_MFAC
             ENDIF
-            ! PBAP number tracers for the INP diagnostic (module_inp_diag).
+            ! PBAP number tracers for the INP scheme (module_inp_emis).
             ! Least-invasive: the OC1 mass emission above is unchanged; here we
             ! additionally carry the bacteria/spore NUMBER (m-2 s-1 -> #/kg via
             ! conv) so species-specific bio INP can be diagnosed. These advect
@@ -230,6 +234,15 @@ MODULE module_pbap_emis
             IF (P_SPORE1 >= PARAM_FIRST_SCALAR) THEN
               chem(i,kts,j,P_SPORE1) = chem(i,kts,j,P_SPORE1) &
                                      + spore_num_emiss * conv
+            ENDIF
+            ! INP emission (ADS, emit-once): biological INP from this step's PBAP
+            ! number emission (bacteria + spores), added to the surface bio-INP bins.
+            IF (inp_diag_opt > 0 .AND. P_INP_BIO1 >= PARAM_FIRST_SCALAR) THEN
+              CALL inp_emit_bio( bact_num_emiss*conv, spore_num_emiss*conv, bio_diff )
+              chem(i,kts,j,P_INP_BIO1) = chem(i,kts,j,P_INP_BIO1) + bio_diff(1)
+              chem(i,kts,j,P_INP_BIO2) = chem(i,kts,j,P_INP_BIO2) + bio_diff(2)
+              chem(i,kts,j,P_INP_BIO3) = chem(i,kts,j,P_INP_BIO3) + bio_diff(3)
+              chem(i,kts,j,P_INP_BIO4) = chem(i,kts,j,P_INP_BIO4) + bio_diff(4)
             ENDIF
           !---- Other chem_opt cases are not supported
           ELSE

@@ -10,6 +10,7 @@ CONTAINS
   USE module_configure
   USE module_state_description
   USE module_model_constants, ONLY: mwdry
+  USE module_inp_emis, ONLY: inp_emit_marine
   IMPLICIT NONE
    TYPE(grid_config_rec_type),  INTENT(IN   )    :: config_flags
 
@@ -50,6 +51,9 @@ CONTAINS
   real*8, dimension (1,1) :: w10m,gwet,airden,airmas
   real*8, dimension (1) :: dxy
   real*8 conver,converi
+  real*8  :: tc0(4)
+  real    :: eseas_ugkg(4), mar_diff(4)
+  integer :: nn
   conver=1.d-9
   converi=1.d9
 !
@@ -74,6 +78,7 @@ CONTAINS
      tc(2)=chem(i,kts,j,p_seas_2)*conver
      tc(3)=chem(i,kts,j,p_seas_3)*conver
      tc(4)=chem(i,kts,j,p_seas_4)*conver
+     tc0(1:4)=tc(1:4)   ! pre-emission sea-spray, for the INP emission increment
      endif
      w10m(1,1)=sqrt(u10(i,j)*u10(i,j)+v10(i,j)*v10(i,j))
      airmas(1,1)=-(p8w(i,kts+1,j)-p8w(i,kts,j))*dx*dx/g
@@ -94,6 +99,18 @@ CONTAINS
      chem(i,kts,j,p_seas_2)=tc(2)*converi
      chem(i,kts,j,p_seas_3)=tc(3)*converi
      chem(i,kts,j,p_seas_4)=tc(4)*converi
+     ! INP emission (ADS, emit-once): marine INP from this step's sea-spray
+     ! emission increment (tc - tc0), added to the surface marine-INP tracers.
+     if (config_flags%inp_diag_opt > 0 .and. p_inp_mar1 >= param_first_scalar) then
+        do nn = 1, 4
+           eseas_ugkg(nn) = real( (tc(nn) - tc0(nn)) * converi )
+        end do
+        call inp_emit_marine( eseas_ugkg, mar_diff )
+        chem(i,kts,j,p_inp_mar1) = chem(i,kts,j,p_inp_mar1) + mar_diff(1)
+        chem(i,kts,j,p_inp_mar2) = chem(i,kts,j,p_inp_mar2) + mar_diff(2)
+        chem(i,kts,j,p_inp_mar3) = chem(i,kts,j,p_inp_mar3) + mar_diff(3)
+        chem(i,kts,j,p_inp_mar4) = chem(i,kts,j,p_inp_mar4) + mar_diff(4)
+     end if
      endif
 ! for output diagnostics
      emis_seas(i,1,j,p_eseas1)=bems(1)

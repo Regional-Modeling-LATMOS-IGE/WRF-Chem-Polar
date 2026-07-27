@@ -16,6 +16,7 @@ CONTAINS
          its,ite, jts,jte, kts,kte                                        )
   USE module_configure
   USE module_state_description
+  USE module_inp_emis, ONLY: inp_emit_dust
   IMPLICIT NONE
    TYPE(grid_config_rec_type),  INTENT(IN   )    :: config_flags
 
@@ -53,6 +54,8 @@ CONTAINS
   real*8, DIMENSION (5) :: tc,bems
   real*8, dimension (1,1) :: w10m,gwet,airden
   real                    :: dz_lowest
+  real                    :: edust_ugkg(5), du_diff(4)
+  integer                 :: nn
   real*8  conver,converi
   conver=1.e-9
   converi=1.e9
@@ -108,7 +111,21 @@ CONTAINS
         chem(i,kts,j,p_dust_4)=tc(4)*converi
         chem(i,kts,j,p_dust_5)=tc(5)*converi
     endif
-     
+
+     ! INP emission (ADS, emit-once): convert this step's per-bin dust emission
+     ! bems (kg m-2) to a mass mixing-ratio increment (ug kg-1), then to
+     ! differential dust-INP bins (# kg-1) added to the surface INP tracers.
+     if (config_flags%inp_diag_opt > 0 .and. p_inp_dust1 >= param_first_scalar) then
+        do nn = 1, 5
+           edust_ugkg(nn) = real( bems(nn) / max(rho_phy(i,kts,j)*dz_lowest, 1.d-30) * 1.d9 )
+        end do
+        call inp_emit_dust( edust_ugkg, rho_phy(i,kts,j), config_flags%inp_dust_param, du_diff )
+        chem(i,kts,j,p_inp_dust1) = chem(i,kts,j,p_inp_dust1) + du_diff(1)
+        chem(i,kts,j,p_inp_dust2) = chem(i,kts,j,p_inp_dust2) + du_diff(2)
+        chem(i,kts,j,p_inp_dust3) = chem(i,kts,j,p_inp_dust3) + du_diff(3)
+        chem(i,kts,j,p_inp_dust4) = chem(i,kts,j,p_inp_dust4) + du_diff(4)
+     end if
+
      ! A. Ukhov
      ! for output diagnostics
      ! bems (kg/m2) per dt

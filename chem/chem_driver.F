@@ -35,7 +35,7 @@
   USE module_ctrans_grell
   USE module_data_soa_vbs, only: ldrog_vbs
   USE module_dust_load
-  USE module_inp_diag, only: inp_diag_driver
+  USE module_inp_emis, only: inp_prog_driver
   USE module_chem_cup, only: chem_cup_driver !BSINGH - For WRFCuP scheme
   USE module_dry_dep_driver
   USE module_emissions_driver
@@ -1825,41 +1825,18 @@ end if !Chemistry time step check
            its,ite, jts,jte, kts, kte                                                 )
 
 !
-! Diagnose ice nucleating particle (INP) number concentrations from the
-! current aerosol field, at the prescribed activation temperatures. Like
-! sum_pm_driver this runs every time step (depends on emissions/deposition).
+! Ice nucleating particles (INP): prognostic emit-once scheme. INP are created
+! from the aerosol in the emission code (GOCART dust/sea salt, PBAP); here, every
+! chem step, we apply the in-cloud activation sink to the advected INP bins and
+! refresh the cumulative TOTAL n_INP(T) fields (also read by the microphysics).
 !
      if (config_flags%inp_diag_opt > 0) then
-       call inp_diag_driver ( chem, t_phy, rho, config_flags%chem_opt,              &
-            config_flags%inp_dust_param,                                            &
-            grid%inp_dust, grid%inp_marine, grid%inp_bio, grid%inp_soot,            &
-            grid%inp_total,                                                         &
+       call inp_prog_driver ( chem, t_phy, moist(:,:,:,P_QC), moist(:,:,:,P_QI),    &
+            grid%dt,                                                                &
+            grid%inp_tot_m10, grid%inp_tot_m15, grid%inp_tot_m20, grid%inp_tot_m25, &
             ids,ide, jds,jde, kds,kde,                                              &
             ims,ime, jms,jme, kms,kme,                                              &
             its,ite, jts,jte, kts,kte                                              )
-       ! Copy the requested activation temperatures from the 4D arrays (which
-       ! WRF history cannot write) into named 3D fields for wrfout output.
-       ! Indices into INP_ACT_TEMP_C: 3=-10C, 5=-15C, 7=-20C, 9=-25C.
-       grid%inp_dust_m10   = grid%inp_dust(:,:,:,3)
-       grid%inp_dust_m15   = grid%inp_dust(:,:,:,5)
-       grid%inp_dust_m20   = grid%inp_dust(:,:,:,7)
-       grid%inp_dust_m25   = grid%inp_dust(:,:,:,9)
-       grid%inp_marine_m10 = grid%inp_marine(:,:,:,3)
-       grid%inp_marine_m15 = grid%inp_marine(:,:,:,5)
-       grid%inp_marine_m20 = grid%inp_marine(:,:,:,7)
-       grid%inp_marine_m25 = grid%inp_marine(:,:,:,9)
-       grid%inp_bio_m10    = grid%inp_bio(:,:,:,3)
-       grid%inp_bio_m15    = grid%inp_bio(:,:,:,5)
-       grid%inp_bio_m20    = grid%inp_bio(:,:,:,7)
-       grid%inp_bio_m25    = grid%inp_bio(:,:,:,9)
-       grid%inp_soot_m10   = grid%inp_soot(:,:,:,3)
-       grid%inp_soot_m15   = grid%inp_soot(:,:,:,5)
-       grid%inp_soot_m20   = grid%inp_soot(:,:,:,7)
-       grid%inp_soot_m25   = grid%inp_soot(:,:,:,9)
-       grid%inp_total_m10  = grid%inp_total(:,:,:,3)
-       grid%inp_total_m15  = grid%inp_total(:,:,:,5)
-       grid%inp_total_m20  = grid%inp_total(:,:,:,7)
-       grid%inp_total_m25  = grid%inp_total(:,:,:,9)
      endif
 
 
