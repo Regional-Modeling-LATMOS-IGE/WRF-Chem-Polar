@@ -431,7 +431,10 @@ CONTAINS
     USE module_state_description, ONLY:p_sulf, p_seas_1, p_seas_2, p_seas_3, &
       p_seas_4, p_bc1, p_oc1, p_bc2, p_oc2, p_dust_1, p_dust_2, p_dust_3, &
       p_dust_4, p_dust_5, MOZCART_KPP, GOCART_SIMPLE, T1_MOZCART_KPP, &
-      GOCARTRADM2, GOCARTRACM_KPP
+      GOCARTRADM2, GOCARTRACM_KPP, &
+      p_inp_dust1, p_inp_dust2, p_inp_dust3, p_inp_dust4, &
+      p_inp_mar1, p_inp_mar2, p_inp_mar3, p_inp_mar4, &
+      p_inp_bio1, p_inp_bio2, p_inp_bio3, p_inp_bio4
 
     IMPLICIT NONE
 
@@ -458,8 +461,8 @@ CONTAINS
     !-------- Initialize aerosol tracer number for chem_opt --------
     ! This could be recovered from the aerosol scheme data directly
     IF(aer_is_gocart) THEN
-      ! MOZCART
-      naerspecies = 14
+      ! MOZCART: 14 GOCART aerosols + 12 prognostic INP tracers (ADS)
+      naerspecies = 26
     ELSE
       CALL wrf_error_fatal ('aer_drydep_simple_init: chem_opt not supported')
     ENDIF
@@ -482,20 +485,35 @@ CONTAINS
     IF(aer_is_gocart) THEN
       !-- GOCART
       ! Species that experience dry deposition
+      ! Last 12 entries = prognostic INP tracers (ADS), deposited like their
+      ! parent aerosol: dust INP with a representative accumulation-coarse dust
+      ! size, marine INP with a mid sea-spray size, bio INP with a PBAP size.
+      ! The 4 bins of each species are the same particles (different freezing
+      ! temperatures), so they share one size/density. (C) tunable if the
+      ! ice-active mode is better constrained.
       aer_pointers(:) = (/ p_sulf, p_seas_1, p_seas_2, p_seas_3, p_seas_4, &
                            p_bc1, p_oc1, p_bc2, p_oc2, p_dust_1, &
-                           p_dust_2, p_dust_3, p_dust_4, p_dust_5 /)
+                           p_dust_2, p_dust_3, p_dust_4, p_dust_5, &
+                           p_inp_dust1, p_inp_dust2, p_inp_dust3, p_inp_dust4, &
+                           p_inp_mar1, p_inp_mar2, p_inp_mar3, p_inp_mar4, &
+                           p_inp_bio1, p_inp_bio2, p_inp_bio3, p_inp_bio4 /)
       ! Effective aerosol dry diameter, from Chin et al. (2002) except dust
       ! and sea salt from WRF-Chem GOCART parameters
       aer_dry_diam(:) = (/ 0.312E-6, 0.6E-6, 2.0E-6, 6.5E-6, 15.0E-6, &
                            0.078E-6, 0.174E-6, 0.078E-6, 0.174E-6, 1.46E-6, &
-                           2.8E-6, 4.8E-6, 9.0E-6, 16.0E-6 /)
+                           2.8E-6, 4.8E-6, 9.0E-6, 16.0E-6, &
+                           2.8E-6, 2.8E-6, 2.8E-6, 2.8E-6, &
+                           2.0E-6, 2.0E-6, 2.0E-6, 2.0E-6, &
+                           2.0E-6, 2.0E-6, 2.0E-6, 2.0E-6 /)
       ! Aerosol dry densities, from Chin et al. (2002). Value of 1000 kg/m3
       ! for BC might not be realistic but was left like this for consistency
       ! with the rest of GOCART
       aer_dry_dens(:) = (/ 1700., 2200., 2200., 2200., 2200., &
                            1000., 1800., 1000., 1800., 2600., &
-                           2600., 2600., 2600., 2600. /)
+                           2600., 2600., 2600., 2600., &
+                           2600., 2600., 2600., 2600., &
+                           2200., 2200., 2200., 2200., &
+                           1000., 1000., 1000., 1000. /)
     ELSE
       CALL wrf_error_fatal ('aer_drydep_simple_init: chem_opt not supported')
     ENDIF

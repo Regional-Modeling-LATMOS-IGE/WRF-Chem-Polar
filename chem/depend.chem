@@ -51,7 +51,7 @@ module_chem.utilities.o:
 
 module_radm.o: module_data_sorgam.o module_data_radm2.o
 
-module_gocart_dust.o: ../phys/module_data_gocart_dust.o
+module_gocart_dust.o: ../phys/module_data_gocart_dust.o module_inp_emis.o
 
 module_gocart_dust_afwa.o: ../phys/module_data_gocart_dust.o module_data_sorgam.o
 
@@ -59,7 +59,7 @@ module_uoc_dust.o: module_qf03.o module_soilpsd.o ../phys/module_sf_noahlsm.o ..
 
 module_uoc_dustwd.o: module_data_uoc_wd.o
 
-module_gocart_seasalt.o: module_data_gocart_seas.o
+module_gocart_seasalt.o: module_data_gocart_seas.o module_inp_emis.o
 
 module_gocart_chem.o: module_data_gocartchem.o module_phot_mad.o
 
@@ -85,7 +85,7 @@ module_mineraldust_emis.o:
 
 module_blowing_snow_emis.o:
 
-module_pbap_emis.o: module_data_gocartchem.o
+module_pbap_emis.o: module_data_gocartchem.o module_inp_emis.o
 
 module_dms_emis.o:
 

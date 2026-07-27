@@ -665,7 +665,10 @@ CONTAINS
     USE module_state_description, ONLY: MOZCART_KPP, &
         T1_MOZCART_KPP, GOCART_SIMPLE, GOCARTRADM2,GOCARTRACM_KPP, &
         p_seas_1, p_seas_2, p_seas_3, p_seas_4, p_bc2, p_oc2, p_dust_1, &
-        p_dust_2, p_dust_3, p_dust_4, p_dust_5, p_sulf
+        p_dust_2, p_dust_3, p_dust_4, p_dust_5, p_sulf, &
+        p_inp_dust1, p_inp_dust2, p_inp_dust3, p_inp_dust4, &
+        p_inp_mar1, p_inp_mar2, p_inp_mar3, p_inp_mar4, &
+        p_inp_bio1, p_inp_bio2, p_inp_bio3, p_inp_bio4
 
     IMPLICIT NONE
 
@@ -682,8 +685,8 @@ CONTAINS
 
     !-------- Initialize number of aerosols for chem_opt --------
     IF(aer_is_gocart) THEN
-      ! GOCART
-      n_aer = 12
+      ! GOCART: 12 wet-scavenged aerosols + 12 prognostic INP tracers (ADS)
+      n_aer = 24
     ELSE
       CALL wrf_error_fatal ('wetscav_simple_init: chem_opt not supported')
     ENDIF
@@ -712,13 +715,23 @@ CONTAINS
       !-- GOCART
       ! Species that experience wet scavenging (sulfate deposition needs to
       ! be disabled in mozcart_wetscav)
+      ! Last 12 entries = prognostic INP tracers (ADS): liquid rainout + washout
+      ! like their parent aerosol, but ICE rainout is set to 0 below because the
+      ! in-cloud activation sink (module_inp_emis) already removes INP that
+      ! nucleate ice, T-selectively -- keeping the two processes distinct.
       aer_pointers(:) = (/ p_sulf, p_seas_1, p_seas_2, p_seas_3, p_seas_4, &
                            p_bc2, p_oc2, p_dust_1, p_dust_2, p_dust_3, &
-                           p_dust_4, p_dust_5 /)
+                           p_dust_4, p_dust_5, &
+                           p_inp_dust1, p_inp_dust2, p_inp_dust3, p_inp_dust4, &
+                           p_inp_mar1, p_inp_mar2, p_inp_mar3, p_inp_mar4, &
+                           p_inp_bio1, p_inp_bio2, p_inp_bio3, p_inp_bio4 /)
       ! Aerosol effective diameters (µm) for aer_pointers species
       aer_dry_diam(:) = (/ 0.312E-6, 0.6E-6, 2.0E-6, 6.5E-6, 15.0E-6, &
                            0.078E-6, 0.174E-6, 1.46E-6, 2.8E-6, 4.8E-6, &
-                           9.0E-6, 16.0E-6 /)
+                           9.0E-6, 16.0E-6, &
+                           2.8E-6, 2.8E-6, 2.8E-6, 2.8E-6, &
+                           2.0E-6, 2.0E-6, 2.0E-6, 2.0E-6, &
+                           2.0E-6, 2.0E-6, 2.0E-6, 2.0E-6 /)
       ! Fraction of activated aerosols for aer_pointers species
       ! Activated fraction in liquid clouds
       ! We use the same values as the aq_gas_ratio parameters for the same
@@ -726,21 +739,31 @@ CONTAINS
       ! phys/module_cu_gf_ctrans.F
       aq_aer_ratio(:) = (/ 1.0, 1.0, 1.0, 1.0, 1.0, &
                            0.8, 0.8, 0.5, 0.5, 0.5, &
-                           0.5, 0.5 /)
+                           0.5, 0.5, &
+                           0.5, 0.5, 0.5, 0.5, &
+                           1.0, 1.0, 1.0, 1.0, &
+                           0.5, 0.5, 0.5, 0.5 /)
       IF(DO_ICE_RAINOUT) THEN
         ! Activated fraction in ice clouds is usually very low except close to
         ! the homogeneous freezing temperature, even for efficient INP
         ! - Pick 0.5 for dust for now but the true value is probably lower
         ! - BC is not an efficient INP except at homogeneous freezing
         !   temperatures but we could also include a tiny fraction
+        ! INP ice rainout = 0: the activation sink owns ice-nucleation removal.
         ice_aer_ratio(:) = (/ 0., 0., 0., 0., 0., &
                               0., 0., 0.5, 0.5, 0.5, &
-                              0.5, 0.5 /)
+                              0.5, 0.5, &
+                              0., 0., 0., 0., &
+                              0., 0., 0., 0., &
+                              0., 0., 0., 0. /)
       ELSE
         ! Disable rainout from ice clouds
         ice_aer_ratio(:) = (/ 0., 0., 0., 0., 0., &
                               0., 0., 0., 0., 0., &
-                              0., 0. /)
+                              0., 0., &
+                              0., 0., 0., 0., &
+                              0., 0., 0., 0., &
+                              0., 0., 0., 0. /)
       ENDIF
     ELSE
       CALL wrf_error_fatal ('wetscav_simple_init: chem_opt not supported')
