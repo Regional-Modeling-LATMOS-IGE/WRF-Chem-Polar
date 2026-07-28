@@ -3701,7 +3701,7 @@ state   real   oc2          ikjftb   chem       1         -   i0{12}rhusdf=(bdy_
 # PBAP number tracers for INP (ADS). Emitted in module_pbap_emis.
 state   real   bact1        ikjftb   chem       1         -   i0{12}rhusdf=(bdy_interp:dt)  "BACT1"     "Bacteria aerosol number (PBAP)"      "#/kg-dryair"
 # ============================================================================
-# INP prognostic tracers (ADS) -- emit-once design (see chem/module_inp_diag.F).
+# INP prognostic tracers (ADS) -- emit-once design (see chem/module_inp_emis.F).
 # INP are created from the aerosol ONLY at emission (species-specific n_s /
 # frozen fraction), then advected as independent chem species and removed by
 # dry deposition, wet deposition and in-cloud activation. Stored as DIFFERENTIAL
@@ -3982,7 +3982,7 @@ rconfig   integer     seas_oa_opt         namelist,chem          max_domains    
 rconfig   integer     pbap_opt            namelist,chem          1              0       rh    "pbap_opt"            ""      ""
 # INP diagnostic options (ADS). inp_dust_param: 1=Tobo2019,
 # 2=Niemand2012, 3=DeMott2015, 4=Ullrich2017. Default 2 (Niemand, verified);
-# switch to 1 (Tobo) once its n_s coefficients are set in module_inp_diag.F.
+# switch to 1 (Tobo) once its n_s coefficients are set in module_inp_emis.F.
 rconfig   integer     inp_diag_opt        namelist,chem          1              0       rh    "inp_diag_opt"        ""      ""
 rconfig   integer     inp_dust_param      namelist,chem          1              2       rh    "inp_dust_param"      ""      ""
 rconfig   integer     nuc_sulf_opt        namelist,chem          max_domains    2       rh    "nuc_sulf_opt"         ""      ""
