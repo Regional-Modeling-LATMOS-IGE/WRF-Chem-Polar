@@ -35,7 +35,7 @@
   USE module_ctrans_grell
   USE module_data_soa_vbs, only: ldrog_vbs
   USE module_dust_load
-  USE module_inp_emis, only: inp_prog_driver
+  USE module_inp_emis, only: inp_prog_driver, inp_bdy_relax
   USE module_chem_cup, only: chem_cup_driver !BSINGH - For WRFCuP scheme
   USE module_dry_dep_driver
   USE module_emissions_driver
@@ -1831,6 +1831,14 @@ end if !Chemistry time step check
 ! refresh the cumulative TOTAL n_INP(T) fields (also read by the microphysics).
 !
      if (config_flags%inp_diag_opt > 0) then
+       ! INP boundary conditions: seed the lateral-boundary zone with diagnostic INP
+       ! from the boundary aerosol, so transported/inflowing aerosol carries INP
+       ! (emit-once creates INP only from LOCAL emission; inflow would else be sterile).
+       call inp_bdy_relax ( chem, rho, config_flags%inp_dust_param,                 &
+            config_flags%spec_bdy_width,                                            &
+            ids,ide, jds,jde, kds,kde,                                              &
+            ims,ime, jms,jme, kms,kme,                                              &
+            its,ite, jts,jte, kts,kte                                              )
        call inp_prog_driver ( chem, t_phy, moist(:,:,:,P_QC), moist(:,:,:,P_QI),    &
             grid%dt,                                                                &
             grid%inp_tot_m10, grid%inp_tot_m15, grid%inp_tot_m20, grid%inp_tot_m25, &

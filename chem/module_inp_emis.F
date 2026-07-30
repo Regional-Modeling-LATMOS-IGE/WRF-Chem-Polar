@@ -69,7 +69,7 @@ MODULE module_inp_emis
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: inp_prog_driver, inp_emit_dust, inp_emit_marine, inp_emit_bio
+  PUBLIC :: inp_prog_driver, inp_bdy_relax, inp_emit_dust, inp_emit_marine, inp_emit_bio
 
   !---- (C) PHYSICS TUNING KNOB: dust parameterization selector (inp_dust_param)
   INTEGER, PARAMETER :: INP_DUST_TOBO2019    = 1
@@ -179,6 +179,91 @@ CONTAINS
     END DO
 
   END SUBROUTINE inp_prog_driver
+
+!------------------------------------------------------------------------------
+  SUBROUTINE inp_bdy_relax( chem, rho, inp_dust_param, spec_bdy_width,   &
+                  ids,ide, jds,jde, kds,kde,                             &
+                  ims,ime, jms,jme, kms,kme,                             &
+                  its,ite, jts,jte, kts,kte                              )
+
+    ! INP boundary conditions for the emit-once scheme. Emit-once creates INP only
+    ! from LOCAL emission, so aerosol advected in through the lateral boundaries
+    ! would otherwise carry NO INP -- a boundary-fed (regional/parent) domain then
+    ! reads ~0 INP even when transported aerosol is abundant. Here, every step, the
+    ! INP tracers in the lateral-boundary zone (width spec_bdy_width) are SET to the
+    ! diagnostic n_INP = aerosol * f(T) computed from the boundary CONCENTRATION
+    ! (same conversion as emission, fed the concentration), so inflow arrives with
+    ! the INP its ice-active spectrum implies. The interior stays pure emit-once.
+    ! NOTE: this assumes the inflowing aerosol is un-depleted (its warm INP not yet
+    ! activated upstream) -- an upper estimate, adequate as a boundary source.
+
+    USE module_state_description, ONLY: num_chem, param_first_scalar,       &
+         p_dust_1, p_dust_2, p_dust_3, p_dust_4, p_dust_5,                 &
+         p_seas_1, p_seas_2, p_seas_3, p_seas_4, p_bact1, p_spore1,        &
+         p_inp_dust1, p_inp_dust2, p_inp_dust3, p_inp_dust4,               &
+         p_inp_mar1,  p_inp_mar2,  p_inp_mar3,  p_inp_mar4,                &
+         p_inp_bio1,  p_inp_bio2,  p_inp_bio3,  p_inp_bio4
+
+    IMPLICIT NONE
+
+    INTEGER, INTENT(IN) :: inp_dust_param, spec_bdy_width
+    INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,                      &
+                           ims,ime, jms,jme, kms,kme,                      &
+                           its,ite, jts,jte, kts,kte
+    REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), INTENT(INOUT) :: chem
+    REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(IN)  :: rho
+
+    INTEGER :: i, j, k, w
+    REAL    :: edust(5), eseas(4), nbact, nspore
+    REAL    :: du_diff(NUM_INP_BINS), mar_diff(NUM_INP_BINS), bio_diff(NUM_INP_BINS)
+    LOGICAL :: in_bdy, has_bio
+
+    IF (p_inp_dust1 < param_first_scalar) RETURN
+    w = MAX(spec_bdy_width, 1)
+    has_bio = (p_bact1 >= param_first_scalar) .AND. (p_spore1 >= param_first_scalar)
+
+    DO j = jts, jte
+    DO i = its, ite
+      ! lateral-boundary zone: outer w mass points on any edge (mass points ids..ide-1)
+      in_bdy = (i <= ids+w-1) .OR. (i >= ide-w) .OR. (j <= jds+w-1) .OR. (j >= jde-w)
+      IF (.NOT. in_bdy) CYCLE
+      DO k = kts, kte
+        edust(1) = MAX(chem(i,k,j,p_dust_1), 0.0)
+        edust(2) = MAX(chem(i,k,j,p_dust_2), 0.0)
+        edust(3) = MAX(chem(i,k,j,p_dust_3), 0.0)
+        edust(4) = MAX(chem(i,k,j,p_dust_4), 0.0)
+        edust(5) = MAX(chem(i,k,j,p_dust_5), 0.0)
+        CALL inp_emit_dust(edust, rho(i,k,j), inp_dust_param, du_diff)
+        chem(i,k,j,p_inp_dust1) = du_diff(1)
+        chem(i,k,j,p_inp_dust2) = du_diff(2)
+        chem(i,k,j,p_inp_dust3) = du_diff(3)
+        chem(i,k,j,p_inp_dust4) = du_diff(4)
+
+        eseas(1) = MAX(chem(i,k,j,p_seas_1), 0.0)
+        eseas(2) = MAX(chem(i,k,j,p_seas_2), 0.0)
+        eseas(3) = MAX(chem(i,k,j,p_seas_3), 0.0)
+        eseas(4) = MAX(chem(i,k,j,p_seas_4), 0.0)
+        CALL inp_emit_marine(eseas, mar_diff)
+        chem(i,k,j,p_inp_mar1) = mar_diff(1)
+        chem(i,k,j,p_inp_mar2) = mar_diff(2)
+        chem(i,k,j,p_inp_mar3) = mar_diff(3)
+        chem(i,k,j,p_inp_mar4) = mar_diff(4)
+
+        nbact = 0.0 ; nspore = 0.0
+        IF (has_bio) THEN
+          nbact  = MAX(chem(i,k,j,p_bact1),  0.0)
+          nspore = MAX(chem(i,k,j,p_spore1), 0.0)
+        END IF
+        CALL inp_emit_bio(nbact, nspore, bio_diff)
+        chem(i,k,j,p_inp_bio1) = bio_diff(1)
+        chem(i,k,j,p_inp_bio2) = bio_diff(2)
+        chem(i,k,j,p_inp_bio3) = bio_diff(3)
+        chem(i,k,j,p_inp_bio4) = bio_diff(4)
+      END DO
+    END DO
+    END DO
+
+  END SUBROUTINE inp_bdy_relax
 
 !------------------------------------------------------------------------------
   SUBROUTINE inp_emit_dust( edust_ugkg, rho, inp_dust_param, du_diff )
