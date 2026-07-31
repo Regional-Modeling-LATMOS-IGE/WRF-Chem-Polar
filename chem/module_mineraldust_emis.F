@@ -69,7 +69,7 @@ MODULE module_mineraldust_emis
 !------------------------------------------------------------------------------
 
   SUBROUTINE mineraldust_emis( dtstep, dz8w, tsk, &
-         chem_opt, dust_opt, dust_erod_opt,   &
+         chem_opt, dust_opt, dust_erod_opt, inp_diag_opt, inp_dust_param, &
          rho_phy, chem, e_dust,                                     &
          u10, v10, ust, xland, xice, snowh, &
          raincv, rainncv, &
@@ -114,7 +114,9 @@ MODULE module_mineraldust_emis
 
     USE module_state_description, ONLY: PARAM_FIRST_SCALAR, NUM_CHEM, &
                            P_DUST_1, P_DUST_2, P_DUST_3, P_DUST_4, P_DUST_5, &
-                           DUST_WRFGOCART, DUST_WCP, DUST_FLEXDUST
+                           DUST_WRFGOCART, DUST_WCP, DUST_FLEXDUST, &
+                           P_INP_DUST1, P_INP_DUST2, P_INP_DUST3, P_INP_DUST4
+    USE module_inp_emis, ONLY: inp_emit_dust
     USE module_model_constants, ONLY: PICONST
     USE module_data_gocart_dust, ONLY: POROSITY
     USE module_data_mosaic_asect, ONLY: numptr_aer, lptr_oin_aer, nsize_aer
@@ -124,6 +126,7 @@ MODULE module_mineraldust_emis
     !---- Arguments
     ! Input
     INTEGER, INTENT(IN) :: chem_opt, dust_opt, dust_erod_opt
+    INTEGER, INTENT(IN) :: inp_diag_opt, inp_dust_param
     INTEGER, INTENT(IN) :: ids,ide, jds,jde, kds,kde,               &
                            ims,ime, jms,jme, kms,kme,               &
                            its,ite, jts,jte, kts,kte
@@ -174,6 +177,8 @@ MODULE module_mineraldust_emis
     INTEGER :: i, j, isize, iphase
     INTEGER :: iaerbin, isoilbin
     INTEGER :: l_dust, l_num
+    ! INP emission (ADS): GOCART dust bins snapshot / increment / differential INP bins
+    REAL :: du0(5), edust(5), du_diff(4)
     ! Ginoux S-function scaled by bare soil fraction ("Erodibility" in WRF-Chem)
     REAL :: s_ginoux
     ! Minimum S-function/erodibility to perform dust emissions
@@ -291,6 +296,14 @@ MODULE module_mineraldust_emis
 
             END SELECT
 
+            ! INP emission (ADS, emit-once): snapshot GOCART dust bins before the
+            ! emission loop; the increment afterwards becomes the dust-INP source.
+            IF (inp_diag_opt > 0 .AND. aer_is_gocart) THEN
+              du0(1)=chem(i,kts,j,P_DUST_1) ; du0(2)=chem(i,kts,j,P_DUST_2)
+              du0(3)=chem(i,kts,j,P_DUST_3) ; du0(4)=chem(i,kts,j,P_DUST_4)
+              du0(5)=chem(i,kts,j,P_DUST_5)
+            END IF
+
             !-------- Emit mineral dust aerosol mass and number for each size bin
             DO iaerbin = 1,naersizes
               !---- Distribute total dust emissions to size bin
@@ -349,6 +362,21 @@ MODULE module_mineraldust_emis
                 CALL wrf_error_fatal ('mineraldust_emis: chem_opt not supported')
               ENDIF ! aer_is_
             END DO ! iaerbin
+
+            ! INP emission (ADS, emit-once): dust emission increment -> differential
+            ! dust-INP bins, added to the surface INP tracers.
+            IF (inp_diag_opt > 0 .AND. aer_is_gocart .AND. P_INP_DUST1 >= PARAM_FIRST_SCALAR) THEN
+              edust(1)=MAX(chem(i,kts,j,P_DUST_1)-du0(1),0.0)
+              edust(2)=MAX(chem(i,kts,j,P_DUST_2)-du0(2),0.0)
+              edust(3)=MAX(chem(i,kts,j,P_DUST_3)-du0(3),0.0)
+              edust(4)=MAX(chem(i,kts,j,P_DUST_4)-du0(4),0.0)
+              edust(5)=MAX(chem(i,kts,j,P_DUST_5)-du0(5),0.0)
+              CALL inp_emit_dust(edust, rho_phy(i,kts,j), inp_dust_param, du_diff)
+              chem(i,kts,j,P_INP_DUST1)=chem(i,kts,j,P_INP_DUST1)+du_diff(1)
+              chem(i,kts,j,P_INP_DUST2)=chem(i,kts,j,P_INP_DUST2)+du_diff(2)
+              chem(i,kts,j,P_INP_DUST3)=chem(i,kts,j,P_INP_DUST3)+du_diff(3)
+              chem(i,kts,j,P_INP_DUST4)=chem(i,kts,j,P_INP_DUST4)+du_diff(4)
+            END IF
 
           END IF ! s_ginoux
         END IF ! xland

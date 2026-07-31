@@ -791,7 +791,7 @@ real, save :: freq_industry(24)    = &
         ! Sea spray emissions for GOCART or MOSAIC aerosols
         CALL wrf_debug(15, 'seaspray_emis sea-spray emissions')
         CALL seaspray_emis( id, dtstep, dz8w, config_flags%chem_opt, &
-         config_flags%seas_opt,                                     &
+         config_flags%seas_opt, config_flags%inp_diag_opt,          &
          config_flags%seas_leads_opt,                               &
          config_flags%seas_so4_opt,                                 &
          config_flags%seas_oa_opt,                                  &
@@ -883,7 +883,9 @@ real, save :: freq_industry(24)    = &
         CALL wrf_debug(15, 'mineraldust_emis dust emissions')
         CALL mineraldust_emis( dtstep=dtstep, dz8w=dz8w, tsk=tsk, &
          chem_opt=config_flags%chem_opt, dust_opt=config_flags%dust_opt, &
-         dust_erod_opt=config_flags%dust_erod_opt, rho_phy=rho_phy, chem=chem, &
+         dust_erod_opt=config_flags%dust_erod_opt, &
+         inp_diag_opt=config_flags%inp_diag_opt, inp_dust_param=config_flags%inp_dust_param, &
+         rho_phy=rho_phy, chem=chem, &
          e_dust=e_dust, u10=u10, v10=v10, ust=ust, xland=xland, xice=xice, &
          raincv=raincv, rainncv=rainncv, &
          snowh=snowh, clayfrac=clayfrac, sandfrac=sandfrac, erod=erod, &

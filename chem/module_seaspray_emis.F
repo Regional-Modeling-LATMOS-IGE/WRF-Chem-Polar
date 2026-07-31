@@ -53,7 +53,7 @@ MODULE module_seaspray_emis
 
 !------------------------------------------------------------------------------
 
-  SUBROUTINE seaspray_emis( id, dtstep, dz8w, chem_opt, seas_opt,    &
+  SUBROUTINE seaspray_emis( id, dtstep, dz8w, chem_opt, seas_opt, inp_diag_opt, &
          seas_leads_opt, &
          seas_so4_opt, seas_oa_opt,                                 &
          rho_phy, chem, e_nacl_ocean, e_nacl_leads,                 &
@@ -93,6 +93,7 @@ MODULE module_seaspray_emis
     !TODO Should include all explicit ONLY: associations for module_state_description
     ! chem_opt, seas_opt, param_first_scalar, num_chem, p_seas_1, p_seas_2, p_seas_3, p_seas_4, p_oc1, p_sulf
     USE module_state_description
+    USE module_inp_emis, ONLY: inp_emit_marine
     USE module_model_constants, ONLY: mwdry, piconst
     !TODO Is it possible to only include this for mosaic?
     USE module_data_mosaic_asect, ONLY: numptr_aer, lptr_cl_aer, &
@@ -102,7 +103,7 @@ MODULE module_seaspray_emis
 
     !---- Arguments
     ! Input
-    INTEGER, INTENT(IN) :: chem_opt, seas_opt
+    INTEGER, INTENT(IN) :: chem_opt, seas_opt, inp_diag_opt
     INTEGER, INTENT(IN) :: seas_leads_opt, seas_so4_opt, seas_oa_opt
     INTEGER, INTENT(IN) :: id,                                      &
                            ids,ide, jds,jde, kds,kde,               &
@@ -124,6 +125,8 @@ MODULE module_seaspray_emis
     REAL :: seaspray_vol_emiss, seaspray_num_emiss
     ! Sea salt, sulfate, organic emission fluxes, microg/m2/s
     REAL :: nacl_mass_emiss, so4_mass_emiss, org_mass_emiss
+    ! INP emission (ADS): GOCART sea-salt bins snapshot / increment / differential INP bins
+    REAL :: sea0(4), eseas(4), mar_diff(4)
     ! 10-m wind (m/s), sea surface temperature (celsius)
     REAL :: w10, sst
     ! Open ocean fraction in grid cell (0-1)
@@ -304,6 +307,12 @@ MODULE module_seaspray_emis
 
           !-------- Compute sea-spray aerosol mass/num emissions for each aer
           !         size bin --------
+          ! INP emission (ADS, emit-once): snapshot GOCART sea-salt bins before the
+          ! emission loop; the increment afterwards becomes the marine-INP source.
+          IF (inp_diag_opt > 0 .AND. aer_is_gocart) THEN
+            sea0(1)=chem(i,kts,j,p_seas_1) ; sea0(2)=chem(i,kts,j,p_seas_2)
+            sea0(3)=chem(i,kts,j,p_seas_3) ; sea0(4)=chem(i,kts,j,p_seas_4)
+          END IF
           DO iaerbin = 1,naersizes
             !---- Compute sea-spray aerosol  mass and number emission fluxes
             ! Calculate the volume emission flux seaspray_vol_emiss(iaerbin)
@@ -422,6 +431,20 @@ MODULE module_seaspray_emis
 
 
           END DO ! iaerbin
+
+          ! INP emission (ADS, emit-once): sea-salt emission increment -> differential
+          ! marine-INP bins, added to the surface INP tracers.
+          IF (inp_diag_opt > 0 .AND. aer_is_gocart .AND. p_inp_mar1 >= param_first_scalar) THEN
+            eseas(1)=MAX(chem(i,kts,j,p_seas_1)-sea0(1),0.0)
+            eseas(2)=MAX(chem(i,kts,j,p_seas_2)-sea0(2),0.0)
+            eseas(3)=MAX(chem(i,kts,j,p_seas_3)-sea0(3),0.0)
+            eseas(4)=MAX(chem(i,kts,j,p_seas_4)-sea0(4),0.0)
+            CALL inp_emit_marine(eseas, mar_diff)
+            chem(i,kts,j,p_inp_mar1)=chem(i,kts,j,p_inp_mar1)+mar_diff(1)
+            chem(i,kts,j,p_inp_mar2)=chem(i,kts,j,p_inp_mar2)+mar_diff(2)
+            chem(i,kts,j,p_inp_mar3)=chem(i,kts,j,p_inp_mar3)+mar_diff(3)
+            chem(i,kts,j,p_inp_mar4)=chem(i,kts,j,p_inp_mar4)+mar_diff(4)
+          END IF
 
         END IF ! xland
       END DO ! j
