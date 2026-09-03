@@ -1665,98 +1665,98 @@
 ! is a negative istate, the run is aborted (apparent infinite loop).
 !-----------------------------------------------------------------------
  601  msg = 'dvode--  istate (=i1) illegal '
-      call xerrwd (msg, 30, 1, 1, 1, istate, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 1, 2, 1, istate, 0, 0, zero, zero)
       if (istate .lt. 0) go to 800
       go to 700
  602  msg = 'dvode--  itask (=i1) illegal  '
-      call xerrwd (msg, 30, 2, 1, 1, itask, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 2, 2, 1, itask, 0, 0, zero, zero)
       go to 700
  603  msg='dvode--  istate (=i1) .gt. 1 but dvode not initialized      '
-      call xerrwd (msg, 60, 3, 1, 1, istate, 0, 0, zero, zero)
+      call xerrwd (msg, 60, 3, 2, 1, istate, 0, 0, zero, zero)
       go to 700
  604  msg = 'dvode--  neq (=i1) .lt. 1     '
-      call xerrwd (msg, 30, 4, 1, 1, neq, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 4, 2, 1, neq, 0, 0, zero, zero)
       go to 700
  605  msg = 'dvode--  istate = 3 and neq increased (i1 to i2)  '
-      call xerrwd (msg, 50, 5, 1, 2, n, neq, 0, zero, zero)
+      call xerrwd (msg, 50, 5, 2, 2, n, neq, 0, zero, zero)
       go to 700
  606  msg = 'dvode--  itol (=i1) illegal   '
-      call xerrwd (msg, 30, 6, 1, 1, itol, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 6, 2, 1, itol, 0, 0, zero, zero)
       go to 700
  607  msg = 'dvode--  iopt (=i1) illegal   '
-      call xerrwd (msg, 30, 7, 1, 1, iopt, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 7, 2, 1, iopt, 0, 0, zero, zero)
       go to 700
  608  msg = 'dvode--  mf (=i1) illegal     '
-      call xerrwd (msg, 30, 8, 1, 1, mf, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 8, 2, 1, mf, 0, 0, zero, zero)
       go to 700
  609  msg = 'dvode--  ml (=i1) illegal:  .lt.0 or .ge.neq (=i2)'
-      call xerrwd (msg, 50, 9, 1, 2, ml, neq, 0, zero, zero)
+      call xerrwd (msg, 50, 9, 2, 2, ml, neq, 0, zero, zero)
       go to 700
  610  msg = 'dvode--  mu (=i1) illegal:  .lt.0 or .ge.neq (=i2)'
-      call xerrwd (msg, 50, 10, 1, 2, mu, neq, 0, zero, zero)
+      call xerrwd (msg, 50, 10, 2, 2, mu, neq, 0, zero, zero)
       go to 700
  611  msg = 'dvode--  maxord (=i1) .lt. 0  '
-      call xerrwd (msg, 30, 11, 1, 1, cmn12%maxord, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 11, 2, 1, cmn12%maxord, 0, 0, zero, zero)
       go to 700
  612  msg = 'dvode--  mxstep (=i1) .lt. 0  '
-      call xerrwd (msg, 30, 12, 1, 1, cmn12%mxstep, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 12, 2, 1, cmn12%mxstep, 0, 0, zero, zero)
       go to 700
  613  msg = 'dvode--  mxhnil (=i1) .lt. 0  '
-      call xerrwd (msg, 30, 13, 1, 1, cmn12%mxhnil, 0, 0, zero, zero)
+      call xerrwd (msg, 30, 13, 2, 1, cmn12%mxhnil, 0, 0, zero, zero)
       go to 700
  614  msg = 'dvode--  tout (=r1) behind t (=r2)      '
-      call xerrwd (msg, 40, 14, 1, 0, 0, 0, 2, tout, t)
+      call xerrwd (msg, 40, 14, 2, 0, 0, 0, 2, tout, t)
       msg = '      integration direction is given by h0 (=r1)  '
-      call xerrwd (msg, 50, 14, 1, 0, 0, 0, 1, h0, zero)
+      call xerrwd (msg, 50, 14, 2, 0, 0, 0, 1, h0, zero)
       go to 700
  615  msg = 'dvode--  hmax (=r1) .lt. 0.0  '
-      call xerrwd (msg, 30, 15, 1, 0, 0, 0, 1, hmax, zero)
+      call xerrwd (msg, 30, 15, 2, 0, 0, 0, 1, hmax, zero)
       go to 700
  616  msg = 'dvode--  hmin (=r1) .lt. 0.0  '
-      call xerrwd (msg, 30, 16, 1, 0, 0, 0, 1, cmn12%hmin, zero)
+      call xerrwd (msg, 30, 16, 2, 0, 0, 0, 1, cmn12%hmin, zero)
       go to 700
  617  continue
       msg='dvode--  rwork length needed, lenrw (=i1), exceeds lrw (=i2)'
-      call xerrwd (msg, 60, 17, 1, 2, lenrw, lrw, 0, zero, zero)
+      call xerrwd (msg, 60, 17, 2, 2, lenrw, lrw, 0, zero, zero)
       go to 700
  618  continue
       msg='dvode--  iwork length needed, leniw (=i1), exceeds liw (=i2)'
-      call xerrwd (msg, 60, 18, 1, 2, leniw, liw, 0, zero, zero)
+      call xerrwd (msg, 60, 18, 2, 2, leniw, liw, 0, zero, zero)
       go to 700
  619  msg = 'dvode--  rtol(i1) is r1 .lt. 0.0        '
-      call xerrwd (msg, 40, 19, 1, 1, i, 0, 1, rtoli, zero)
+      call xerrwd (msg, 40, 19, 2, 1, i, 0, 1, rtoli, zero)
       go to 700
  620  msg = 'dvode--  atol(i1) is r1 .lt. 0.0        '
-      call xerrwd (msg, 40, 20, 1, 1, i, 0, 1, atoli, zero)
+      call xerrwd (msg, 40, 20, 2, 1, i, 0, 1, atoli, zero)
       go to 700
  621  ewti = rwork(cmn12%lewt+i-1)
       msg = 'dvode--  ewt(i1) is r1 .le. 0.0         '
-      call xerrwd (msg, 40, 21, 1, 1, i, 0, 1, ewti, zero)
+      call xerrwd (msg, 40, 21, 2, 1, i, 0, 1, ewti, zero)
       go to 700
  622  continue
       msg='dvode--  tout (=r1) too close to t(=r2) to start integration'
-      call xerrwd (msg, 60, 22, 1, 0, 0, 0, 2, tout, t)
+      call xerrwd (msg, 60, 22, 2, 0, 0, 0, 2, tout, t)
       go to 700
  623  continue
       msg='dvode--  itask = i1 and tout (=r1) behind tcur - hu (= r2)  '
-      call xerrwd (msg, 60, 23, 1, 1, itask, 0, 2, tout, tp)
+      call xerrwd (msg, 60, 23, 2, 1, itask, 0, 2, tout, tp)
       go to 700
  624  continue
       msg='dvode--  itask = 4 or 5 and tcrit (=r1) behind tcur (=r2)   '
-      call xerrwd (msg, 60, 24, 1, 0, 0, 0, 2, tcrit, cmn12%tn)
+      call xerrwd (msg, 60, 24, 2, 0, 0, 0, 2, tcrit, cmn12%tn)
       go to 700
  625  continue
       msg='dvode--  itask = 4 or 5 and tcrit (=r1) behind tout (=r2)   '
-      call xerrwd (msg, 60, 25, 1, 0, 0, 0, 2, tcrit, tout)
+      call xerrwd (msg, 60, 25, 2, 0, 0, 0, 2, tcrit, tout)
       go to 700
  626  msg = 'dvode--  at start of problem, too much accuracy   '
-      call xerrwd (msg, 50, 26, 1, 0, 0, 0, 0, zero, zero)
+      call xerrwd (msg, 50, 26, 2, 0, 0, 0, 0, zero, zero)
       msg='      requested for precision of machine:   see tolsf (=r1) '
-      call xerrwd (msg, 60, 26, 1, 0, 0, 0, 1, tolsf, zero)
+      call xerrwd (msg, 60, 26, 2, 0, 0, 0, 1, tolsf, zero)
       rwork(14) = tolsf
       go to 700
  627  msg='dvode--  trouble from dvindy.  itask = i1, tout = r1.       '
-      call xerrwd (msg, 60, 27, 1, 1, itask, 0, 1, tout, zero)
+      call xerrwd (msg, 60, 27, 2, 1, itask, 0, 1, tout, zero)
 !
  700  continue
       istate = -3

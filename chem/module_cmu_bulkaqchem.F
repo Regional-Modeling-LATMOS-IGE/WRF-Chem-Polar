@@ -573,6 +573,9 @@
       enddo
       lrw = lrw1                      ! dimension of double precision work vector
       liw = liw1                      ! dimension of integer work vector
+      iwork(:) = 0
+      rwork(:) = 0.
+      iwork(1:2) = -1                 ! make sure these values are not used
       iwork(6) = worki                ! steps allowed
       rwork(6) = workr                ! maximum step in seconds
 
